@@ -114,7 +114,7 @@ button:hover { background: #b0060f; }
 button:active { transform: scale(0.97); }
 button:disabled { background: #444; border-color: #444; cursor: wait; }
 @media (max-width: 480px) {
-  .wrap { flex-direction: column; width: 90%; }
+  .wrap { flex-direction: column; width: 90%; gap: 8px; }
   input { width: 100%; border-right: 1px solid #222; border-radius: 6px 6px 0 0; }
   button { width: 100%; border-radius: 0 0 6px 6px; }
 }
