@@ -101,7 +101,8 @@ export default async function handler(req: Request): Promise<Response> {
 <meta name="description" content="Watch movies and TV shows for free. Paste an IMDB ID to stream instantly.">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'SF Mono', 'Consolas', monospace; background: #000; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'SF Mono', 'Consolas', monospace; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; }
 .wrap { display: flex; gap: 0; align-items: center; }
 input { padding: 1rem 1.25rem; font-size: 1rem; font-family: inherit; border: 1px solid #222; border-right: none; border-radius: 6px 0 0 6px; background: #0a0a0a; color: #fff; outline: none; width: 280px; transition: border-color 0.2s; }
 input:focus { border-color: #e50914; }
