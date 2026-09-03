@@ -16,6 +16,18 @@
     justify-content: center;
   }
   .wrap { display: flex; gap: 0; align-items: center; }
+  select {
+    padding: 1rem 0.75rem;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 1px solid #222;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    background: #0a0a0a;
+    color: #fff;
+    outline: none;
+    cursor: pointer;
+  }
   input {
     padding: 1rem 1.25rem;
     font-size: 1rem;
@@ -31,6 +43,7 @@
   }
   input:focus { border-color: #e50914; }
   input::placeholder { color: #444; }
+  input[type=number] { width: 50px; padding: 1rem 0.5rem; text-align: center; border-right: none; }
   input.loading { border-color: #e50914; animation: pulse 0.6s infinite alternate; }
   @keyframes pulse { to { border-color: #555; } }
   button {
@@ -51,13 +64,28 @@
 </head>
 <body>
   <div class="wrap">
+    <select id="type">
+      <option value="movie">movie</option>
+      <option value="tv">tv</option>
+    </select>
     <input type="text" id="imdb" placeholder="tt1300854" autocomplete="off" spellcheck="false">
+    <input type="number" id="s" placeholder="S" min="1" style="display:none">
+    <input type="number" id="e" placeholder="E" min="1" style="display:none">
     <button id="go">watch</button>
   </div>
 
 <script>
+const type = document.getElementById('type');
 const input = document.getElementById('imdb');
+const sIn = document.getElementById('s');
+const eIn = document.getElementById('e');
 const btn = document.getElementById('go');
+
+type.addEventListener('change', () => {
+  const tv = type.value === 'tv';
+  sIn.style.display = tv ? 'block' : 'none';
+  eIn.style.display = tv ? 'block' : 'none';
+});
 
 async function go() {
   const id = input.value.trim().toLowerCase();
@@ -72,7 +100,10 @@ async function go() {
     const res = await fetch(`/api/watch?id=${encodeURIComponent(id)}`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     const { url } = await res.json();
-    window.open(url, '_blank');
+    const finalUrl = type.value === 'tv'
+      ? url.replace('/embed/movie/', `/embed/tv/`).replace(`/${id}`, `/${id}/${sIn.value||1}/${eIn.value||1}`)
+      : url;
+    window.open(finalUrl, '_blank');
   } catch (err) {
     input.style.borderColor = '#e50914';
     console.error(err.message);

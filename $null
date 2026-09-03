@@ -1,0 +1,3 @@
+error: pathspec ';' did not match any file(s) known to git
+error: pathspec 'git' did not match any file(s) known to git
+error: pathspec 'status' did not match any file(s) known to git
