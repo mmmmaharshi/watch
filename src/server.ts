@@ -82,7 +82,7 @@ const server = Bun.serve({
         );
       }
       return new Response(
-        JSON.stringify({ url: `https://${domain}/embed/movie/${id}`, domain }),
+        JSON.stringify({ url: `https://${domain}/embed/tv/${id}/1/1`, domain }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
