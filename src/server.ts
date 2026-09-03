@@ -50,7 +50,7 @@ async function checkDomain(domain: string): Promise<boolean> {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    return res.ok || (res.status >= 300 && res.status < 400);
+    return res.status < 400;
   } catch {
     return false;
   }
