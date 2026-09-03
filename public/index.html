@@ -62,6 +62,14 @@
     <button id="go">watch</button>
   </div>
 
+<style>
+@media (max-width: 480px) {
+  .wrap { flex-direction: column; width: 90%; }
+  input { width: 100%; border-right: 1px solid #222; border-radius: 6px 6px 0 0; }
+  button { width: 100%; border-radius: 0 0 6px 6px; }
+}
+</style>
+
 <script>
 const input = document.getElementById('imdb');
 const btn = document.getElementById('go');
