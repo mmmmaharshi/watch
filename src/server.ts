@@ -28,11 +28,6 @@ async function fetchDomains(): Promise<string[]> {
   }
 }
 
-async function refreshDomains() {
-  const updated = await fetchDomains();
-  if (updated.length > 0) domains = updated;
-}
-
 async function checkDomain(domain: string): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -57,8 +52,8 @@ async function getWorkingDomain(): Promise<string | null> {
 }
 
 // Initial fetch + periodic refresh
-await refreshDomains();
-setInterval(refreshDomains, REFRESH_INTERVAL);
+await fetchDomains().then(u => { if (u.length) domains = u; });
+setInterval(() => fetchDomains().then(u => { if (u.length) domains = u; }), REFRESH_INTERVAL);
 
 const server = Bun.serve({
   port: 3000,
@@ -84,12 +79,6 @@ const server = Bun.serve({
         JSON.stringify({ url: `https://${domain}/embed/movie/${id}`, domain }),
         { headers: { "Content-Type": "application/json" } },
       );
-    }
-
-    if (url.pathname === "/api/domains") {
-      return new Response(JSON.stringify({ domains }), {
-        headers: { "Content-Type": "application/json" },
-      });
     }
 
     if (url.pathname === "/") {
