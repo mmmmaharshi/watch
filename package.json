@@ -1,0 +1,11 @@
+{
+  "name": "watch-movie",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun --watch run src/server.ts",
+    "start": "bun run src/server.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
