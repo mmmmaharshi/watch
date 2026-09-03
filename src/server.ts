@@ -1,5 +1,7 @@
 const DOMAINS_SOURCE = "https://vidsrc.domains";
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const REFRESH_INTERVAL = 24 * 60 * 60 * 1000; // 1 day
+const FAILED_TTL = 10 * 60 * 1000; // skip failed domains for 10 min
+const failures = new Map<string, number>();
 
 let domains: string[] = [];
 
@@ -44,9 +46,13 @@ async function checkDomain(domain: string): Promise<boolean> {
 }
 
 async function getWorkingDomain(): Promise<string | null> {
-  const shuffled = [...domains].sort(() => Math.random() - 0.5);
+  const now = Date.now();
+  const shuffled = [...domains]
+    .filter(d => !(failures.get(d)! > now))
+    .sort(() => Math.random() - 0.5);
   for (const domain of shuffled) {
     if (await checkDomain(domain)) return domain;
+    failures.set(domain, now + FAILED_TTL);
   }
   return null;
 }
