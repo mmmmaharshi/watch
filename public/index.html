@@ -55,10 +55,22 @@
     <input type="text" id="imdb" placeholder="tt1300854" autocomplete="off" spellcheck="false">
     <button id="go">watch</button>
   </div>
+  <div id="history"></div>
 
 <script>
 const input = document.getElementById('imdb');
 const btn = document.getElementById('go');
+const historyEl = document.getElementById('history');
+
+const params = new URLSearchParams(location.search);
+if (params.get('id')) input.value = params.get('id');
+
+function loadHistory() {
+  const ids = JSON.parse(localStorage.getItem('watch_history') || '[]');
+  historyEl.innerHTML = ids.length ? '<br><br>' + ids.map(id =>
+    `<a href="?id=${id}" style="color:#666;margin-right:8px;text-decoration:none;border:1px solid #333;padding:2px 6px;border-radius:4px">${id}</a>`
+  ).join('') : '';
+}
 
 async function go() {
   const id = input.value.trim().toLowerCase();
@@ -67,6 +79,11 @@ async function go() {
     setTimeout(() => input.style.borderColor = '#222', 1200);
     return;
   }
+  history.pushState(null, '', `?id=${id}`);
+  let ids = JSON.parse(localStorage.getItem('watch_history') || '[]');
+  ids = [id, ...ids.filter(i => i !== id)].slice(0, 5);
+  localStorage.setItem('watch_history', JSON.stringify(ids));
+  loadHistory();
   btn.disabled = true;
   input.classList.add('loading');
   try {
@@ -86,6 +103,7 @@ async function go() {
 btn.addEventListener('click', go);
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) go(); });
 input.focus();
+loadHistory();
 </script>
 </body>
 </html>
