@@ -30,6 +30,17 @@ async function fetchDomains(): Promise<string[]> {
   }
 }
 
+async function detectType(id: string): Promise<"movie" | "tv"> {
+  try {
+    const res = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok ? "tv" : "movie";
+  } catch {
+    return "movie";
+  }
+}
+
 async function checkDomain(domain: string): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -81,8 +92,12 @@ const server = Bun.serve({
           { status: 503, headers: { "Content-Type": "application/json" } },
         );
       }
+      const type = await detectType(id);
+      const embedUrl = type === "tv"
+        ? `https://${domain}/embed/tv/${id}/1/1`
+        : `https://${domain}/embed/movie/${id}`;
       return new Response(
-        JSON.stringify({ url: `https://${domain}/embed/tv/${id}/1/1`, domain }),
+        JSON.stringify({ url: embedUrl, domain, type }),
         { headers: { "Content-Type": "application/json" } },
       );
     }
