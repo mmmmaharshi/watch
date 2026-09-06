@@ -226,14 +226,26 @@
     }
 
     .modal .detail {
-      flex-direction: column;
-      gap: 4px;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+    }
+
+    .modal .detail-label {
+      flex: 0 0 auto;
+      white-space: nowrap;
     }
 
     .modal .detail-value {
-      max-width: 100%;
-      text-align: left;
-      justify-content: flex-start;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+      text-align: right;
+      justify-content: flex-end;
+      overflow-wrap: anywhere;
+      font-size: 0.8rem;
     }
 
     .modal .actions {
