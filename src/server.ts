@@ -4,12 +4,10 @@
 
 interface HttpClient {
   get(url: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean; json: () => Promise<any> }>;
-  head(url: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean }>;
 }
 
 const defaultHttpClient: HttpClient = {
-  get: (url, options) => fetch(url, { ...options, method: "GET" }).then(res => ({ ok: res.ok, json: () => res.json() })),
-  head: (url, options) => fetch(url, { ...options, method: "HEAD" }).then(res => ({ ok: res.ok })),
+  get: (url, options) => fetch(url, options).then(res => ({ ok: res.ok, json: () => res.json() })),
 };
 
 // ============================================================================
@@ -31,10 +29,6 @@ class Cache<T> {
   set(key: string, value: T): void {
     this.store.set(key, { value, expires: Date.now() + this.ttl });
   }
-
-  clear(): void {
-    this.store.clear();
-  }
 }
 
 // ============================================================================
@@ -55,11 +49,11 @@ const PROVIDERS: Provider[] = [
   { name: "vidlink.pro", baseUrl: "https://vidlink.pro" },
 ];
 
-function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string, season = 1, episode = 1): string {
+function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string): string {
   if (provider.name === "multiembed.mov") {
-    return `${provider.baseUrl}/?video_id=${id}&tmdb=1${type === "tv" ? `&s=${season}&e=${episode}` : ""}`;
+    return `${provider.baseUrl}/?video_id=${id}&tmdb=1`;
   }
-  return `${provider.baseUrl}/embed/${type}/${id}${type === "tv" ? `/${season}/${episode}` : ""}`;
+  return `${provider.baseUrl}/embed/${type}/${id}`;
 }
 
 // ============================================================================
@@ -71,7 +65,6 @@ interface TitleMeta {
   name: string;
   year?: string;
   rating?: string;
-  poster?: string;
   description?: string;
 }
 
@@ -92,7 +85,6 @@ async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null
         name: m.name,
         year: m.year || m.releaseInfo,
         rating: m.imdbRating,
-        poster: m.poster,
         description: m.description,
       };
     } catch {
@@ -126,18 +118,13 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
 // Provider Selection — With caching and exclusion
 // ============================================================================
 
-interface StreamResult {
-  url: string;
-  provider: string;
-}
-
 async function getWorkingEmbedUrl(
   type: "movie" | "tv",
   id: string,
   exclude: string | undefined,
   http: HttpClient,
   cache: Cache<string>
-): Promise<StreamResult | null> {
+): Promise<{ url: string; provider: string } | null> {
   const cacheKey = `${type}:${id}`;
   const cached = cache.get(cacheKey);
   if (cached && cached !== exclude) {
@@ -150,7 +137,7 @@ async function getWorkingEmbedUrl(
   for (const provider of PROVIDERS) {
     if (provider.name === exclude) continue;
     const url = buildEmbedUrl(provider, type, id);
-    const res = await http.head(url, { signal: AbortSignal.timeout(8000) });
+    const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
     if (res.ok) {
       cache.set(cacheKey, provider.name);
       return { url, provider: provider.name };
@@ -164,24 +151,19 @@ async function getWorkingEmbedUrl(
 // Rate Limiter — Encapsulated state
 // ============================================================================
 
-class RateLimiter {
-  private attempts = new Map<string, { count: number; expires: number }>();
+function createRateLimiter(windowMs: number, maxAttempts: number) {
+  const attempts = new Map<string, { count: number; expires: number }>();
 
-  constructor(
-    private windowMs: number,
-    private maxAttempts: number
-  ) {}
-
-  isLimited(ip: string): boolean {
+  return function isLimited(ip: string): boolean {
     const now = Date.now();
-    const entry = this.attempts.get(ip);
+    const entry = attempts.get(ip);
     if (!entry || entry.expires < now) {
-      this.attempts.set(ip, { count: 1, expires: now + this.windowMs });
+      attempts.set(ip, { count: 1, expires: now + windowMs });
       return false;
     }
     entry.count++;
-    return entry.count > this.maxAttempts;
-  }
+    return entry.count > maxAttempts;
+  };
 }
 
 // ============================================================================
@@ -214,22 +196,20 @@ const HTML_HEADERS: Record<string, string> = {
 
 const IMDB_ID_PATTERN = /^tt\d{7,8}$/;
 
-interface HandlerDeps {
+function createHandler(deps: {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
   providerCache: Cache<string>;
-  rateLimiter: RateLimiter;
-}
-
-function createHandler(deps: HandlerDeps) {
-  const { http, typeCache, providerCache, rateLimiter } = deps;
+  isLimited: (ip: string) => boolean;
+}) {
+  const { http, typeCache, providerCache, isLimited } = deps;
 
   return async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
 
     if (url.pathname === "/api/watch") {
-      if (rateLimiter.isLimited(clientIp)) {
+      if (isLimited(clientIp)) {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
       }
 
@@ -270,17 +250,16 @@ function createHandler(deps: HandlerDeps) {
 
 const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
 const providerCache = new Cache<string>(5 * 60 * 1000);
-const rateLimiter = new RateLimiter(15 * 60 * 1000, 100);
+const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 const handler = createHandler({
   http: defaultHttpClient,
   typeCache,
   providerCache,
-  rateLimiter,
+  isLimited,
 });
 
-export { handler, createHandler, buildEmbedUrl, PROVIDERS, Cache, RateLimiter };
-export type { HttpClient, TypeResult, StreamResult, HandlerDeps };
+export { handler };
 
 // Start server locally (port only applies when running directly, not on Vercel)
 import os from "node:os";
