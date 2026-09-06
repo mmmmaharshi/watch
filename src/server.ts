@@ -91,10 +91,10 @@ async function verifyEmbedUrl(url: string): Promise<boolean> {
   }
 }
 
-async function getWorkingEmbedUrl(type: "movie" | "tv", id: string): Promise<{ url: string; provider: string } | null> {
+async function getWorkingEmbedUrl(type: "movie" | "tv", id: string, exclude?: string): Promise<{ url: string; provider: string } | null> {
   const cacheKey = `${type}:${id}`;
   const cached = providerCache.get(cacheKey);
-  if (cached && cached.expires > Date.now()) {
+  if (cached && cached.expires > Date.now() && cached.provider !== exclude) {
     const provider = EMBED_PROVIDERS.find(p => p.name === cached.provider);
     if (provider) {
       const url = type === "tv" ? provider.tv(id) : provider.movie(id);
@@ -104,6 +104,7 @@ async function getWorkingEmbedUrl(type: "movie" | "tv", id: string): Promise<{ u
     }
   }
   for (const provider of EMBED_PROVIDERS) {
+    if (provider.name === exclude) continue;
     const embedUrl = type === "tv" ? provider.tv(id) : provider.movie(id);
     if (!isValidEmbedUrl(embedUrl)) continue;
     if (await verifyEmbedUrl(embedUrl)) {
@@ -137,7 +138,8 @@ const server = Bun.serve({
       }
 
       const { type, name } = await detectType(id);
-      const result = await getWorkingEmbedUrl(type, id);
+      const exclude = url.searchParams.get("exclude") || undefined;
+      const result = await getWorkingEmbedUrl(type, id, exclude);
       if (!result) {
         return new Response(
           JSON.stringify({ error: "No working providers available" }),

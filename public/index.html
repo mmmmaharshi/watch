@@ -356,6 +356,7 @@
       </div>
       <div class="actions">
         <button class="btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn-secondary" id="modal-try-another">Try another</button>
         <button class="btn-primary" id="modal-watch">Watch</button>
       </div>
     </div>
@@ -372,12 +373,15 @@ const modalType = document.getElementById('modal-type');
 const modalProvider = document.getElementById('modal-provider');
 const modalUrl = document.getElementById('modal-url');
 const modalCancel = document.getElementById('modal-cancel');
+const modalTryAnother = document.getElementById('modal-try-another');
 const modalWatch = document.getElementById('modal-watch');
 
 const params = new URLSearchParams(location.search);
 if (params.get('id')) input.value = params.get('id');
 
 let pendingStreamUrl = null;
+let currentProvider = null;
+let currentId = null;
 
 function setStatus(text, type) {
   status.textContent = text;
@@ -393,6 +397,8 @@ function setLoading(loading) {
 
 function showModal(data) {
   pendingStreamUrl = data.url;
+  currentProvider = data.provider;
+  currentId = data.id;
   modalMeta.textContent = data.name || data.id.toUpperCase();
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
@@ -403,6 +409,8 @@ function showModal(data) {
 function hideModal() {
   modal.classList.remove('active');
   pendingStreamUrl = null;
+  currentProvider = null;
+  currentId = null;
 }
 
 modalCancel.addEventListener('click', hideModal);
@@ -411,6 +419,20 @@ modalWatch.addEventListener('click', () => {
   if (pendingStreamUrl) window.open(pendingStreamUrl, '_blank');
   hideModal();
   setStatus('', '');
+});
+
+modalTryAnother.addEventListener('click', async () => {
+  if (!currentId) return;
+  setStatus('Finding another stream...', 'loading');
+  try {
+    const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    const data = await res.json();
+    showModal({ ...data, id: currentId });
+    setStatus('', '');
+  } catch (err) {
+    setStatus(err.message || 'No other providers available.', 'error');
+  }
 });
 
 document.addEventListener('keydown', e => {
