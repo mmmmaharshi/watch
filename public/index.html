@@ -642,14 +642,6 @@ async function go() {
 form.addEventListener('submit', e => { e.preventDefault(); go(); });
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) go(); });
 
-// Auto-fetch on page load if URL has ?id=
-if (params.get('id')) {
-  const id = params.get('id').trim().toLowerCase();
-  if (IMDB_PATTERN.test(id)) {
-    go();
-  }
-}
-
 input.focus();
 </script>
 </body>
