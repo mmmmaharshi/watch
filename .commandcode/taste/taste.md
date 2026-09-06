@@ -1,7 +1,0 @@
-- Prefers Scandinavian design aesthetics: minimal decoration, neutral black-and-white foundations, restrained sans-serif typography, and generous spacing. Confidence: 0.85
-- Dislikes hardcoded provider health-checking / URL verification logic — prefers returning the first provider URL directly and letting the client handle failures. Explicitly rejected HEAD-request verification as overcomplicated. Confidence: 0.85
-- Commits automatically without asking for permission — only asks when pushing to remote. Confidence: 0.9
-- Always follows `@CODING_STANDARDS.md` guidelines as a permanent project convention. Confidence: 0.9
-- Post-feature workflow: after completing a feature, runs `/ponytail-audit` to fix over-engineering, then runs `/improve-codebase-architecture` to fix architectural issues. Confidence: 0.9
-- Ensures features are fully functional and existing functionality is not broken before considering work done. Confidence: 0.85
-- Prefers grammar-checked, polished instructions and documentation. Confidence: 0.6
