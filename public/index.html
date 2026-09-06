@@ -294,11 +294,12 @@
     min-width: fit-content;
   }
 
-  .modal .btn-secondary.icon {
-    flex: 0 0 auto;
-    width: 44px;
-    height: 44px;
-    padding: 0;
+  .modal .btn-secondary.icon svg {
+    transition: transform 0.2s ease;
+  }
+
+  .modal .btn-secondary.icon.loading svg {
+    animation: spin 0.7s linear infinite;
   }
 
   .modal .btn-primary {
@@ -441,6 +442,7 @@ modalWatch.addEventListener('click', () => {
 
 modalTryAnother.addEventListener('click', async () => {
   if (!currentId) return;
+  modalTryAnother.classList.add('loading');
   setStatus('Finding another stream...', 'loading');
   try {
     const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
@@ -450,6 +452,8 @@ modalTryAnother.addEventListener('click', async () => {
     setStatus('', '');
   } catch (err) {
     setStatus(err.message || 'No other providers available.', 'error');
+  } finally {
+    modalTryAnother.classList.remove('loading');
   }
 });
 
