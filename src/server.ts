@@ -257,7 +257,5 @@ const server = Bun.serve({
   hostname: "0.0.0.0",
   fetch: handler,
 });
-const nets = Object.values(Bun.os.networkInterfaces() ?? {}).flat().filter(Boolean) as any[];
-const lanIp = nets.find(n => n.family === "IPv4" && !n.internal)?.address ?? server.hostname;
 console.log(`Local: http://localhost:${server.port}`);
-console.log(`LAN: http://${lanIp}:${server.port}`);
+console.log(`LAN: http://<your-local-ip>:${server.port}`);
