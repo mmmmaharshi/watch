@@ -183,6 +183,13 @@
     color: var(--ink);
   }
 
+  .disclaimer {
+    margin-top: 16px;
+    color: var(--ink-tertiary);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
   @media (max-width: 480px) {
     .container {
       max-width: 100%;
@@ -190,6 +197,11 @@
 
     .header {
       margin-bottom: 32px;
+    }
+
+    .disclaimer {
+      margin-top: 24px;
+      font-size: 0.75rem;
     }
 
     .form-group {
@@ -271,6 +283,19 @@
     align-items: center;
     gap: 8px;
     justify-content: flex-end;
+  }
+
+  .modal .warning {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--ink-secondary);
+  }
+
+  .modal .warning strong {
+    color: var(--ink);
   }
 
   .modal .btn-secondary.icon.copied {
@@ -360,6 +385,7 @@
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a></p>
+    <p class="disclaimer">We don't host anything — we only link to third-party providers. Check the URL before playing.</p>
   </main>
 
   <div class="modal-overlay" id="modal">
@@ -377,6 +403,11 @@
       <div class="detail">
         <span class="detail-label">Stream URL</span>
         <span class="detail-value" id="modal-url-text"></span>
+      </div>
+      <div class="warning">
+        <span>You'll leave this site and play on </span>
+        <strong id="modal-warning-provider"></strong>
+        <span>. We don't control external sites.</span>
       </div>
       <div class="actions">
         <button class="btn-secondary" id="modal-cancel">Cancel</button>
@@ -411,6 +442,7 @@ const modalCopy = document.getElementById('modal-copy');
 const modalCancel = document.getElementById('modal-cancel');
 const modalTryAnother = document.getElementById('modal-try-another');
 const modalWatch = document.getElementById('modal-watch');
+const modalWarningProvider = document.getElementById('modal-warning-provider');
 
 const params = new URLSearchParams(location.search);
 if (params.get('id')) input.value = params.get('id');
@@ -442,6 +474,7 @@ function showModal(data) {
   modalMeta.textContent = data.name || data.id.toUpperCase();
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
+  modalWarningProvider.textContent = data.provider;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
