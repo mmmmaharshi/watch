@@ -453,6 +453,10 @@
         <span class="detail-value" id="modal-provider"></span>
       </div>
       <div class="detail">
+        <span class="detail-label">IMDB</span>
+        <span class="detail-value" id="modal-imdb"></span>
+      </div>
+      <div class="detail">
         <span class="detail-label">Stream URL</span>
         <span class="detail-value" id="modal-url-text"></span>
       </div>
@@ -490,6 +494,7 @@ const modalMeta = document.getElementById('modal-meta');
 const modalType = document.getElementById('modal-type');
 const modalProvider = document.getElementById('modal-provider');
 const modalUrlText = document.getElementById('modal-url-text');
+const modalImdb = document.getElementById('modal-imdb');
 const modalCopy = document.getElementById('modal-copy');
 const modalCancel = document.getElementById('modal-cancel');
 const modalTryAnother = document.getElementById('modal-try-another');
@@ -527,6 +532,7 @@ function showModal(data) {
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;
+  modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
