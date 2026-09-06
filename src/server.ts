@@ -174,7 +174,7 @@ const JSON_HEADERS: Record<string, string> = {
 const HTML_HEADERS: Record<string, string> = {
   ...SECURITY_HEADERS,
   "Content-Type": "text/html",
-  "Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'",
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'",
 };
 
 // ============================================================================
