@@ -401,6 +401,7 @@ if (params.get('id')) input.value = params.get('id');
 let pendingStreamUrl = null;
 let currentProvider = null;
 let currentId = null;
+let isFetching = false;
 
 function setStatus(text, type) {
   status.textContent = text;
@@ -433,7 +434,7 @@ function hideModal() {
 }
 
 modalCancel.addEventListener('click', hideModal);
-modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });
+modal.addEventListener('click', e => { if (e.target === modal && !isFetching) hideModal(); });
 modalWatch.addEventListener('click', () => {
   if (pendingStreamUrl) window.open(pendingStreamUrl, '_blank');
   hideModal();
@@ -441,8 +442,12 @@ modalWatch.addEventListener('click', () => {
 });
 
 modalTryAnother.addEventListener('click', async () => {
-  if (!currentId) return;
+  if (!currentId || isFetching) return;
+  isFetching = true;
   modalTryAnother.classList.add('loading');
+  modalCancel.disabled = true;
+  modalWatch.disabled = true;
+  modal.style.pointerEvents = 'none';
   setStatus('Finding another stream...', 'loading');
   try {
     const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
@@ -453,12 +458,16 @@ modalTryAnother.addEventListener('click', async () => {
   } catch (err) {
     setStatus(err.message || 'No other providers available.', 'error');
   } finally {
+    isFetching = false;
     modalTryAnother.classList.remove('loading');
+    modalCancel.disabled = false;
+    modalWatch.disabled = false;
+    modal.style.pointerEvents = '';
   }
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && modal.classList.contains('active')) hideModal();
+  if (e.key === 'Escape' && modal.classList.contains('active') && !isFetching) hideModal();
 });
 
 async function go() {
