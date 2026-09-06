@@ -254,6 +254,7 @@ export type { HttpClient, TypeResult, StreamResult, HandlerDeps };
 // Start server locally (port only applies when running directly, not on Vercel)
 const server = Bun.serve({
   port: 3000,
+  hostname: "0.0.0.0",
   fetch: handler,
 });
-console.log(`Server running at http://localhost:${server.port}`);
+console.log(`Server running at http://${server.hostname}:${server.port}`);
