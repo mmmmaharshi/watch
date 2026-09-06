@@ -476,7 +476,7 @@
       </div>
       <div class="detail">
         <span class="detail-label">Stream URL</span>
-        <span class="detail-value" id="modal-url-text"></span>
+        <span class="detail-value"><a id="modal-url-text" href="#" target="_blank" rel="noopener"></a></span>
       </div>
       <div class="warning">
         <span>You'll leave this site and play on </span>
@@ -561,6 +561,7 @@ function showModal(data) {
   modalWarningProvider.textContent = data.provider;
   modalImdb.href = `https://www.imdb.com/title/${data.id}/`;
   modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
+  modalUrlText.href = data.url;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
