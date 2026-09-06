@@ -267,7 +267,35 @@
     text-align: right;
     word-break: break-all;
     max-width: 60%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
   }
+
+  .modal .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--ink-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .modal .copy-btn:hover {
+    color: var(--ink);
+    border-color: var(--border-strong);
+  }
+
+  .modal .copy-btn.copied {
+    color: #22c55e;
+    border-color: #22c55e;
+  }
+
 
   .modal .actions {
     display: flex;
@@ -366,7 +394,15 @@
       </div>
       <div class="detail">
         <span class="detail-label">Stream URL</span>
-        <span class="detail-value" id="modal-url"></span>
+        <span class="detail-value">
+          <span id="modal-url-text"></span>
+          <button class="copy-btn" id="modal-copy" title="Copy URL">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </span>
       </div>
       <div class="actions">
         <button class="btn-secondary" id="modal-cancel">Cancel</button>
@@ -390,7 +426,8 @@ const modal = document.getElementById('modal');
 const modalMeta = document.getElementById('modal-meta');
 const modalType = document.getElementById('modal-type');
 const modalProvider = document.getElementById('modal-provider');
-const modalUrl = document.getElementById('modal-url');
+const modalUrlText = document.getElementById('modal-url-text');
+const modalCopy = document.getElementById('modal-copy');
 const modalCancel = document.getElementById('modal-cancel');
 const modalTryAnother = document.getElementById('modal-try-another');
 const modalWatch = document.getElementById('modal-watch');
@@ -402,6 +439,9 @@ let pendingStreamUrl = null;
 let currentProvider = null;
 let currentId = null;
 let isFetching = false;
+let focusedElementBeforeModal = null;
+
+const IMDB_PATTERN = /^tt\d{7,8}$/;
 
 function setStatus(text, type) {
   status.textContent = text;
@@ -422,8 +462,10 @@ function showModal(data) {
   modalMeta.textContent = data.name || data.id.toUpperCase();
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
-  modalUrl.textContent = data.url;
+  modalUrlText.textContent = data.url;
+  modalCopy.classList.remove('copied');
   modal.classList.add('active');
+  trapFocus();
 }
 
 function hideModal() {
@@ -431,7 +473,47 @@ function hideModal() {
   pendingStreamUrl = null;
   currentProvider = null;
   currentId = null;
+  releaseFocus();
 }
+
+function trapFocus() {
+  focusedElementBeforeModal = document.activeElement;
+  const focusable = modal.querySelectorAll('button, input, [tabindex]');
+  if (focusable.length) focusable[0].focus();
+  
+  modal.addEventListener('keydown', handleFocusTrap);
+}
+
+function releaseFocus() {
+  modal.removeEventListener('keydown', handleFocusTrap);
+  if (focusedElementBeforeModal) focusedElementBeforeModal.focus();
+}
+
+function handleFocusTrap(e) {
+  if (e.key !== 'Tab') return;
+  const focusable = modal.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]');
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+modalCopy.addEventListener('click', async () => {
+  if (!pendingStreamUrl) return;
+  try {
+    await navigator.clipboard.writeText(pendingStreamUrl);
+    modalCopy.classList.add('copied');
+    setTimeout(() => modalCopy.classList.remove('copied'), 2000);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+});
 
 modalCancel.addEventListener('click', hideModal);
 modal.addEventListener('click', e => { if (e.target === modal && !isFetching) hideModal(); });
@@ -470,10 +552,20 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('active') && !isFetching) hideModal();
 });
 
+// Real-time input validation
+input.addEventListener('input', () => {
+  const value = input.value.trim().toLowerCase();
+  if (value && !IMDB_PATTERN.test(value)) {
+    input.style.borderColor = 'var(--ink)';
+  } else {
+    input.style.borderColor = '';
+  }
+});
+
 async function go() {
   const id = input.value.trim().toLowerCase();
-  if (!id.startsWith('tt')) {
-    setStatus('Please enter a valid IMDB ID starting with tt', 'error');
+  if (!IMDB_PATTERN.test(id)) {
+    setStatus('Please enter a valid IMDB ID (e.g., tt1300854)', 'error');
     input.style.borderColor = 'var(--ink)';
     setTimeout(() => {
       input.style.borderColor = '';
@@ -503,6 +595,15 @@ async function go() {
 
 form.addEventListener('submit', e => { e.preventDefault(); go(); });
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) go(); });
+
+// Auto-fetch on page load if URL has ?id=
+if (params.get('id')) {
+  const id = params.get('id').trim().toLowerCase();
+  if (IMDB_PATTERN.test(id)) {
+    go();
+  }
+}
+
 input.focus();
 </script>
 </body>
