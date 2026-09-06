@@ -350,6 +350,12 @@
     color: var(--ink);
   }
 
+  .modal .detail-value a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .modal .btn-secondary.icon.copied {
     color: #22c55e;
     border-color: #22c55e;
@@ -454,7 +460,7 @@
       </div>
       <div class="detail">
         <span class="detail-label">IMDB</span>
-        <span class="detail-value" id="modal-imdb"></span>
+        <span class="detail-value"><a id="modal-imdb" href="#" target="_blank" rel="noopener"></a></span>
       </div>
       <div class="detail">
         <span class="detail-label">Stream URL</span>
@@ -532,7 +538,8 @@ function showModal(data) {
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;
-  modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
+  modalImdb.href = `https://www.imdb.com/title/${data.id}/`;
+  modalImdb.textContent = data.id;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
