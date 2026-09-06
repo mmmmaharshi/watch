@@ -250,11 +250,9 @@ const handler = createHandler({
 export { handler, createHandler, buildEmbedUrl, PROVIDERS, Cache, RateLimiter };
 export type { HttpClient, TypeResult, StreamResult, HandlerDeps };
 
-// Start server (only when run directly, not when imported)
-if (import.meta.main) {
-  const server = Bun.serve({
-    port: 3000,
-    fetch: handler,
-  });
-  console.log(`Server running at http://localhost:${server.port}`);
-}
+// Start server locally (port only applies when running directly, not on Vercel)
+const server = Bun.serve({
+  port: 3000,
+  fetch: handler,
+});
+console.log(`Server running at http://localhost:${server.port}`);
