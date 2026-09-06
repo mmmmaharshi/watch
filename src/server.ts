@@ -225,7 +225,8 @@ function createHandler(deps: HandlerDeps) {
     }
 
     if (url.pathname === "/") {
-      return new Response(Bun.file("public/index.html"), { headers: HTML_HEADERS });
+      const indexPath = new URL("../public/index.html", import.meta.url);
+      return new Response(Bun.file(indexPath), { headers: HTML_HEADERS });
     }
 
     return new Response("Not Found", { status: 404, headers: JSON_HEADERS });
