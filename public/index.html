@@ -504,6 +504,7 @@
 
 <script>
 const form = document.getElementById('form');
+const main = document.querySelector('main');
 const input = document.getElementById('imdb');
 const btn = document.getElementById('go');
 const status = document.getElementById('status');
@@ -543,6 +544,17 @@ function setLoading(loading) {
   if (loading) input.blur();
 }
 
+function setModalFetching(fetching) {
+  isFetching = fetching;
+  modalTryAnother.classList.toggle('loading', fetching);
+  modalCancel.disabled = fetching;
+  modalCopy.disabled = fetching;
+  modalWatch.disabled = fetching;
+  modalTryAnother.disabled = fetching;
+  [modalImdb, modalUrlText].forEach(a => a.style.pointerEvents = fetching ? 'none' : '');
+  main.inert = fetching || modal.classList.contains('active');
+}
+
 function showModal(data) {
   pendingStreamUrl = data.url;
   currentProvider = data.provider;
@@ -565,6 +577,7 @@ function showModal(data) {
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
+  main.inert = true;
   trapFocus();
 }
 
@@ -573,6 +586,7 @@ function hideModal() {
   pendingStreamUrl = null;
   currentProvider = null;
   currentId = null;
+  main.inert = false;
   releaseFocus();
 }
 
@@ -625,11 +639,7 @@ modalWatch.addEventListener('click', () => {
 
 modalTryAnother.addEventListener('click', async () => {
   if (!currentId || isFetching) return;
-  isFetching = true;
-  modalTryAnother.classList.add('loading');
-  modalCancel.disabled = true;
-  modalWatch.disabled = true;
-  modal.style.pointerEvents = 'none';
+  setModalFetching(true);
   setStatus('Finding another stream...', 'loading');
   try {
     const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
@@ -640,11 +650,8 @@ modalTryAnother.addEventListener('click', async () => {
   } catch (err) {
     setStatus(err.message || 'No other providers available.', 'error');
   } finally {
-    isFetching = false;
-    modalTryAnother.classList.remove('loading');
-    modalCancel.disabled = false;
-    modalWatch.disabled = false;
-    modal.style.pointerEvents = '';
+    setModalFetching(false);
+    main.inert = true;
   }
 });
 
