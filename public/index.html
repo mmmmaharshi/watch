@@ -541,6 +541,7 @@ function setLoading(loading) {
   btn.disabled = loading;
   btn.classList.toggle('loading', loading);
   input.classList.toggle('loading', loading);
+  input.disabled = loading;
   if (loading) input.blur();
 }
 
