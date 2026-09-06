@@ -352,6 +352,10 @@
 
   .modal .detail-value a {
     color: inherit;
+    text-decoration: none;
+  }
+
+  .modal .detail-value a:hover {
     text-decoration: underline;
     text-underline-offset: 2px;
   }
@@ -539,7 +543,7 @@ function showModal(data) {
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;
   modalImdb.href = `https://www.imdb.com/title/${data.id}/`;
-  modalImdb.textContent = data.id;
+  modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
   modal.classList.add('active');
