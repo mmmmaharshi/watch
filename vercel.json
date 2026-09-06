@@ -1,8 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "bunVersion": "1.x",
-  "builds": [
-    { "src": "src/server.ts" }
-  ],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "bunVersion": "1.x"
 }
