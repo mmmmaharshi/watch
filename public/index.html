@@ -3,74 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Watch Movies & TV Shows Free</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔴</text></svg>">
-<meta name="description" content="Watch movies and TV shows for free. Paste an IMDB ID to stream instantly.">
-<meta name="keywords" content="watch movies, free streaming, imdb, tv shows, online streaming">
-<meta property="og:title" content="Watch Movies & TV Shows Free">
-<meta property="og:description" content="Watch movies and TV shows for free. Paste an IMDB ID to stream instantly.">
-<meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<title>Watch</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▶</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&display=swap" rel="stylesheet">
+<meta name="description" content="Watch movies and TV shows. Paste an IMDB ID to stream.">
 <style>
+  :root {
+    --canvas: #0A0A0A;
+    --ink: #FFFFFF;
+    --ink-secondary: rgb(255 255 255 / 56%);
+    --ink-tertiary: rgb(255 255 255 / 36%);
+    --border: rgb(255 255 255 / 10%);
+    --border-strong: rgb(255 255 255 / 18%);
+    --fill-hover: rgb(255 255 255 / 9%);
+    --fill-pressed: rgb(255 255 255 / 14%);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; overflow: hidden; }
+
+  html, body { height: 100%; }
+
   body {
-    font-family: 'SF Mono', 'Consolas', monospace;
-    background: #000;
-    color: #fff;
+    font-family: 'Geist Pixel', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    background: var(--canvas);
+    color: var(--ink);
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 24px;
   }
-  .wrap { display: flex; gap: 0; align-items: center; }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .header {
+    margin-bottom: 48px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    color: var(--ink-secondary);
+    margin-top: 8px;
+  }
+
+  .form-group {
+    display: flex;
+    align-items: stretch;
+  }
+
   input {
-    padding: 1rem 1.25rem;
+    flex: 1;
+    padding: 16px 20px;
     font-size: 1rem;
     font-family: inherit;
-    border: 1px solid #222;
-    border-right: none;
-    border-radius: 6px 0 0 6px;
-    background: #0a0a0a;
-    color: #fff;
+    font-weight: 400;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px 0 0 8px;
+    background: var(--canvas);
+    color: var(--ink);
     outline: none;
-    width: 280px;
-    transition: border-color 0.2s;
+    min-width: 0;
+    transition: border-color 0.15s ease;
   }
-  input:focus { border-color: #e50914; }
-  input::placeholder { color: #444; }
-  input.loading { border-color: #e50914; animation: pulse 0.6s infinite alternate; }
-  @keyframes pulse { to { border-color: #555; } }
+
+  input::placeholder {
+    color: var(--ink-tertiary);
+  }
+
+  input:focus {
+    border-color: var(--ink);
+  }
+
+  input.loading {
+    border-color: var(--ink);
+    animation: pulse 0.8s infinite alternate;
+  }
+
+  @keyframes pulse {
+    to { border-color: var(--border-strong); }
+  }
+
   button {
-    padding: 1rem 1.5rem;
+    padding: 16px 24px;
     font-size: 1rem;
     font-family: inherit;
-    border: 1px solid #e50914;
-    border-radius: 0 6px 6px 0;
-    background: #e50914;
-    color: #fff;
+    font-weight: 500;
+    border: 1px solid var(--ink);
+    border-radius: 0 8px 8px 0;
+    background: var(--ink);
+    color: var(--canvas);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
   }
-  button:hover { background: #b0060f; }
-  button:active { transform: scale(0.97); }
-  button:disabled { background: #444; border-color: #444; cursor: wait; }
+
+  button:hover {
+    background: var(--ink-secondary);
+    border-color: var(--ink-secondary);
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  button:disabled {
+    background: var(--ink-tertiary);
+    border-color: var(--ink-tertiary);
+    cursor: wait;
+  }
+
+  .help {
+    margin-top: 16px;
+    color: var(--ink-tertiary);
+    font-size: 0.875rem;
+  }
+
+  .help a {
+    color: var(--ink-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .help a:hover {
+    color: var(--ink);
+  }
+
+  @media (max-width: 480px) {
+    .container {
+      max-width: 100%;
+    }
+
+    .header {
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    input {
+      border-radius: 8px;
+      border-right: 1px solid var(--border-strong);
+    }
+
+    button {
+      border-radius: 8px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <input type="text" id="imdb" placeholder="tt1300854" autocomplete="off" spellcheck="false">
-    <button id="go">watch</button>
-  </div>
+  <main class="container">
+    <header class="header">
+      <h1>Watch</h1>
+      <p class="subtitle">Movies and TV shows, instantly.</p>
+    </header>
 
-<style>
-@media (max-width: 480px) {
-  .wrap { flex-direction: column; width: 90%; gap: 8px; }
-  input { width: 100%; border-right: 1px solid #222; border-radius: 6px 6px 0 0; }
-  button { width: 100%; border-radius: 0 0 6px 6px; }
-}
-</style>
+    <form class="form-group" id="form">
+      <input type="text" id="imdb" placeholder="tt1300854" autocomplete="off" spellcheck="false" aria-label="IMDB ID">
+      <button type="submit" id="go">Watch now</button>
+    </form>
+
+    <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a></p>
+  </main>
 
 <script>
+const form = document.getElementById('form');
 const input = document.getElementById('imdb');
 const btn = document.getElementById('go');
 
@@ -80,8 +198,8 @@ if (params.get('id')) input.value = params.get('id');
 async function go() {
   const id = input.value.trim().toLowerCase();
   if (!id.startsWith('tt')) {
-    input.style.borderColor = '#e50914';
-    setTimeout(() => input.style.borderColor = '#222', 1200);
+    input.style.borderColor = 'var(--ink)';
+    setTimeout(() => input.style.borderColor = '', 1200);
     return;
   }
   history.pushState(null, '', `?id=${id}`);
@@ -93,7 +211,7 @@ async function go() {
     const { url } = await res.json();
     window.open(url, '_blank');
   } catch (err) {
-    input.style.borderColor = '#e50914';
+    input.style.borderColor = 'var(--ink)';
     console.error(err.message);
   } finally {
     btn.disabled = false;
@@ -101,7 +219,7 @@ async function go() {
   }
 }
 
-btn.addEventListener('click', go);
+form.addEventListener('submit', e => { e.preventDefault(); go(); });
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) go(); });
 input.focus();
 </script>

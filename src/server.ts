@@ -58,18 +58,28 @@ async function checkDomain(domain: string): Promise<boolean> {
 
 async function getWorkingDomain(): Promise<string | null> {
   const now = Date.now();
+  console.log(`[getWorkingDomain] domains array length: ${domains.length}`);
+  console.log(`[getWorkingDomain] domains: ${domains.join(", ")}`);
+  console.log(`[getWorkingDomain] failures map: ${[...failures.entries()].map(([k,v]) => `${k}=${v > now ? "active" : "expired"}`).join(", ") || "empty"}`);
   const shuffled = [...domains]
     .filter(d => !(failures.get(d)! > now))
     .sort(() => Math.random() - 0.5);
+  console.log(`[getWorkingDomain] checking ${shuffled.length} domains (after filter): ${shuffled.join(", ")}`);
   for (const domain of shuffled) {
-    if (await checkDomain(domain)) return domain;
+    const ok = await checkDomain(domain);
+    console.log(`[getWorkingDomain] checkDomain(${domain}) = ${ok}`);
+    if (ok) return domain;
     failures.set(domain, now + FAILED_TTL);
   }
   return null;
 }
 
 // Initial fetch + periodic refresh
-fetchDomains().then(u => { if (u.length) domains = u; });
+fetchDomains().then(u => {
+  console.log(`[init] fetchDomains returned ${u.length} domains: ${u.join(", ")}`);
+  if (u.length) domains = u;
+  console.log(`[init] domains array now has ${domains.length} entries`);
+});
 setInterval(() => fetchDomains().then(u => { if (u.length) domains = u; }), REFRESH_INTERVAL);
 
 const server = Bun.serve({
