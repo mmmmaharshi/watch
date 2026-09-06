@@ -252,10 +252,14 @@ export { handler, createHandler, buildEmbedUrl, PROVIDERS, Cache, RateLimiter };
 export type { HttpClient, TypeResult, StreamResult, HandlerDeps };
 
 // Start server locally (port only applies when running directly, not on Vercel)
+import os from "node:os";
+
 const server = Bun.serve({
   port: 3000,
   hostname: "0.0.0.0",
   fetch: handler,
 });
+const nets = Object.values(os.networkInterfaces() ?? {}).flat().filter(Boolean) as any[];
+const lanIp = nets.find(n => n.family === "IPv4" && !n.internal)?.address ?? "localhost";
 console.log(`Local: http://localhost:${server.port}`);
-console.log(`LAN: http://<your-local-ip>:${server.port}`);
+console.log(`LAN: http://${lanIp}:${server.port}`);
