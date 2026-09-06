@@ -206,16 +206,49 @@
 
     .form-group {
       flex-direction: column;
-      gap: 8px;
+      gap: 0;
     }
 
     input {
-      border-radius: 8px;
+      border-radius: 8px 8px 0 0;
       border-right: 1px solid var(--border-strong);
+      border-bottom: none;
     }
 
-    button {
-      border-radius: 8px;
+    .form-group button {
+      border-radius: 0 0 8px 8px;
+      border-top: none;
+    }
+
+    .modal {
+      padding: 20px;
+      max-width: 100%;
+    }
+
+    .modal .detail {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .modal .detail-value {
+      max-width: 100%;
+      text-align: left;
+      justify-content: flex-start;
+    }
+
+    .modal .actions {
+      flex-direction: column;
+    }
+
+    .modal .btn-secondary,
+    .modal .btn-primary {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .modal .btn-secondary.icon {
+      width: 100%;
+      height: 44px;
     }
   }
 
