@@ -207,6 +207,110 @@
     }
   }
 
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgb(0 0 0 / 64%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal {
+    background: var(--canvas);
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .modal h2 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
+  .modal .meta {
+    color: var(--ink-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 24px;
+  }
+
+  .modal .detail {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .modal .detail:first-of-type {
+    border-top: none;
+  }
+
+  .modal .detail-label {
+    color: var(--ink-tertiary);
+    font-size: 0.875rem;
+  }
+
+  .modal .detail-value {
+    font-size: 0.875rem;
+    text-align: right;
+    word-break: break-all;
+    max-width: 60%;
+  }
+
+  .modal .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .modal .btn-secondary {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .modal .btn-secondary:hover {
+    background: var(--fill-hover);
+  }
+
+  .modal .btn-primary {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    font-weight: 500;
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--canvas);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .modal .btn-primary:hover {
+    background: var(--ink-secondary);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.01ms !important;
@@ -234,14 +338,46 @@
     <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a></p>
   </main>
 
+  <div class="modal-overlay" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title">Stream Found</h2>
+      <p class="meta" id="modal-meta"></p>
+      <div class="detail">
+        <span class="detail-label">Type</span>
+        <span class="detail-value" id="modal-type"></span>
+      </div>
+      <div class="detail">
+        <span class="detail-label">Provider</span>
+        <span class="detail-value" id="modal-provider"></span>
+      </div>
+      <div class="detail">
+        <span class="detail-label">Stream URL</span>
+        <span class="detail-value" id="modal-url"></span>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn-primary" id="modal-watch">Watch</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 const form = document.getElementById('form');
 const input = document.getElementById('imdb');
 const btn = document.getElementById('go');
 const status = document.getElementById('status');
+const modal = document.getElementById('modal');
+const modalMeta = document.getElementById('modal-meta');
+const modalType = document.getElementById('modal-type');
+const modalProvider = document.getElementById('modal-provider');
+const modalUrl = document.getElementById('modal-url');
+const modalCancel = document.getElementById('modal-cancel');
+const modalWatch = document.getElementById('modal-watch');
 
 const params = new URLSearchParams(location.search);
 if (params.get('id')) input.value = params.get('id');
+
+let pendingStreamUrl = null;
 
 function setStatus(text, type) {
   status.textContent = text;
@@ -254,6 +390,32 @@ function setLoading(loading) {
   input.classList.toggle('loading', loading);
   if (loading) input.blur();
 }
+
+function showModal(data) {
+  pendingStreamUrl = data.url;
+  modalMeta.textContent = data.name || data.id.toUpperCase();
+  modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
+  modalProvider.textContent = data.provider;
+  modalUrl.textContent = data.url;
+  modal.classList.add('active');
+}
+
+function hideModal() {
+  modal.classList.remove('active');
+  pendingStreamUrl = null;
+}
+
+modalCancel.addEventListener('click', hideModal);
+modal.addEventListener('click', e => { if (e.target === modal) hideModal(); });
+modalWatch.addEventListener('click', () => {
+  if (pendingStreamUrl) window.open(pendingStreamUrl, '_blank');
+  hideModal();
+  setStatus('', '');
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modal.classList.contains('active')) hideModal();
+});
 
 async function go() {
   const id = input.value.trim().toLowerCase();
@@ -274,10 +436,9 @@ async function go() {
   try {
     const res = await fetch(`/api/watch?id=${encodeURIComponent(id)}`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-    const { url } = await res.json();
-    setStatus('Opening stream...', 'loading');
-    window.open(url, '_blank');
-    setTimeout(() => setStatus('', ''), 1500);
+    const data = await res.json();
+    setStatus('', '');
+    showModal({ ...data, id });
   } catch (err) {
     setStatus(err.message || 'Something went wrong. Try again.', 'error');
     input.style.borderColor = 'var(--ink)';

@@ -3,7 +3,7 @@ const PROVIDER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX = 100; // requests per window
 
-const typeCache = new Map<string, { type: "movie" | "tv"; expires: number }>();
+const typeCache = new Map<string, { type: "movie" | "tv"; name: string; expires: number }>();
 const providerCache = new Map<string, { provider: string; expires: number }>();
 const rateLimit = new Map<string, { count: number; expires: number }>();
 
@@ -57,21 +57,25 @@ function securityHeaders(): Record<string, string> {
   };
 }
 
-async function detectType(id: string): Promise<"movie" | "tv"> {
+async function detectType(id: string): Promise<{ type: "movie" | "tv"; name: string }> {
   const cached = typeCache.get(id);
   if (cached && cached.expires > Date.now()) {
-    return cached.type;
+    return { type: cached.type, name: cached.name };
   }
   try {
     const res = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, {
       signal: AbortSignal.timeout(5000),
     });
-    const type = res.ok ? "tv" : "movie";
-    typeCache.set(id, { type, expires: Date.now() + TYPE_CACHE_TTL });
-    return type;
-  } catch {
-    return "movie";
-  }
+    if (res.ok) {
+      const data = await res.json();
+      const result = { type: "tv" as const, name: data.name || "Unknown" };
+      typeCache.set(id, { ...result, expires: Date.now() + TYPE_CACHE_TTL });
+      return result;
+    }
+  } catch {}
+  const result = { type: "movie" as const, name: id.toUpperCase() };
+  typeCache.set(id, { ...result, expires: Date.now() + TYPE_CACHE_TTL });
+  return result;
 }
 
 async function verifyEmbedUrl(url: string): Promise<boolean> {
@@ -132,7 +136,7 @@ const server = Bun.serve({
         );
       }
 
-      const type = await detectType(id);
+      const { type, name } = await detectType(id);
       const result = await getWorkingEmbedUrl(type, id);
       if (!result) {
         return new Response(
@@ -141,7 +145,7 @@ const server = Bun.serve({
         );
       }
       return new Response(
-        JSON.stringify({ url: result.url, provider: result.provider, type }),
+        JSON.stringify({ url: result.url, provider: result.provider, type, name }),
         { headers: securityHeaders() },
       );
     }
