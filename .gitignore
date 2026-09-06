@@ -1,5 +1,27 @@
+# dependencies
 node_modules/
+
+# deployment
 .vercel
+
+# tooling
 .commandcode/
 .deepsec/
-$null
+
+# editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# os
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# env
+.env
+.env.local
