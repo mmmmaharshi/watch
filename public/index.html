@@ -310,6 +310,13 @@
     margin-bottom: 24px;
   }
 
+  .modal-description {
+    color: var(--ink-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 16px 0 8px;
+  }
+
   .modal .detail {
     display: flex;
     justify-content: space-between;
@@ -454,6 +461,7 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <h2 id="modal-title">Stream Found</h2>
       <p class="meta" id="modal-meta"></p>
+      <p class="modal-description" id="modal-description" style="display: none;"></p>
       <div class="detail">
         <span class="detail-label">Type</span>
         <span class="detail-value" id="modal-type"></span>
@@ -501,6 +509,7 @@ const btn = document.getElementById('go');
 const status = document.getElementById('status');
 const modal = document.getElementById('modal');
 const modalMeta = document.getElementById('modal-meta');
+const modalDescription = document.getElementById('modal-description');
 const modalType = document.getElementById('modal-type');
 const modalProvider = document.getElementById('modal-provider');
 const modalUrlText = document.getElementById('modal-url-text');
@@ -538,7 +547,15 @@ function showModal(data) {
   pendingStreamUrl = data.url;
   currentProvider = data.provider;
   currentId = data.id;
-  modalMeta.textContent = data.name || data.id.toUpperCase();
+  const title = data.name || data.id.toUpperCase();
+  const bits = [data.year, data.rating ? `★ ${data.rating}` : null].filter(Boolean).join(' · ');
+  modalMeta.textContent = title + (bits ? ` — ${bits}` : '');
+  if (data.description) {
+    modalDescription.textContent = data.description;
+    modalDescription.style.display = 'block';
+  } else {
+    modalDescription.style.display = 'none';
+  }
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;

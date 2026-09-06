@@ -63,22 +63,53 @@ function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string, sea
 }
 
 // ============================================================================
-// Type Detection — Explicit error handling with discriminated union
+// Metadata — Cinemeta lookup (movies + series, no key, IMDB IDs)
 // ============================================================================
 
+interface TitleMeta {
+  type: "movie" | "tv";
+  name: string;
+  year?: string;
+  rating?: string;
+  poster?: string;
+  description?: string;
+}
+
 type TypeResult =
-  | { ok: true; type: "movie" | "tv"; name: string }
+  | { ok: true; meta: TitleMeta }
   | { ok: false; reason: string };
+
+async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null> {
+  for (const kind of ["series", "movie"] as const) {
+    try {
+      const res = await http.get(`https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const m = data?.meta;
+      if (!m?.name) continue;
+      return {
+        type: kind === "series" ? "tv" : "movie",
+        name: m.name,
+        year: m.year || m.releaseInfo,
+        rating: m.imdbRating,
+        poster: m.poster,
+        description: m.description,
+      };
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
 
 async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>): Promise<TypeResult> {
   const cached = cache.get(id);
   if (cached) return cached;
 
   try {
-    const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) {
-      const data = await res.json();
-      const result: TypeResult = { ok: true, type: "tv", name: data.name || "Unknown" };
+    const meta = await fetchMeta(id, http);
+    if (meta) {
+      const result: TypeResult = { ok: true, meta };
       cache.set(id, result);
       return result;
     }
@@ -86,7 +117,7 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
     return { ok: false, reason: err instanceof Error ? err.message : "Network error" };
   }
 
-  const result: TypeResult = { ok: true, type: "movie", name: id.toUpperCase() };
+  const result: TypeResult = { ok: true, meta: { type: "movie", name: id.toUpperCase() } };
   cache.set(id, result);
   return result;
 }
@@ -213,13 +244,13 @@ function createHandler(deps: HandlerDeps) {
       }
 
       const exclude = url.searchParams.get("exclude") || undefined;
-      const stream = await getWorkingEmbedUrl(typeResult.type, id, exclude, http, providerCache);
+      const stream = await getWorkingEmbedUrl(typeResult.meta.type, id, exclude, http, providerCache);
       if (!stream) {
         return new Response(JSON.stringify({ error: "No working providers available" }), { status: 503, headers: JSON_HEADERS });
       }
 
       return new Response(
-        JSON.stringify({ url: stream.url, provider: stream.provider, type: typeResult.type, name: typeResult.name }),
+        JSON.stringify({ url: stream.url, provider: stream.provider, ...typeResult.meta }),
         { headers: JSON_HEADERS }
       );
     }
