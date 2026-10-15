@@ -1,14 +1,8 @@
 # watch
 
-Paste an IMDB ID, get a working stream link. A single Bun server serves one page
-and finds a third-party embed provider that responds for the given title.
+Live at <https://watch.maharshi.work>
 
-- No dependencies. Runs on the Bun runtime only.
-- Titles come from [Cinemeta](https://v3-cinemeta.strem.io) (no API key).
-- Provider domains are read live from the [vidsrc.domains](https://vidsrc.domains)
-  directory, then probed in parallel; the first one that answers is returned.
-- If no VidSrc domain answers, it falls back to [VidFast](https://vidfast.vc)
-  (movies, and TV at season 1 episode 1).
+Paste an IMDB ID, get a working stream link.
 
 ## Run
 
@@ -31,11 +25,6 @@ bun test           # unit tests for the route handler
 Returns `{ url, provider, type, name, year, rating, description }`, or an error
 status: `400` invalid ID, `429` rate limited (100 requests / 15 min per client),
 `502` title not found, `503` no provider responded.
-
-## Deploy
-
-Set up for Vercel (`vercel.json`, `bunVersion`). The page is static; the API is
-the only server code.
 
 ## Layout
 
