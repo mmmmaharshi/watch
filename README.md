@@ -27,6 +27,11 @@ Returns `{ id, url, provider, type, name, year, rating, description }`, or an er
 status: `400` invalid ID, `429` rate limited (100 requests / 15 min per client),
 `502` title not found, `503` no provider responded.
 
+The title ID also rides in the page URL after a `#`, so a shared link does not
+create a second URL for search engines to index. `GET /robots.txt`,
+`GET /sitemap.xml` and `GET /og.png` are served from the bundle rather than
+from static files, since the deploy has no static file layer.
+
 ## Layout
 
 - `server.ts` — the entrypoint: calls `Bun.serve`.
@@ -35,3 +40,5 @@ status: `400` invalid ID, `429` rate limited (100 requests / 15 min per client),
 - `src/recent.test.ts` — tests for the recent-lookups list.
 - `src/page.ts` — the page and its browser module, inlined as strings because
   the deploy bundler cannot load a `.html` file.
+- `src/og.ts` — the 1200x630 share card, base64-encoded for the same reason.
+- `tools/og-card.html` — the source of that card: screenshot it to regenerate.

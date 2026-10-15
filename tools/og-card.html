@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #0A0A0A; }
+  body {
+    font-family: 'Geist Pixel', system-ui, sans-serif;
+    color: #fff;
+    padding: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+  }
+  .watermark { position: absolute; right: -80px; top: 50%; transform: translateY(-50%); }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 30px; letter-spacing: -.01em; }
+  h1 { font-size: 72px; font-weight: 500; line-height: 1.08; letter-spacing: -.02em; }
+  p { margin-top: 24px; font-size: 27px; line-height: 1.4; color: rgb(255 255 255 / 56%); }
+  .url { font-size: 22px; color: rgb(255 255 255 / 46%); }
+</style>
+</head>
+<body>
+  <svg class="watermark" width="440" height="440" viewBox="0 0 24 24" fill="rgb(255 255 255 / 4%)" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="white" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    Watch
+  </div>
+
+  <div>
+    <h1>Watch movies and TV<br>shows online</h1>
+    <p>Paste an IMDb ID or an IMDb link —<br>get a working stream in one click.</p>
+  </div>
+
+  <div class="url">watch.maharshi.work</div>
+</body>
+</html>

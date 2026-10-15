@@ -1,7 +1,8 @@
 // The page and its browser module ship inside the bundle as strings. Vercel's
 // bundler (Rolldown) has no loader for .html or any other asset, so the page
 // cannot be imported as a file or read from disk at runtime.
-import { PAGE, RECENT_JS } from "./page";
+import { PAGE, RECENT_JS, SITE_URL } from "./page";
+import { OG_PNG_BASE64 } from "./og";
 
 // ============================================================================
 // HTTP Client — Seam for network operations (testability)
@@ -273,6 +274,40 @@ const JS_HEADERS: Record<string, string> = {
   "Content-Type": "text/javascript",
 };
 
+const TEXT_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "Content-Type": "text/plain",
+};
+
+const XML_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "Content-Type": "application/xml",
+};
+
+const PNG_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "Content-Type": "image/png",
+  "Cache-Control": "public, max-age=86400",
+};
+
+// Decoded once at startup, not per request.
+const OG_PNG = Buffer.from(OG_PNG_BASE64, "base64");
+
+// Two tiny files for search engines. The Bun preset on Vercel has no static
+// file layer, so they are served as strings, like the page itself. The hash
+// carries the title ID, so the root is the only indexable URL.
+const ROBOTS_TXT = `User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`;
+
+const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>${SITE_URL}/</loc></url>
+</urlset>
+`;
+
 // ============================================================================
 // Route Handler — Pure function, testable without server
 // ============================================================================
@@ -342,6 +377,18 @@ function createHandler(deps: {
 
     if (url.pathname === "/recent.js") {
       return new Response(RECENT_JS, { headers: JS_HEADERS });
+    }
+
+    if (url.pathname === "/robots.txt") {
+      return new Response(ROBOTS_TXT, { headers: TEXT_HEADERS });
+    }
+
+    if (url.pathname === "/sitemap.xml") {
+      return new Response(SITEMAP_XML, { headers: XML_HEADERS });
+    }
+
+    if (url.pathname === "/og.png") {
+      return new Response(OG_PNG, { headers: PNG_HEADERS });
     }
 
     return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });

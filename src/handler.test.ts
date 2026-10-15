@@ -236,3 +236,46 @@ test("serves the recent-list module", async () => {
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toBe("text/javascript");
 });
+
+test("serves robots.txt and sitemap.xml for crawlers", async () => {
+  const handler = makeHandler(() => "vidsrc.sh");
+
+  const robots = await handler(new Request("http://x/robots.txt"));
+  expect(robots.status).toBe(200);
+  expect(robots.headers.get("content-type")).toBe("text/plain");
+  expect(await robots.text()).toContain("Sitemap: https://watch.maharshi.work/sitemap.xml");
+
+  const sitemap = await handler(new Request("http://x/sitemap.xml"));
+  expect(sitemap.status).toBe(200);
+  expect(sitemap.headers.get("content-type")).toBe("application/xml");
+  expect(await sitemap.text()).toContain("<loc>https://watch.maharshi.work/</loc>");
+});
+
+test("serves the Open Graph image as a real PNG", async () => {
+  const handler = makeHandler(() => "vidsrc.sh");
+  const res = await handler(new Request("http://x/og.png"));
+  expect(res.status).toBe(200);
+  expect(res.headers.get("content-type")).toBe("image/png");
+
+  // A base64 blob that lost its header would still answer 200, so check the
+  // PNG magic bytes and the size.
+  const png = new Uint8Array(await res.arrayBuffer());
+  expect([...png.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+  expect(png.length).toBeGreaterThan(10_000);
+});
+
+test("gives the page a title, a canonical and share tags", async () => {
+  const handler = makeHandler(() => "vidsrc.sh");
+  const page = await (await handler(new Request("http://x/"))).text();
+
+  expect(page).toContain("<title>Watch Movies and TV Shows Online — Paste an IMDb ID</title>");
+  expect(page).toContain('<link rel="canonical" href="https://watch.maharshi.work/">');
+  expect(page).toContain('property="og:title"');
+  expect(page).toContain('property="og:image" content="https://watch.maharshi.work/og.png"');
+  expect(page).toContain('name="twitter:card"');
+  // The title ID has to stay in the hash: a query string would give every
+  // title its own URL to index, all serving the same shell.
+  expect(page).toContain("location.hash");
+  // Hash links do not reload the page, so the listener is what makes them work.
+  expect(page).toContain("addEventListener('hashchange'");
+});

@@ -8,17 +8,32 @@
 // escaped as it would be in any template literal, or this module fails to
 // parse and `bun test` says so immediately.
 
+export const SITE_URL = "https://watch.maharshi.work";
+
 export const PAGE = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Watch</title>
+<title>Watch Movies and TV Shows Online — Paste an IMDb ID</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
+<link rel="canonical" href="${SITE_URL}/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist+Pixel&display=swap" rel="stylesheet">
-<meta name="description" content="Watch movies and TV shows. Paste an IMDB ID to stream.">
+<meta name="description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show. No sign-up, no app, just a click to play.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Watch">
+<meta property="og:title" content="Watch Movies and TV Shows Online — Paste an IMDb ID">
+<meta property="og:description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show.">
+<meta property="og:url" content="${SITE_URL}/">
+<meta property="og:image" content="${SITE_URL}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Watch movies and TV shows online — paste an IMDb ID or link.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Watch Movies and TV Shows Online — Paste an IMDb ID">
+<meta name="twitter:description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show.">
 <style>
   :root {
     --canvas: #0A0A0A;
@@ -450,8 +465,8 @@ export const PAGE = `<!DOCTYPE html>
 <body>
   <main class="container">
     <header class="header">
-      <h1>Watch</h1>
-      <p class="subtitle">Movies and TV shows, instantly.</p>
+      <h1>Watch movies and TV shows online</h1>
+      <p class="subtitle">Paste an IMDb ID or an IMDb link to start.</p>
     </header>
 
     <form class="form-group" id="form">
@@ -463,7 +478,7 @@ export const PAGE = `<!DOCTYPE html>
     </form>
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a> — or paste an IMDb link.</p>
+    <p class="help">Enter an IMDb ID, e.g. <a href="#id=tt1300854">tt1300854</a> — or paste an IMDb link.</p>
     <p class="help" id="recent"></p>
     <p class="disclaimer">We don't host anything — we only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
   </main>
@@ -534,7 +549,9 @@ const modalTryAnother = document.getElementById('modal-try-another');
 const modalWatch = document.getElementById('modal-watch');
 const modalWarningProvider = document.getElementById('modal-warning-provider');
 
-const params = new URLSearchParams(location.search);
+// The ID rides in the hash so a shared link never creates a second URL for
+// search engines to index. The query form is still read for older links.
+const params = new URLSearchParams(location.search || location.hash.slice(1));
 if (params.get('id')) input.value = params.get('id');
 
 let pendingStreamUrl = null;
@@ -691,7 +708,7 @@ async function go() {
     const data = await res.json();
     // The server answers with the canonical ID, whether an ID or a link went in.
     input.value = data.id;
-    if (location.search !== \`?id=\${data.id}\`) history.pushState(null, '', \`?id=\${data.id}\`);
+    if (location.hash !== \`#id=\${data.id}\`) history.pushState(null, '', \`#id=\${data.id}\`);
     setStatus('', '');
     showModal(data);
     saveRecent(data.id, data.name);
@@ -726,7 +743,7 @@ function renderRecent() {
   items.forEach((item, i) => {
     if (i) recent.append(' · ');
     const link = document.createElement('a');
-    link.href = \`?id=\${encodeURIComponent(item.id)}\`;
+    link.href = \`#id=\${encodeURIComponent(item.id)}\`;
     link.textContent = item.name || item.id;
     recent.appendChild(link);
   });
@@ -735,9 +752,16 @@ function renderRecent() {
 form.addEventListener('submit', e => { e.preventDefault(); go(); });
 
 renderRecent();
-// A shared link such as /?id=tt0133093 (or a whole IMDb link) loads right away.
+// A shared link such as /#id=tt0133093 (or a whole IMDb link) loads right away.
 if (params.get('id')) go();
 else input.focus();
+// Recent and help links change only the hash, which does not reload the page.
+window.addEventListener('hashchange', () => {
+  const shared = new URLSearchParams(location.hash.slice(1)).get('id');
+  if (!shared || shared === currentId) return;
+  input.value = shared;
+  go();
+});
 </script>
 </body>
 </html>
