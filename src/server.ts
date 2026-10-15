@@ -317,8 +317,8 @@ function createHandler(deps: {
 
 const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
 const providerCache = new Cache<string>(5 * 60 * 1000);
-// The domain list changes as VidSrc rotates hosts; refresh hourly.
-const domainCache = new Cache<string[]>(60 * 60 * 1000);
+// The domain list changes as VidSrc rotates hosts; refresh daily.
+const domainCache = new Cache<string[]>(24 * 60 * 60 * 1000);
 const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 const handler = createHandler({
