@@ -5,7 +5,8 @@ and finds a third-party embed provider that responds for the given title.
 
 - No dependencies. Runs on the Bun runtime only.
 - Titles come from [Cinemeta](https://v3-cinemeta.strem.io) (no API key).
-- Providers are probed in parallel; the first one that answers is returned.
+- Provider domains are read live from the [vidsrc.domains](https://vidsrc.domains)
+  directory, then probed in parallel; the first one that answers is returned.
 
 ## Run
 
@@ -20,7 +21,7 @@ bun test           # unit tests for the route handler
 
 ## API
 
-`GET /api/watch?id=tt0133093[&exclude=vidsrc.pm]`
+`GET /api/watch?id=tt0133093[&exclude=vidsrc.sh]`
 
 - `id` — IMDB ID, `tt` followed by 7 or 8 digits.
 - `exclude` — provider name to skip (used by the "try another" button).

@@ -15,14 +15,18 @@ interface MetaJson {
 }
 
 interface HttpClient {
-  get(url: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean; json: () => Promise<MetaJson> }>;
+  get(url: string, options?: { signal?: AbortSignal }): Promise<{
+    ok: boolean;
+    json: () => Promise<MetaJson>;
+    text: () => Promise<string>;
+  }>;
 }
 
 const defaultHttpClient: HttpClient = {
   get: async (url, options) => {
     const res = await fetch(url, options);
     // Cinemeta is third-party JSON; the shape is validated at the call site.
-    return { ok: res.ok, json: () => res.json() as Promise<MetaJson> };
+    return { ok: res.ok, json: () => res.json() as Promise<MetaJson>, text: () => res.text() };
   },
 };
 
@@ -48,28 +52,60 @@ class Cache<T> {
 }
 
 // ============================================================================
-// URL Builder — Pure data + pure function (no closures)
+// Providers — Read the live domain list from the vidsrc.domains directory
 // ============================================================================
+
+// VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
+// still answer 200 and get picked ahead of the live one. So read the active
+// domains from the directory at runtime, and fall back only if it is down.
+const DIRECTORY_URL = "https://vidsrc.domains/";
+const FALLBACK_DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vidsrc.ir"];
 
 interface Provider {
   name: string;
   baseUrl: string;
 }
 
-const PROVIDERS: Provider[] = [
-  { name: "vidsrc.pm", baseUrl: "https://vidsrc.pm" },
-  { name: "vidsrc.to", baseUrl: "https://vidsrc.to" },
-  { name: "vidsrc.in", baseUrl: "https://vidsrc.in" },
-  { name: "2embed.cc", baseUrl: "https://www.2embed.cc" },
-  { name: "multiembed.mov", baseUrl: "https://multiembed.mov" },
-  { name: "vidlink.pro", baseUrl: "https://vidlink.pro" },
-];
+// Active domains sit in the #domains section, each row carrying its URL in a
+// data-val copy button. This parses third-party HTML, so every URL is validated.
+function parseActiveDomains(html: string): string[] {
+  const start = html.indexOf('id="domains"');
+  if (start === -1) return [];
+  const end = html.indexOf('id="old"');
+  const section = html.slice(start, end > start ? end : undefined);
+  const urls = [...section.matchAll(/data-val="([^"]+)"/g)]
+    .map(m => {
+      try {
+        return new URL(m[1]).origin;
+      } catch {
+        return null;
+      }
+    })
+    .filter((u): u is string => u !== null);
+  return [...new Set(urls)];
+}
+
+function toProviders(baseUrls: string[]): Provider[] {
+  return baseUrls.map(baseUrl => ({ name: new URL(baseUrl).host, baseUrl }));
+}
 
 function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string): string {
-  if (provider.name === "multiembed.mov") {
-    return `${provider.baseUrl}/?video_id=${id}&tmdb=1`;
-  }
   return `${provider.baseUrl}/embed/${type}/${id}`;
+}
+
+async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<Provider[]> {
+  const cached = cache.get("domains");
+  if (cached) return toProviders(cached);
+
+  let domains: string[] = [];
+  try {
+    const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) domains = parseActiveDomains(await res.text());
+  } catch {
+    // Directory unreachable — fall through to the known-good fallback below.
+  }
+  if (domains.length) cache.set("domains", domains);
+  return toProviders(domains.length ? domains : FALLBACK_DOMAINS);
 }
 
 // ============================================================================
@@ -126,6 +162,7 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
 // ============================================================================
 
 async function getWorkingEmbedUrl(
+  providers: Provider[],
   type: "movie" | "tv",
   id: string,
   exclude: string | undefined,
@@ -135,13 +172,13 @@ async function getWorkingEmbedUrl(
   const cacheKey = `${type}:${id}`;
   const cached = cache.get(cacheKey);
   if (cached && cached !== exclude) {
-    const provider = PROVIDERS.find(p => p.name === cached);
+    const provider = providers.find(p => p.name === cached);
     if (provider) {
       return { url: buildEmbedUrl(provider, type, id), provider: provider.name };
     }
   }
 
-  const candidates = PROVIDERS.filter(p => p.name !== exclude);
+  const candidates = providers.filter(p => p.name !== exclude);
   try {
     const winner = await Promise.any(
       candidates.map(async (provider) => {
@@ -229,9 +266,10 @@ function createHandler(deps: {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
   providerCache: Cache<string>;
+  domainCache: Cache<string[]>;
   isLimited: (ip: string) => boolean;
 }) {
-  const { http, typeCache, providerCache, isLimited } = deps;
+  const { http, typeCache, providerCache, domainCache, isLimited } = deps;
 
   return async function handleRequest(req: Request, server?: RequestServer): Promise<Response> {
     const url = new URL(req.url);
@@ -252,7 +290,8 @@ function createHandler(deps: {
       }
 
       const exclude = url.searchParams.get("exclude") || undefined;
-      const stream = await getWorkingEmbedUrl(typeResult.meta.type, id, exclude, http, providerCache);
+      const providers = await loadProviders(http, domainCache);
+      const stream = await getWorkingEmbedUrl(providers, typeResult.meta.type, id, exclude, http, providerCache);
       if (!stream) {
         return new Response(JSON.stringify({ error: "No working providers available" }), { status: 503, headers: JSON_HEADERS });
       }
@@ -278,16 +317,19 @@ function createHandler(deps: {
 
 const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
 const providerCache = new Cache<string>(5 * 60 * 1000);
+// The domain list changes as VidSrc rotates hosts; refresh hourly.
+const domainCache = new Cache<string[]>(60 * 60 * 1000);
 const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 const handler = createHandler({
   http: defaultHttpClient,
   typeCache,
   providerCache,
+  domainCache,
   isLimited,
 });
 
-export { handler, createHandler, createRateLimiter, Cache };
+export { handler, createHandler, createRateLimiter, parseActiveDomains, Cache };
 export type { HttpClient, TitleMeta, TypeResult };
 
 if (import.meta.main) {
