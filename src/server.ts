@@ -46,8 +46,8 @@ class Cache<T> {
     return undefined;
   }
 
-  set(key: string, value: T): void {
-    this.store.set(key, { value, expires: Date.now() + this.ttl });
+  set(key: string, value: T, ttl: number = this.ttl): void {
+    this.store.set(key, { value, expires: Date.now() + ttl });
   }
 }
 
@@ -106,7 +106,10 @@ async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<
   } catch {
     // Directory unreachable — fall through to the known-good fallback below.
   }
+  // The directory list is worth caching for a day, but a failure is not: cache it
+  // briefly so an outage does not add a 5s lookup to every request.
   if (domains.length) cache.set("domains", domains);
+  else cache.set("domains", FALLBACK_DOMAINS, 60_000);
   return toProviders(domains.length ? domains : FALLBACK_DOMAINS);
 }
 

@@ -113,31 +113,25 @@ test("falls back to known domains when the directory is unreachable", async () =
 });
 
 test("uses VidFast when every VidSrc domain fails", async () => {
-  const http: HttpClient = {
-    get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
-      if (url.includes("cinemeta")) return reply(url.includes("/meta/movie/"), url.includes("/meta/movie/") ? MATRIX : {});
-      return reply(url.includes("vidfast.vc")); // only VidFast answers
-    },
-  };
-  const handler = createHandler({
-    http,
-    typeCache: new Cache<TypeResult>(1),
-    providerCache: new Cache(1),
-    domainCache: new Cache<string[]>(1),
-    isLimited: () => false,
-  });
+  const handler = makeHandler(() => "vidfast.vc");
   const body = await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json();
   expect(body.provider).toBe("vidfast.vc");
   expect(body.url).toBe("https://vidfast.vc/movie/tt0133093");
 });
 
 test("VidFast TV falls back to season 1 episode 1", async () => {
+  const handler = makeHandler(() => "vidfast.vc", false, "series");
+  const body = await (await handler(new Request("http://x/api/watch?id=tt0903747"))).json();
+  expect(body.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
+});
+
+test("caches the fallback domains so a directory outage is not re-fetched", async () => {
+  let directoryCalls = 0;
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
-      if (url.includes("cinemeta")) return reply(url.includes("/meta/series/"), url.includes("/meta/series/") ? MATRIX : {});
-      return reply(url.includes("vidfast.vc"));
+      if (url === DIRECTORY) { directoryCalls++; return reply(false); }
+      const ok = url.includes("cinemeta") ? url.includes("/meta/movie/") : url.includes("vidsrc.sh");
+      return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
   const handler = createHandler({
@@ -147,8 +141,9 @@ test("VidFast TV falls back to season 1 episode 1", async () => {
     domainCache: new Cache<string[]>(1),
     isLimited: () => false,
   });
-  const body = await (await handler(new Request("http://x/api/watch?id=tt0903747"))).json();
-  expect(body.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
+  await handler(new Request("http://x/api/watch?id=tt0133093"));
+  await handler(new Request("http://x/api/watch?id=tt0133094"));
+  expect(directoryCalls).toBe(1);
 });
 
 test("returns 502 when metadata is unavailable", async () => {
