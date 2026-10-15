@@ -7,6 +7,8 @@ and finds a third-party embed provider that responds for the given title.
 - Titles come from [Cinemeta](https://v3-cinemeta.strem.io) (no API key).
 - Provider domains are read live from the [vidsrc.domains](https://vidsrc.domains)
   directory, then probed in parallel; the first one that answers is returned.
+- If no VidSrc domain answers, it falls back to [VidFast](https://vidfast.vc)
+  (movies, and TV at season 1 episode 1).
 
 ## Run
 

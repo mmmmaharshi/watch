@@ -112,6 +112,45 @@ test("falls back to known domains when the directory is unreachable", async () =
   expect(body.provider).toBe("vidsrc.sh");
 });
 
+test("uses VidFast when every VidSrc domain fails", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
+      if (url.includes("cinemeta")) return reply(url.includes("/meta/movie/"), url.includes("/meta/movie/") ? MATRIX : {});
+      return reply(url.includes("vidfast.vc")); // only VidFast answers
+    },
+  };
+  const handler = createHandler({
+    http,
+    typeCache: new Cache<TypeResult>(1),
+    providerCache: new Cache(1),
+    domainCache: new Cache<string[]>(1),
+    isLimited: () => false,
+  });
+  const body = await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json();
+  expect(body.provider).toBe("vidfast.vc");
+  expect(body.url).toBe("https://vidfast.vc/movie/tt0133093");
+});
+
+test("VidFast TV falls back to season 1 episode 1", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
+      if (url.includes("cinemeta")) return reply(url.includes("/meta/series/"), url.includes("/meta/series/") ? MATRIX : {});
+      return reply(url.includes("vidfast.vc"));
+    },
+  };
+  const handler = createHandler({
+    http,
+    typeCache: new Cache<TypeResult>(1),
+    providerCache: new Cache(1),
+    domainCache: new Cache<string[]>(1),
+    isLimited: () => false,
+  });
+  const body = await (await handler(new Request("http://x/api/watch?id=tt0903747"))).json();
+  expect(body.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
+});
+
 test("returns 502 when metadata is unavailable", async () => {
   const handler = createHandler({
     http: { get: async () => reply(false) },

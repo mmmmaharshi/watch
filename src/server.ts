@@ -64,6 +64,8 @@ const FALLBACK_DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vi
 interface Provider {
   name: string;
   baseUrl: string;
+  // Defaults to /embed/{type}/{id}; override for a provider with another shape.
+  path?: (type: "movie" | "tv", id: string) => string;
 }
 
 // Active domains sit in the #domains section, each row carrying its URL in a
@@ -90,7 +92,7 @@ function toProviders(baseUrls: string[]): Provider[] {
 }
 
 function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string): string {
-  return `${provider.baseUrl}/embed/${type}/${id}`;
+  return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
 
 async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<Provider[]> {
@@ -107,6 +109,14 @@ async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<
   if (domains.length) cache.set("domains", domains);
   return toProviders(domains.length ? domains : FALLBACK_DOMAINS);
 }
+
+// A separate provider, tried only after every VidSrc domain fails. Its TV route
+// needs a season and episode, so default to the first.
+const VIDFAST: Provider = {
+  name: "vidfast.vc",
+  baseUrl: "https://vidfast.vc",
+  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+};
 
 // ============================================================================
 // Metadata — Cinemeta lookup (movies + series, no key, IMDB IDs)
@@ -163,6 +173,7 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
 
 async function getWorkingEmbedUrl(
   providers: Provider[],
+  fallback: Provider[],
   type: "movie" | "tv",
   id: string,
   exclude: string | undefined,
@@ -171,28 +182,34 @@ async function getWorkingEmbedUrl(
 ): Promise<{ url: string; provider: string } | null> {
   const cacheKey = `${type}:${id}`;
   const cached = cache.get(cacheKey);
+  const all = [...providers, ...fallback];
   if (cached && cached !== exclude) {
-    const provider = providers.find(p => p.name === cached);
+    const provider = all.find(p => p.name === cached);
     if (provider) {
       return { url: buildEmbedUrl(provider, type, id), provider: provider.name };
     }
   }
 
-  const candidates = providers.filter(p => p.name !== exclude);
-  try {
-    const winner = await Promise.any(
-      candidates.map(async (provider) => {
-        const url = buildEmbedUrl(provider, type, id);
-        const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) throw new Error(`${provider.name} unavailable`);
-        return { url, provider: provider.name };
-      })
-    );
-    cache.set(cacheKey, winner.provider);
-    return winner;
-  } catch {
-    return null;
+  const probe = async (provider: Provider) => {
+    const url = buildEmbedUrl(provider, type, id);
+    const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`${provider.name} unavailable`);
+    return { url, provider: provider.name };
+  };
+
+  // VidSrc domains first; the fallback tier only if none of them answer.
+  for (const tier of [providers, fallback]) {
+    const candidates = tier.filter(p => p.name !== exclude);
+    if (!candidates.length) continue;
+    try {
+      const winner = await Promise.any(candidates.map(probe));
+      cache.set(cacheKey, winner.provider);
+      return winner;
+    } catch {
+      // This tier failed — try the next one.
+    }
   }
+  return null;
 }
 
 // ============================================================================
@@ -291,7 +308,7 @@ function createHandler(deps: {
 
       const exclude = url.searchParams.get("exclude") || undefined;
       const providers = await loadProviders(http, domainCache);
-      const stream = await getWorkingEmbedUrl(providers, typeResult.meta.type, id, exclude, http, providerCache);
+      const stream = await getWorkingEmbedUrl(providers, [VIDFAST], typeResult.meta.type, id, exclude, http, providerCache);
       if (!stream) {
         return new Response(JSON.stringify({ error: "No working providers available" }), { status: 503, headers: JSON_HEADERS });
       }
