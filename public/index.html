@@ -632,7 +632,6 @@ modalCopy.addEventListener('click', async () => {
 });
 
 modalCancel.addEventListener('click', hideModal);
-modal.addEventListener('click', e => { if (e.target === modal && !isFetching) hideModal(); });
 modalWatch.addEventListener('click', () => {
   if (pendingStreamUrl) window.open(pendingStreamUrl, '_blank');
   hideModal();
