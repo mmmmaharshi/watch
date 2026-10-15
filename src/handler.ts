@@ -1,8 +1,7 @@
-// The page and its module are bundled in as text. On Vercel the function is a
-// single file with no ../public directory beside it, so neither can be read
-// from disk at runtime.
-import indexHtml from "../public/index.html" with { type: "text" };
-import recentModule from "../public/recent.js" with { type: "text" };
+// The page and its browser module ship inside the bundle as strings. Vercel's
+// bundler (Rolldown) has no loader for .html or any other asset, so the page
+// cannot be imported as a file or read from disk at runtime.
+import { PAGE, RECENT_JS } from "./page";
 
 // ============================================================================
 // HTTP Client — Seam for network operations (testability)
@@ -338,11 +337,11 @@ function createHandler(deps: {
     }
 
     if (url.pathname === "/") {
-      return new Response(indexHtml, { headers: HTML_HEADERS });
+      return new Response(PAGE, { headers: HTML_HEADERS });
     }
 
     if (url.pathname === "/recent.js") {
-      return new Response(recentModule, { headers: JS_HEADERS });
+      return new Response(RECENT_JS, { headers: JS_HEADERS });
     }
 
     return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });

@@ -33,5 +33,5 @@ status: `400` invalid ID, `429` rate limited (100 requests / 15 min per client),
 - `src/handler.ts` — HTTP handler, caches, rate limiter, provider selection.
 - `src/handler.test.ts` — tests against the handler with a fake network.
 - `src/recent.test.ts` — tests for the recent-lookups list.
-- `public/index.html` — the whole UI (HTML, CSS, JS in one file).
-- `public/recent.js` — the recent-lookups list, DOM-free so the tests can load it.
+- `src/page.ts` — the page and its browser module, inlined as strings because
+  the deploy bundler cannot load a `.html` file.

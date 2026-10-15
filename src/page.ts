@@ -1,4 +1,14 @@
-<!DOCTYPE html>
+// The page and its browser module, inlined as strings.
+//
+// Vercel bundles this function with Rolldown, which has no loader for .html or
+// any other asset, so the page cannot be read from disk at runtime or imported
+// as a file. The text ships inside the bundle instead.
+//
+// Escaping rule: a literal backtick or dollar-brace in the page must be
+// escaped as it would be in any template literal, or this module fails to
+// parse and `bun test` says so immediately.
+
+export const PAGE = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -538,7 +548,7 @@ const recent = document.getElementById('recent');
 
 function setStatus(text, type) {
   status.textContent = text;
-  status.className = type ? `status ${type}` : 'status';
+  status.className = type ? \`status \${type}\` : 'status';
 }
 
 function setLoading(loading) {
@@ -565,8 +575,8 @@ function showModal(data) {
   currentProvider = data.provider;
   currentId = data.id;
   const title = data.name || data.id.toUpperCase();
-  const bits = [data.year, data.rating ? `★ ${data.rating}` : null].filter(Boolean).join(' · ');
-  modalMeta.textContent = title + (bits ? ` — ${bits}` : '');
+  const bits = [data.year, data.rating ? \`★ \${data.rating}\` : null].filter(Boolean).join(' · ');
+  modalMeta.textContent = title + (bits ? \` — \${bits}\` : '');
   if (data.description) {
     modalDescription.textContent = data.description;
     modalDescription.style.display = 'block';
@@ -576,8 +586,8 @@ function showModal(data) {
   modalType.textContent = data.type === 'tv' ? 'TV Show' : 'Movie';
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;
-  modalImdb.href = `https://www.imdb.com/title/${data.id}/`;
-  modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
+  modalImdb.href = \`https://www.imdb.com/title/\${data.id}/\`;
+  modalImdb.textContent = \`https://www.imdb.com/title/\${data.id}/\`;
   modalUrlText.href = data.url;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove('copied');
@@ -646,7 +656,7 @@ modalTryAnother.addEventListener('click', async () => {
   setModalFetching(true);
   setStatus('Finding another stream...', 'loading');
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
+    const res = await fetch(\`/api/watch?id=\${encodeURIComponent(currentId)}&exclude=\${encodeURIComponent(currentProvider)}\`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     const data = await res.json();
     showModal({ ...data, id: currentId });
@@ -676,12 +686,12 @@ async function go() {
   setStatus('Finding a working stream...', 'loading');
 
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(value)}`);
+    const res = await fetch(\`/api/watch?id=\${encodeURIComponent(value)}\`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     const data = await res.json();
     // The server answers with the canonical ID, whether an ID or a link went in.
     input.value = data.id;
-    if (location.search !== `?id=${data.id}`) history.pushState(null, '', `?id=${data.id}`);
+    if (location.search !== \`?id=\${data.id}\`) history.pushState(null, '', \`?id=\${data.id}\`);
     setStatus('', '');
     showModal(data);
     saveRecent(data.id, data.name);
@@ -716,7 +726,7 @@ function renderRecent() {
   items.forEach((item, i) => {
     if (i) recent.append(' · ');
     const link = document.createElement('a');
-    link.href = `?id=${encodeURIComponent(item.id)}`;
+    link.href = \`?id=\${encodeURIComponent(item.id)}\`;
     link.textContent = item.name || item.id;
     recent.appendChild(link);
   });
@@ -731,3 +741,25 @@ else input.focus();
 </script>
 </body>
 </html>
+`;
+
+export const RECENT_JS = `// The recent-lookups list. Pure functions, no DOM, in their own module so the
+// browser and \`bun test\` can share the one implementation.
+
+const RECENT_MAX = 5;
+
+// Newest first, no duplicates, capped.
+export function addRecent(list, entry) {
+  return [entry, ...list.filter(item => item.id !== entry.id)].slice(0, RECENT_MAX);
+}
+
+// localStorage may hold anything: junk, or a shape from an older version.
+export function parseRecent(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+`;
