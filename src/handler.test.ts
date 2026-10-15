@@ -3,9 +3,10 @@ import {
   createHandler,
   createRateLimiter,
   parseActiveDomains,
+  parseImdbId,
   type HttpClient,
   type TypeResult,
-} from "./server";
+} from "./handler";
 
 const MATRIX = { meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." } };
 const DIRECTORY = "https://vidsrc.domains/";
@@ -53,11 +54,31 @@ test("rejects a malformed IMDB id", async () => {
   }
 });
 
+test("parses an id out of pasted text", () => {
+  expect(parseImdbId("tt0133093")).toBe("tt0133093");
+  expect(parseImdbId("TT0133093")).toBe("tt0133093");
+  expect(parseImdbId("https://m.imdb.com/title/tt0903747/episodes/?season=1")).toBe("tt0903747");
+  expect(parseImdbId("tt123456789")).toBe(null);
+  expect(parseImdbId("https://www.imdb.com/title/")).toBe(null);
+  expect(parseImdbId("")).toBe(null);
+});
+
+test("accepts a full IMDb link and answers with the canonical id", async () => {
+  const handler = makeHandler(() => "vidsrc.sh");
+  const link = "https://www.imdb.com/title/tt0133093/?ref_=nv_sr_srsg_0";
+  const res = await handler(new Request(`http://x/api/watch?id=${encodeURIComponent(link)}`));
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(body.id).toBe("tt0133093");
+  expect(body.url).toBe("https://vidsrc.sh/embed/movie/tt0133093");
+});
+
 test("returns a working embed url and metadata for a valid id", async () => {
   const handler = makeHandler(() => "vidsrc.sh");
   const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual({
+    id: "tt0133093",
     url: "https://vidsrc.sh/embed/movie/tt0133093",
     provider: "vidsrc.sh",
     type: "movie",
@@ -207,4 +228,11 @@ test("serves the page at /", async () => {
   const res = await handler(new Request("http://x/"));
   expect(res.status).toBe(200);
   expect(res.headers.get("content-type")).toBe("text/html");
+});
+
+test("serves the recent-list module", async () => {
+  const handler = makeHandler(() => "vidsrc.sh");
+  const res = await handler(new Request("http://x/recent.js"));
+  expect(res.status).toBe(200);
+  expect(res.headers.get("content-type")).toBe("text/javascript");
 });

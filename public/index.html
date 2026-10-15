@@ -445,7 +445,7 @@
     </header>
 
     <form class="form-group" id="form">
-      <input type="text" id="imdb" placeholder="tt1300854" autocomplete="off" spellcheck="false" aria-label="IMDB ID">
+      <input type="text" id="imdb" placeholder="IMDB ID or link" autocomplete="off" spellcheck="false" aria-label="IMDB ID or link">
       <button type="submit" id="go">
         <span class="spinner"></span>
         <span class="btn-text">Watch now</span>
@@ -453,7 +453,8 @@
     </form>
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a></p>
+    <p class="help">Enter an IMDB ID, e.g. <a href="?id=tt1300854">tt1300854</a> — or paste an IMDb link.</p>
+    <p class="help" id="recent"></p>
     <p class="disclaimer">We don't host anything — we only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
   </main>
 
@@ -502,7 +503,9 @@
     </div>
   </div>
 
-<script>
+<script type="module">
+import { addRecent, parseRecent } from './recent.js';
+
 const form = document.getElementById('form');
 const main = document.querySelector('main');
 const input = document.getElementById('imdb');
@@ -530,8 +533,8 @@ let currentId = null;
 let isFetching = false;
 let focusedElementBeforeModal = null;
 
-// Keep in sync with IMDB_ID_PATTERN in src/server.ts
-const IMDB_PATTERN = /^tt\d{7,8}$/;
+const RECENT_KEY = 'watch.recent';
+const recent = document.getElementById('recent');
 
 function setStatus(text, type) {
   status.textContent = text;
@@ -660,38 +663,28 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && modal.classList.contains('active') && !isFetching) hideModal();
 });
 
-// Real-time input validation
-input.addEventListener('input', () => {
-  const value = input.value.trim().toLowerCase();
-  if (value && !IMDB_PATTERN.test(value)) {
-    input.style.borderColor = 'var(--ink)';
-  } else {
-    input.style.borderColor = '';
-  }
-});
-
 async function go() {
-  const id = input.value.trim().toLowerCase();
-  if (!IMDB_PATTERN.test(id)) {
-    setStatus('Please enter a valid IMDB ID (e.g., tt1300854)', 'error');
+  const value = input.value.trim();
+  if (!value) {
+    setStatus('Enter an IMDB ID or an IMDb link.', 'error');
     input.style.borderColor = 'var(--ink)';
-    setTimeout(() => {
-      input.style.borderColor = '';
-      setStatus('', '');
-    }, 2000);
+    setTimeout(() => { input.style.borderColor = ''; setStatus('', ''); }, 2000);
     return;
   }
 
-  history.pushState(null, '', `?id=${id}`);
   setLoading(true);
   setStatus('Finding a working stream...', 'loading');
 
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(id)}`);
+    const res = await fetch(`/api/watch?id=${encodeURIComponent(value)}`);
     if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     const data = await res.json();
+    // The server answers with the canonical ID, whether an ID or a link went in.
+    input.value = data.id;
+    if (location.search !== `?id=${data.id}`) history.pushState(null, '', `?id=${data.id}`);
     setStatus('', '');
-    showModal({ ...data, id });
+    showModal(data);
+    saveRecent(data.id, data.name);
   } catch (err) {
     setStatus(err.message || 'Something went wrong. Try again.', 'error');
     input.style.borderColor = 'var(--ink)';
@@ -701,9 +694,40 @@ async function go() {
   }
 }
 
+const storedRecent = () => parseRecent(localStorage.getItem(RECENT_KEY));
+
+function saveRecent(id, name) {
+  const list = addRecent(storedRecent(), { id, name });
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+  } catch {
+    // Storage blocked or full — the list is a convenience, not a requirement.
+  }
+  renderRecent();
+}
+
+// Built with createElement/textContent: names come from a third-party API.
+function renderRecent() {
+  const items = storedRecent();
+  recent.hidden = items.length === 0;
+  recent.replaceChildren();
+  if (!items.length) return;
+  recent.append('Recent: ');
+  items.forEach((item, i) => {
+    if (i) recent.append(' · ');
+    const link = document.createElement('a');
+    link.href = `?id=${encodeURIComponent(item.id)}`;
+    link.textContent = item.name || item.id;
+    recent.appendChild(link);
+  });
+}
+
 form.addEventListener('submit', e => { e.preventDefault(); go(); });
 
-input.focus();
+renderRecent();
+// A shared link such as /?id=tt0133093 (or a whole IMDb link) loads right away.
+if (params.get('id')) go();
+else input.focus();
 </script>
 </body>
 </html>

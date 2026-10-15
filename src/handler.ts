@@ -1,4 +1,8 @@
-import os from "node:os";
+// The page and its module are bundled in as text. On Vercel the function is a
+// single file with no ../public directory beside it, so neither can be read
+// from disk at runtime.
+import indexHtml from "../public/index.html" with { type: "text" };
+import recentModule from "../public/recent.js" with { type: "text" };
 
 // ============================================================================
 // HTTP Client — Seam for network operations (testability)
@@ -265,12 +269,23 @@ const HTML_HEADERS: Record<string, string> = {
   "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'",
 };
 
+const JS_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  "Content-Type": "text/javascript",
+};
+
 // ============================================================================
 // Route Handler — Pure function, testable without server
 // ============================================================================
 
-// Keep in sync with IMDB_PATTERN in public/index.html
-const IMDB_ID_PATTERN = /^tt\d{7,8}$/;
+// Accepts a bare IMDB ID or anything containing a full IMDb link, and returns
+// the canonical ID. The lookahead rejects a longer digit run, so "tt123456789"
+// is not silently truncated into a valid-looking ID.
+const IMDB_ID = /tt\d{7,8}(?!\d)/;
+
+function parseImdbId(input: string): string | null {
+  return input.toLowerCase().match(IMDB_ID)?.[0] ?? null;
+}
 
 interface RequestServer {
   requestIP(req: Request): { address: string } | null;
@@ -299,8 +314,8 @@ function createHandler(deps: {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
       }
 
-      const id = url.searchParams.get("id")?.trim().toLowerCase() ?? "";
-      if (!IMDB_ID_PATTERN.test(id)) {
+      const id = parseImdbId(url.searchParams.get("id") ?? "");
+      if (!id) {
         return new Response(JSON.stringify({ error: "Invalid IMDB ID" }), { status: 400, headers: JSON_HEADERS });
       }
 
@@ -317,14 +332,17 @@ function createHandler(deps: {
       }
 
       return new Response(
-        JSON.stringify({ url: stream.url, provider: stream.provider, ...typeResult.meta }),
+        JSON.stringify({ id, url: stream.url, provider: stream.provider, ...typeResult.meta }),
         { headers: JSON_HEADERS }
       );
     }
 
     if (url.pathname === "/") {
-      const indexPath = new URL("../public/index.html", import.meta.url);
-      return new Response(Bun.file(indexPath), { headers: HTML_HEADERS });
+      return new Response(indexHtml, { headers: HTML_HEADERS });
+    }
+
+    if (url.pathname === "/recent.js") {
+      return new Response(recentModule, { headers: JS_HEADERS });
     }
 
     return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });
@@ -332,7 +350,7 @@ function createHandler(deps: {
 }
 
 // ============================================================================
-// Server Bootstrap — Side effects isolated here
+// Singletons — One handler for the process
 // ============================================================================
 
 const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
@@ -341,6 +359,9 @@ const providerCache = new Cache<string>(5 * 60 * 1000);
 const domainCache = new Cache<string[]>(24 * 60 * 60 * 1000);
 const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
+// The entrypoint is server.ts at the repository root, which is the only file
+// that calls Bun.serve. Nothing under test imports this `handler`, so no port
+// opens during tests.
 const handler = createHandler({
   http: defaultHttpClient,
   typeCache,
@@ -349,19 +370,5 @@ const handler = createHandler({
   isLimited,
 });
 
-export { handler, createHandler, createRateLimiter, parseActiveDomains, Cache };
+export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, Cache };
 export type { HttpClient, TitleMeta, TypeResult };
-
-if (import.meta.main) {
-  const server = Bun.serve({
-    port: 3000,
-    hostname: "0.0.0.0",
-    fetch: (req, srv) => handler(req, srv),
-  });
-  const nets = Object.values(os.networkInterfaces() ?? {})
-    .flat()
-    .filter((n): n is os.NetworkInterfaceInfo => n != null);
-  const lanIp = nets.find(n => n.family === "IPv4" && !n.internal)?.address ?? "localhost";
-  console.log(`Local: http://localhost:${server.port}`);
-  console.log(`LAN: http://${lanIp}:${server.port}`);
-}

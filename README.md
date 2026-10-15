@@ -19,15 +19,19 @@ bun test           # unit tests for the route handler
 
 `GET /api/watch?id=tt0133093[&exclude=vidsrc.sh]`
 
-- `id` — IMDB ID, `tt` followed by 7 or 8 digits.
+- `id` — an IMDB ID (`tt` plus 7 or 8 digits) or a full IMDb link, which is
+  normalized to its ID.
 - `exclude` — provider name to skip (used by the "try another" button).
 
-Returns `{ url, provider, type, name, year, rating, description }`, or an error
+Returns `{ id, url, provider, type, name, year, rating, description }`, or an error
 status: `400` invalid ID, `429` rate limited (100 requests / 15 min per client),
 `502` title not found, `503` no provider responded.
 
 ## Layout
 
-- `src/server.ts` — HTTP handler, caches, rate limiter, provider selection.
-- `src/server.test.ts` — tests against the handler with a fake network.
+- `server.ts` — the entrypoint: calls `Bun.serve`.
+- `src/handler.ts` — HTTP handler, caches, rate limiter, provider selection.
+- `src/handler.test.ts` — tests against the handler with a fake network.
+- `src/recent.test.ts` — tests for the recent-lookups list.
 - `public/index.html` — the whole UI (HTML, CSS, JS in one file).
+- `public/recent.js` — the recent-lookups list, DOM-free so the tests can load it.
