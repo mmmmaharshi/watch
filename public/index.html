@@ -530,6 +530,7 @@ let currentId = null;
 let isFetching = false;
 let focusedElementBeforeModal = null;
 
+// Keep in sync with IMDB_ID_PATTERN in src/server.ts
 const IMDB_PATTERN = /^tt\d{7,8}$/;
 
 function setStatus(text, type) {
@@ -702,7 +703,6 @@ async function go() {
 }
 
 form.addEventListener('submit', e => { e.preventDefault(); go(); });
-input.addEventListener('keydown', e => { if (e.key === 'Enter' && !btn.disabled) go(); });
 
 input.focus();
 </script>

@@ -1,13 +1,29 @@
+import os from "node:os";
+
 // ============================================================================
 // HTTP Client — Seam for network operations (testability)
 // ============================================================================
 
+interface MetaJson {
+  meta?: {
+    name?: string;
+    year?: string;
+    releaseInfo?: string;
+    imdbRating?: string;
+    description?: string;
+  };
+}
+
 interface HttpClient {
-  get(url: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean; json: () => Promise<any> }>;
+  get(url: string, options?: { signal?: AbortSignal }): Promise<{ ok: boolean; json: () => Promise<MetaJson> }>;
 }
 
 const defaultHttpClient: HttpClient = {
-  get: (url, options) => fetch(url, options).then(res => ({ ok: res.ok, json: () => res.json() })),
+  get: async (url, options) => {
+    const res = await fetch(url, options);
+    // Cinemeta is third-party JSON; the shape is validated at the call site.
+    return { ok: res.ok, json: () => res.json() as Promise<MetaJson> };
+  },
 };
 
 // ============================================================================
@@ -77,8 +93,7 @@ async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null
     try {
       const res = await http.get(`https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) continue;
-      const data = await res.json();
-      const m = data?.meta;
+      const m = (await res.json()).meta;
       if (!m?.name) continue;
       return {
         type: kind === "series" ? "tv" : "movie",
@@ -98,18 +113,10 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
   const cached = cache.get(id);
   if (cached) return cached;
 
-  try {
-    const meta = await fetchMeta(id, http);
-    if (meta) {
-      const result: TypeResult = { ok: true, meta };
-      cache.set(id, result);
-      return result;
-    }
-  } catch (err) {
-    return { ok: false, reason: err instanceof Error ? err.message : "Network error" };
-  }
+  const meta = await fetchMeta(id, http);
+  if (!meta) return { ok: false, reason: "Metadata not found" };
 
-  const result: TypeResult = { ok: true, meta: { type: "movie", name: id.toUpperCase() } };
+  const result: TypeResult = { ok: true, meta };
   cache.set(id, result);
   return result;
 }
@@ -134,22 +141,28 @@ async function getWorkingEmbedUrl(
     }
   }
 
-  for (const provider of PROVIDERS) {
-    if (provider.name === exclude) continue;
-    const url = buildEmbedUrl(provider, type, id);
-    const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
-    if (res.ok) {
-      cache.set(cacheKey, provider.name);
-      return { url, provider: provider.name };
-    }
+  const candidates = PROVIDERS.filter(p => p.name !== exclude);
+  try {
+    const winner = await Promise.any(
+      candidates.map(async (provider) => {
+        const url = buildEmbedUrl(provider, type, id);
+        const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error(`${provider.name} unavailable`);
+        return { url, provider: provider.name };
+      })
+    );
+    cache.set(cacheKey, winner.provider);
+    return winner;
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
 // ============================================================================
 // Rate Limiter — Encapsulated state
 // ============================================================================
+
+const MAX_TRACKED_IPS = 10_000;
 
 function createRateLimiter(windowMs: number, maxAttempts: number) {
   const attempts = new Map<string, { count: number; expires: number }>();
@@ -158,6 +171,11 @@ function createRateLimiter(windowMs: number, maxAttempts: number) {
     const now = Date.now();
     const entry = attempts.get(ip);
     if (!entry || entry.expires < now) {
+      if (attempts.size >= MAX_TRACKED_IPS) {
+        for (const [key, e] of attempts) if (e.expires < now) attempts.delete(key);
+        const oldest = attempts.keys().next().value;
+        if (oldest !== undefined) attempts.delete(oldest);
+      }
       attempts.set(ip, { count: 1, expires: now + windowMs });
       return false;
     }
@@ -194,7 +212,18 @@ const HTML_HEADERS: Record<string, string> = {
 // Route Handler — Pure function, testable without server
 // ============================================================================
 
+// Keep in sync with IMDB_PATTERN in public/index.html
 const IMDB_ID_PATTERN = /^tt\d{7,8}$/;
+
+interface RequestServer {
+  requestIP(req: Request): { address: string } | null;
+}
+
+// The transport address is authoritative. x-forwarded-for is only a fallback:
+// Vercel overwrites it, but a bare server would trust a client-supplied value.
+function clientIpFor(req: Request, server?: RequestServer): string {
+  return server?.requestIP(req)?.address ?? req.headers.get("x-forwarded-for") ?? "unknown";
+}
 
 function createHandler(deps: {
   http: HttpClient;
@@ -204,12 +233,11 @@ function createHandler(deps: {
 }) {
   const { http, typeCache, providerCache, isLimited } = deps;
 
-  return async function handleRequest(req: Request): Promise<Response> {
+  return async function handleRequest(req: Request, server?: RequestServer): Promise<Response> {
     const url = new URL(req.url);
-    const clientIp = req.headers.get("x-forwarded-for") || "unknown";
 
     if (url.pathname === "/api/watch") {
-      if (isLimited(clientIp)) {
+      if (isLimited(clientIpFor(req, server))) {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
       }
 
@@ -240,7 +268,7 @@ function createHandler(deps: {
       return new Response(Bun.file(indexPath), { headers: HTML_HEADERS });
     }
 
-    return new Response("Not Found", { status: 404, headers: JSON_HEADERS });
+    return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });
   };
 }
 
@@ -259,17 +287,19 @@ const handler = createHandler({
   isLimited,
 });
 
-export { handler };
+export { handler, createHandler, createRateLimiter, Cache };
+export type { HttpClient, TitleMeta, TypeResult };
 
-// Start server locally (port only applies when running directly, not on Vercel)
-import os from "node:os";
-
-const server = Bun.serve({
-  port: 3000,
-  hostname: "0.0.0.0",
-  fetch: handler,
-});
-const nets = Object.values(os.networkInterfaces() ?? {}).flat().filter(Boolean) as any[];
-const lanIp = nets.find(n => n.family === "IPv4" && !n.internal)?.address ?? "localhost";
-console.log(`Local: http://localhost:${server.port}`);
-console.log(`LAN: http://${lanIp}:${server.port}`);
+if (import.meta.main) {
+  const server = Bun.serve({
+    port: 3000,
+    hostname: "0.0.0.0",
+    fetch: (req, srv) => handler(req, srv),
+  });
+  const nets = Object.values(os.networkInterfaces() ?? {})
+    .flat()
+    .filter((n): n is os.NetworkInterfaceInfo => n != null);
+  const lanIp = nets.find(n => n.family === "IPv4" && !n.internal)?.address ?? "localhost";
+  console.log(`Local: http://localhost:${server.port}`);
+  console.log(`LAN: http://${lanIp}:${server.port}`);
+}
