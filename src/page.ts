@@ -772,16 +772,18 @@ export const RECENT_JS = `// The recent-lookups list. Pure functions, no DOM, in
 
 const RECENT_MAX = 5;
 
-// Newest first, no duplicates, capped.
+// Newest first, no duplicates, capped. Entries without a string id are dropped.
 export function addRecent(list, entry) {
-  return [entry, ...list.filter(item => item.id !== entry.id)].slice(0, RECENT_MAX);
+  if (!entry || typeof entry.id !== "string") return list.slice(0, RECENT_MAX);
+  return [entry, ...list.filter(item => item && item.id !== entry.id)].slice(0, RECENT_MAX);
 }
 
 // localStorage may hold anything: junk, or a shape from an older version.
 export function parseRecent(raw) {
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(item => item && typeof item.id === "string");
   } catch {
     return [];
   }

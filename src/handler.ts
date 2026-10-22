@@ -41,7 +41,7 @@ const defaultHttpClient: HttpClient = {
 class Cache<T> {
   private store = new Map<string, { value: T; expires: number }>();
 
-  constructor(private ttl: number) {}
+  constructor(private ttl: number, private maxEntries = 1000) {}
 
   get(key: string): T | undefined {
     const entry = this.store.get(key);
@@ -51,6 +51,10 @@ class Cache<T> {
   }
 
   set(key: string, value: T, ttl: number = this.ttl): void {
+    if (!this.store.has(key) && this.store.size >= this.maxEntries) {
+      const oldest = this.store.keys().next().value;
+      if (oldest !== undefined) this.store.delete(oldest);
+    }
     this.store.set(key, { value, expires: Date.now() + ttl });
   }
 }
@@ -141,33 +145,47 @@ type TypeResult =
   | { ok: true; meta: TitleMeta }
   | { ok: false; reason: string };
 
-async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null> {
-  for (const kind of ["series", "movie"] as const) {
-    try {
-      const res = await http.get(`https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) continue;
-      const m = (await res.json()).meta;
-      if (!m?.name) continue;
-      return {
-        type: kind === "series" ? "tv" : "movie",
-        name: m.name,
-        year: m.year || m.releaseInfo,
-        rating: m.imdbRating,
-        description: m.description,
-      };
-    } catch {
-      continue;
-    }
+const META_TIMEOUT_MS = 5000;
+// A miss is cached briefly so a bad ID does not hit Cinemeta twice per request.
+const NEGATIVE_TTL_MS = 60_000;
+
+async function fetchKind(kind: "series" | "movie", id: string, http: HttpClient): Promise<TitleMeta | null> {
+  try {
+    const res = await http.get(`https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const m = (await res.json()).meta;
+    if (!m?.name) return null;
+    return {
+      type: kind === "series" ? "tv" : "movie",
+      name: m.name,
+      year: m.year || m.releaseInfo,
+      rating: m.imdbRating,
+      description: m.description,
+    };
+  } catch {
+    return null;
   }
-  return null;
 }
 
-async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>): Promise<TypeResult> {
+// Both kinds race in parallel: a slow wrong-kind answer no longer blocks the
+// right one. Series still wins when both answer.
+async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null> {
+  const [series, movie] = await Promise.all([fetchKind("series", id, http), fetchKind("movie", id, http)]);
+  return series ?? movie;
+}
+
+// Deep title module: one seam behind resolveTitle. It owns the Cinemeta
+// adapter, the success cache, and the brief negative cache.
+async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResult>): Promise<TypeResult> {
   const cached = cache.get(id);
   if (cached) return cached;
 
   const meta = await fetchMeta(id, http);
-  if (!meta) return { ok: false, reason: "Metadata not found" };
+  if (!meta) {
+    const miss: TypeResult = { ok: false, reason: "Metadata not found" };
+    cache.set(id, miss, NEGATIVE_TTL_MS);
+    return miss;
+  }
 
   const result: TypeResult = { ok: true, meta };
   cache.set(id, result);
@@ -178,39 +196,43 @@ async function detectType(id: string, http: HttpClient, cache: Cache<TypeResult>
 // Provider Selection — With caching and exclusion
 // ============================================================================
 
-async function getWorkingEmbedUrl(
-  providers: Provider[],
-  fallback: Provider[],
-  type: "movie" | "tv",
-  id: string,
-  exclude: string | undefined,
-  http: HttpClient,
-  cache: Cache<string>
-): Promise<{ url: string; provider: string } | null> {
-  const cacheKey = `${type}:${id}`;
-  const cached = cache.get(cacheKey);
-  const all = [...providers, ...fallback];
-  if (cached && cached !== exclude) {
-    const provider = all.find(p => p.name === cached);
-    if (provider) {
-      return { url: buildEmbedUrl(provider, type, id), provider: provider.name };
-    }
-  }
+const PROBE_TIMEOUT_MS = 8000;
 
-  const probe = async (provider: Provider) => {
-    const url = buildEmbedUrl(provider, type, id);
-    const res = await http.get(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new Error(`${provider.name} unavailable`);
-    return { url, provider: provider.name };
-  };
+// One probe: build the embed URL and fail loudly when the provider is down.
+async function probeProvider(provider: Provider, type: "movie" | "tv", id: string, http: HttpClient) {
+  const url = buildEmbedUrl(provider, type, id);
+  const res = await http.get(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`${provider.name} unavailable`);
+  return { url, provider: provider.name };
+}
+
+// Deep stream-selection module: one seam behind selectStream. It owns the
+// domain list, the exclusion rule, and the tier order. The cached provider,
+// when present, races as its own first tier: a dead cache entry simply loses
+// and the loop moves on, so no special case is needed.
+async function selectStream(args: {
+  http: HttpClient;
+  type: "movie" | "tv";
+  id: string;
+  exclude: string | undefined;
+  providerCache: Cache<string>;
+  domainCache: Cache<string[]>;
+}): Promise<{ url: string; provider: string } | null> {
+  const { http, type, id, exclude, providerCache, domainCache } = args;
+  const cacheKey = `${type}:${id}`;
+  const providers = await loadProviders(http, domainCache);
+  const tiers: Provider[][] = [providers, [VIDFAST]];
+  const cachedName = providerCache.get(cacheKey);
+  const cached = cachedName ? [...providers, VIDFAST].find(p => p.name === cachedName) : undefined;
+  if (cached) tiers.unshift([cached]);
 
   // VidSrc domains first; the fallback tier only if none of them answer.
-  for (const tier of [providers, fallback]) {
+  for (const tier of tiers) {
     const candidates = tier.filter(p => p.name !== exclude);
     if (!candidates.length) continue;
     try {
-      const winner = await Promise.any(candidates.map(probe));
-      cache.set(cacheKey, winner.provider);
+      const winner = await Promise.any(candidates.map(p => probeProvider(p, type, id, http)));
+      providerCache.set(cacheKey, winner.provider);
       return winner;
     } catch {
       // This tier failed — try the next one.
@@ -225,19 +247,21 @@ async function getWorkingEmbedUrl(
 
 const MAX_TRACKED_IPS = 10_000;
 
-function createRateLimiter(windowMs: number, maxAttempts: number) {
+// Deep traffic-guard module: one seam behind isLimited. It owns the counting,
+// the eviction sweep, and the clock (injectable so tests stay deterministic).
+function createRateLimiter(windowMs: number, maxAttempts: number, now: () => number = Date.now) {
   const attempts = new Map<string, { count: number; expires: number }>();
 
   return function isLimited(ip: string): boolean {
-    const now = Date.now();
+    const at = now();
     const entry = attempts.get(ip);
-    if (!entry || entry.expires < now) {
+    if (!entry || entry.expires < at) {
       if (attempts.size >= MAX_TRACKED_IPS) {
-        for (const [key, e] of attempts) if (e.expires < now) attempts.delete(key);
+        for (const [key, e] of attempts) if (e.expires < at) attempts.delete(key);
         const oldest = attempts.keys().next().value;
         if (oldest !== undefined) attempts.delete(oldest);
       }
-      attempts.set(ip, { count: 1, expires: now + windowMs });
+      attempts.set(ip, { count: 1, expires: at + windowMs });
       return false;
     }
     entry.count++;
@@ -331,6 +355,20 @@ function clientIpFor(req: Request, server?: RequestServer): string {
   return server?.requestIP(req)?.address ?? req.headers.get("x-forwarded-for") ?? "unknown";
 }
 
+// Deep page module: one table behind serveStatic. All static routes live here,
+// so the watch route stays the only other branch in the handler.
+const STATIC_ROUTES: Record<string, () => Response> = {
+  "/": () => new Response(PAGE, { headers: HTML_HEADERS }),
+  "/recent.js": () => new Response(RECENT_JS, { headers: JS_HEADERS }),
+  "/robots.txt": () => new Response(ROBOTS_TXT, { headers: TEXT_HEADERS }),
+  "/sitemap.xml": () => new Response(SITEMAP_XML, { headers: XML_HEADERS }),
+  "/og.png": () => new Response(OG_PNG, { headers: PNG_HEADERS }),
+};
+
+function serveStatic(pathname: string): Response {
+  return STATIC_ROUTES[pathname]?.() ?? new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });
+}
+
 function createHandler(deps: {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
@@ -353,14 +391,13 @@ function createHandler(deps: {
         return new Response(JSON.stringify({ error: "Invalid IMDB ID" }), { status: 400, headers: JSON_HEADERS });
       }
 
-      const typeResult = await detectType(id, http, typeCache);
+      const typeResult = await resolveTitle(id, http, typeCache);
       if (!typeResult.ok) {
         return new Response(JSON.stringify({ error: "Failed to detect content type" }), { status: 502, headers: JSON_HEADERS });
       }
 
       const exclude = url.searchParams.get("exclude") || undefined;
-      const providers = await loadProviders(http, domainCache);
-      const stream = await getWorkingEmbedUrl(providers, [VIDFAST], typeResult.meta.type, id, exclude, http, providerCache);
+      const stream = await selectStream({ http, type: typeResult.meta.type, id, exclude, providerCache, domainCache });
       if (!stream) {
         return new Response(JSON.stringify({ error: "No working providers available" }), { status: 503, headers: JSON_HEADERS });
       }
@@ -371,27 +408,7 @@ function createHandler(deps: {
       );
     }
 
-    if (url.pathname === "/") {
-      return new Response(PAGE, { headers: HTML_HEADERS });
-    }
-
-    if (url.pathname === "/recent.js") {
-      return new Response(RECENT_JS, { headers: JS_HEADERS });
-    }
-
-    if (url.pathname === "/robots.txt") {
-      return new Response(ROBOTS_TXT, { headers: TEXT_HEADERS });
-    }
-
-    if (url.pathname === "/sitemap.xml") {
-      return new Response(SITEMAP_XML, { headers: XML_HEADERS });
-    }
-
-    if (url.pathname === "/og.png") {
-      return new Response(OG_PNG, { headers: PNG_HEADERS });
-    }
-
-    return new Response(JSON.stringify({ error: "Not Found" }), { status: 404, headers: JSON_HEADERS });
+    return serveStatic(url.pathname);
   };
 }
 
@@ -416,5 +433,5 @@ const handler = createHandler({
   isLimited,
 });
 
-export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, Cache };
+export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, resolveTitle, selectStream, Cache };
 export type { HttpClient, TitleMeta, TypeResult };

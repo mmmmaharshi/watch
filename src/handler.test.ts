@@ -4,6 +4,8 @@ import {
   createRateLimiter,
   parseActiveDomains,
   parseImdbId,
+  resolveTitle,
+  selectStream,
   type HttpClient,
   type TypeResult,
 } from "./handler";
@@ -191,6 +193,97 @@ test("rate limiter counts per ip and blocks after the limit", () => {
   expect(limited("1.1.1.1")).toBe(false);
   expect(limited("1.1.1.1")).toBe(true);
   expect(limited("2.2.2.2")).toBe(false);
+});
+
+test("rate limiter window expires on the injected clock", () => {
+  let at = 1_000;
+  const limited = createRateLimiter(60_000, 1, () => at);
+  expect(limited("1.1.1.1")).toBe(false);
+  expect(limited("1.1.1.1")).toBe(true);
+  at += 60_001;
+  expect(limited("1.1.1.1")).toBe(false);
+});
+
+test("re-probes a cached provider instead of trusting it blind", async () => {
+  let shUp = true;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
+      if (url.includes("cinemeta")) return reply(url.includes("/meta/movie/"), MATRIX);
+      if (url.includes("vidsrc.sh")) return reply(shUp);
+      return reply(url.includes("vidsrc2.ru"));
+    },
+  };
+  const providerCache = new Cache<string>(60_000);
+  const handler = createHandler({
+    http,
+    typeCache: new Cache<TypeResult>(60_000),
+    providerCache,
+    domainCache: new Cache<string[]>(60_000),
+    isLimited: () => false,
+  });
+  expect((await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json()).provider).toBe("vidsrc.sh");
+  shUp = false;
+  expect((await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json()).provider).toBe("vidsrc2.ru");
+});
+
+test("caches a metadata miss so a repeat bad id costs nothing", async () => {
+  let metaCalls = 0;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url.includes("cinemeta")) metaCalls++;
+      return reply(false);
+    },
+  };
+  const typeCache = new Cache<TypeResult>(60_000);
+  await resolveTitle("tt9999999", http, typeCache);
+  await resolveTitle("tt9999999", http, typeCache);
+  expect(metaCalls).toBe(2);
+});
+
+test("probes both kinds in parallel and prefers series", async () => {
+  let inFlight = 0;
+  let peak = 0;
+  const http: HttpClient = {
+    get: async (url) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise(r => setTimeout(r, 10));
+      inFlight--;
+      if (url.includes("cinemeta")) return reply(true, MATRIX);
+      return reply(false);
+    },
+  };
+  const result = await resolveTitle("tt0903747", http, new Cache<TypeResult>(60_000));
+  expect(peak).toBe(2);
+  expect(result).toEqual({ ok: true, meta: expect.objectContaining({ type: "tv" }) });
+});
+
+test("selectStream skips the excluded provider across tiers", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) return reply(true, {}, directoryHtml(["https://a.test", "https://b.test"]));
+      return reply(true);
+    },
+  };
+  const winner = await selectStream({
+    http,
+    type: "movie",
+    id: "tt0133093",
+    exclude: "a.test",
+    providerCache: new Cache<string>(60_000),
+    domainCache: new Cache<string[]>(60_000),
+  });
+  expect(winner?.provider).toBe("b.test");
+});
+
+test("caps the cache by evicting the oldest entry", () => {
+  const cache = new Cache<string>(60_000, 2);
+  cache.set("a", "1");
+  cache.set("b", "2");
+  cache.set("c", "3");
+  expect(cache.get("a")).toBe(undefined);
+  expect(cache.get("c")).toBe("3");
 });
 
 test("keys the limiter on the transport address, not a spoofed header", async () => {
