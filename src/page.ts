@@ -470,6 +470,8 @@ export const PAGE = `<!DOCTYPE html>
     </header>
 
     <form class="form-group" id="form">
+      <input type="search" id="search" placeholder="Search by title" autocomplete="off" spellcheck="false" aria-label="Search by title">
+      <ul id="searchResults" hidden></ul>
       <input type="text" id="imdb" placeholder="IMDB ID or link" autocomplete="off" spellcheck="false" aria-label="IMDB ID or link">
       <button type="submit" id="go">
         <span class="spinner"></span>
@@ -533,7 +535,52 @@ import { addRecent, parseRecent } from './recent.js';
 
 const form = document.getElementById('form');
 const main = document.querySelector('main');
-const input = document.getElementById('imdb');
+const searchInput = document.getElementById('search');
+const searchList = document.getElementById('searchResults');
+let searchTimer = null;
+let searchIndex = -1;
+
+function renderSearch(results) {
+  if (!searchList) return;
+  searchList.innerHTML = '';
+  searchIndex = -1;
+  if (!results.length) { searchList.hidden = true; return; }
+  results.forEach((r) => {
+    const li = document.createElement('li');
+    li.textContent = r.name + ' (' + (r.year || '?') + ')';
+    li.dataset.id = r.id;
+    li.addEventListener('click', () => pickSearch(r.id));
+    searchList.appendChild(li);
+  });
+  searchList.hidden = false;
+}
+
+function pickSearch(id) {
+  if (searchList) searchList.hidden = true;
+  if (searchInput) searchInput.value = '';
+  input.value = id;
+  go();
+}
+
+async function doSearch(q) {
+  if (!q || q.length < 2) { renderSearch([]); return; }
+  try {
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+    if (!res.ok) { renderSearch([]); return; }
+    const data = await res.json();
+    renderSearch(data.results || []);
+  } catch { renderSearch([]); }
+}
+
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => doSearch(searchInput.value), 300);
+  });
+}
+document.addEventListener('click', (e) => {
+  if (searchList && searchInput && !searchList.contains(e.target) && e.target !== searchInput) searchList.hidden = true;
+});
 const btn = document.getElementById('go');
 const status = document.getElementById('status');
 const modal = document.getElementById('modal');
