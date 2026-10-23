@@ -2,6 +2,7 @@ import {
   Cache,
   createHandler,
   createRateLimiter,
+  fetchTVMaze,
   parseActiveDomains,
   parseImdbId,
   resolveTitle,
@@ -241,22 +242,29 @@ test("caches a metadata miss so a repeat bad id costs nothing", async () => {
   expect(metaCalls).toBe(2);
 });
 
-test("probes both kinds in parallel and prefers series", async () => {
-  let inFlight = 0;
-  let peak = 0;
+test("fetchTVMaze strips HTML and omits rating", async () => {
   const http: HttpClient = {
-    get: async (url) => {
-      inFlight++;
-      peak = Math.max(peak, inFlight);
-      await new Promise(r => setTimeout(r, 10));
-      inFlight--;
-      if (url.includes("cinemeta")) return reply(true, MATRIX);
-      return reply(false);
-    },
+    get: async () => reply(true, { name: "X", premiered: "2020-05-01", summary: "<b>Y</b>" }),
   };
-  const result = await resolveTitle("tt0903747", http, new Cache<TypeResult>(60_000));
-  expect(peak).toBe(2);
-  expect(result).toEqual({ ok: true, meta: expect.objectContaining({ type: "tv" }) });
+  const meta = await fetchTVMaze("tt0000001", http);
+  expect(meta).toEqual({ type: "tv", name: "X", year: "2020", description: "Y" });
+});
+
+test("fetchTVMaze returns null on 404", async () => {
+  const http: HttpClient = { get: async () => reply(false) };
+  expect(await fetchTVMaze("tt0000001", http)).toBeNull();
+});
+
+test("returns 502 when both Cinemeta and TVMaze miss", async () => {
+  const handler = createHandler({
+    http: { get: async () => reply(false) },
+    typeCache: new Cache<TypeResult>(60_000),
+    providerCache: new Cache(60_000),
+    domainCache: new Cache<string[]>(60_000),
+    isLimited: () => false,
+  });
+  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
+  expect(res.status).toBe(502);
 });
 
 test("selectStream skips the excluded provider across tiers", async () => {

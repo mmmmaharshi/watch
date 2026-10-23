@@ -182,6 +182,12 @@ async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResul
 
   const meta = await fetchMeta(id, http);
   if (!meta) {
+    const fallback = await fetchTVMaze(id, http);
+    if (fallback) {
+      const result: TypeResult = { ok: true, meta: fallback };
+      cache.set(id, result);
+      return result;
+    }
     const miss: TypeResult = { ok: false, reason: "Metadata not found" };
     cache.set(id, miss, NEGATIVE_TTL_MS);
     return miss;
@@ -192,9 +198,24 @@ async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResul
   return result;
 }
 
-// ============================================================================
-// Provider Selection — With caching and exclusion
-// ============================================================================
+// Free metadata fallback: TVMaze, keyless, series-only. Used only when Cinemeta
+// misses. Rating is TVMaze's own score (not IMDb), so it is omitted; the summary
+// is HTML and is stripped to plain text.
+const TVMAZE_TIMEOUT_MS = 5000;
+
+async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMeta | null> {
+  try {
+    const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, { signal: AbortSignal.timeout(TVMAZE_TIMEOUT_MS) });
+    if (!res.ok) return null;
+    const m = await res.json();
+    if (!m?.name) return null;
+    const year = m.premiered ? String(m.premiered).slice(0, 4) : undefined;
+    const summary = typeof m.summary === "string" ? m.summary.replace(/<[^>]*>/g, "").trim() : undefined;
+    return { type: "tv", name: m.name, year, description: summary };
+  } catch {
+    return null;
+  }
+}
 
 const PROBE_TIMEOUT_MS = 8000;
 
@@ -433,5 +454,5 @@ const handler = createHandler({
   isLimited,
 });
 
-export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, resolveTitle, selectStream, Cache };
+export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, resolveTitle, selectStream, fetchTVMaze, Cache };
 export type { HttpClient, TitleMeta, TypeResult };
