@@ -16,7 +16,7 @@ const { addRecent, parseRecent } = (() => {
   // `^export ` is stripped so the text can run as a function body; the module's
   // only exports are the two at line start. Bun loads a data: URL as a CJS
   // namespace, so importing it directly does not expose named exports.
-  return new Function(`${RECENT_JS.replace(/^export /gm, "")}\nreturn { addRecent, parseRecent };`)();
+  return new Function(`${RECENT_JS.replace(/^\s*export\s+/gm, "")}\nreturn { addRecent, parseRecent };`)();
 })() as RecentModule;
 
 test("keeps the newest first, without duplicates", () => {

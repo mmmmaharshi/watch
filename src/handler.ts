@@ -45,7 +45,12 @@ class Cache<T> {
 
   get(key: string): T | undefined {
     const entry = this.store.get(key);
-    if (entry && entry.expires > Date.now()) return entry.value;
+    if (entry && entry.expires > Date.now()) {
+      // LRU: move to the end so hot entries survive eviction.
+      this.store.delete(key);
+      this.store.set(key, entry);
+      return entry.value;
+    }
     this.store.delete(key);
     return undefined;
   }
@@ -81,12 +86,14 @@ interface Provider {
 function parseActiveDomains(html: string): string[] {
   const start = html.indexOf('id="domains"');
   if (start === -1) return [];
-  const end = html.indexOf('id="old"');
-  const section = html.slice(start, end > start ? end : undefined);
+  const end = html.indexOf('id="old"', start);
+  const section = html.slice(start, end === -1 ? undefined : end);
   const urls = [...section.matchAll(/data-val="([^"]+)"/g)]
     .map(m => {
       try {
-        return new URL(m[1]).origin;
+        const origin = new URL(m[1]).origin;
+        // The directory is untrusted: only http(s) origins are providers.
+        return /^https?:\/\//.test(origin) ? origin : null;
       } catch {
         return null;
       }
@@ -149,29 +156,43 @@ const META_TIMEOUT_MS = 5000;
 // A miss is cached briefly so a bad ID does not hit Cinemeta twice per request.
 const NEGATIVE_TTL_MS = 60_000;
 
-async function fetchKind(kind: "series" | "movie", id: string, http: HttpClient): Promise<TitleMeta | null> {
+interface FetchKindResult {
+  meta: TitleMeta | null;
+  transient: boolean;
+}
+
+async function fetchKind(kind: "series" | "movie", id: string, http: HttpClient): Promise<FetchKindResult> {
   try {
-    const res = await http.get(`https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
-    if (!res.ok) return null;
+    const url = `https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`;
+    const res = await http.get(url, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
+    if (!res.ok) return { meta: null, transient: false };
     const m = (await res.json()).meta;
-    if (!m?.name) return null;
+    if (!m?.name) return { meta: null, transient: false };
     return {
-      type: kind === "series" ? "tv" : "movie",
-      name: m.name,
-      year: m.year || m.releaseInfo,
-      rating: m.imdbRating,
-      description: m.description,
+      meta: {
+        type: kind === "series" ? "tv" : "movie",
+        name: m.name,
+        year: m.year || m.releaseInfo,
+        rating: m.imdbRating,
+        description: m.description,
+      },
+      transient: false,
     };
   } catch {
-    return null;
+    // Network/timeout: treat as transient so callers don't cache a false miss.
+    return { meta: null, transient: true };
   }
 }
 
 // Both kinds race in parallel: a slow wrong-kind answer no longer blocks the
-// right one. Series still wins when both answer.
-async function fetchMeta(id: string, http: HttpClient): Promise<TitleMeta | null> {
-  const [series, movie] = await Promise.all([fetchKind("series", id, http), fetchKind("movie", id, http)]);
-  return series ?? movie;
+// right one. The first to resolve with data wins.
+async function fetchMeta(id: string, http: HttpClient): Promise<{ meta: TitleMeta | null; transient: boolean }> {
+  const seriesPromise = fetchKind("series", id, http).then(result => ({ which: "series" as const, result }));
+  const moviePromise = fetchKind("movie", id, http).then(result => ({ which: "movie" as const, result }));
+  const first = await Promise.race([seriesPromise, moviePromise]);
+  if (first.result.meta) return first.result;
+  const other = first.which === "series" ? await moviePromise : await seriesPromise;
+  return { meta: other.result.meta, transient: first.result.transient || other.result.transient };
 }
 
 // Deep title module: one seam behind resolveTitle. It owns the Cinemeta
@@ -180,7 +201,8 @@ async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResul
   const cached = cache.get(id);
   if (cached) return cached;
 
-  const meta = await fetchMeta(id, http);
+  const fetched = await fetchMeta(id, http);
+  const meta = fetched.meta;
   if (!meta) {
     const fallback = await fetchTVMaze(id, http);
     if (fallback) {
@@ -189,7 +211,8 @@ async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResul
       return result;
     }
     const miss: TypeResult = { ok: false, reason: "Metadata not found" };
-    cache.set(id, miss, NEGATIVE_TTL_MS);
+    // Don't cache transient failures (timeouts/network) so the next request retries.
+    if (!fetched.transient) cache.set(id, miss, NEGATIVE_TTL_MS);
     return miss;
   }
 
@@ -279,8 +302,11 @@ function createRateLimiter(windowMs: number, maxAttempts: number, now: () => num
     if (!entry || entry.expires < at) {
       if (attempts.size >= MAX_TRACKED_IPS) {
         for (const [key, e] of attempts) if (e.expires < at) attempts.delete(key);
-        const oldest = attempts.keys().next().value;
-        if (oldest !== undefined) attempts.delete(oldest);
+        // Only evict an active entry if the sweep did not free space.
+        if (attempts.size >= MAX_TRACKED_IPS) {
+          const oldest = attempts.keys().next().value;
+          if (oldest !== undefined) attempts.delete(oldest);
+        }
       }
       attempts.set(ip, { count: 1, expires: at + windowMs });
       return false;
@@ -373,7 +399,9 @@ interface RequestServer {
 // The transport address is authoritative. x-forwarded-for is only a fallback:
 // Vercel overwrites it, but a bare server would trust a client-supplied value.
 function clientIpFor(req: Request, server?: RequestServer): string {
-  return server?.requestIP(req)?.address ?? req.headers.get("x-forwarded-for") ?? "unknown";
+  const forwarded = req.headers.get("x-forwarded-for");
+  const first = forwarded ? forwarded.split(",")[0].trim() : "";
+  return server?.requestIP(req)?.address ?? (first || "unknown");
 }
 
 // Deep page module: one table behind serveStatic. All static routes live here,
@@ -441,6 +469,7 @@ const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
 const providerCache = new Cache<string>(5 * 60 * 1000);
 // The domain list changes as VidSrc rotates hosts; refresh daily.
 const domainCache = new Cache<string[]>(24 * 60 * 60 * 1000);
+// shortcut: rate limit and caches are per-process; Vercel instances do not share state, upgrade to a shared store (e.g. Upstash) if global enforcement is required.
 const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 // The entrypoint is server.ts at the repository root, which is the only file

@@ -255,6 +255,40 @@ test("fetchTVMaze returns null on 404", async () => {
   expect(await fetchTVMaze("tt0000001", http)).toBeNull();
 });
 
+test("resolveTitle does not cache a transient Cinemeta failure", async () => {
+  let calls = 0;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url.includes("cinemeta")) { calls++; throw new Error("boom"); }
+      return reply(false);
+    },
+  };
+  const typeCache = new Cache<TypeResult>(60_000);
+  const first = await resolveTitle("tt9999999", http, typeCache);
+  const second = await resolveTitle("tt9999999", http, typeCache);
+  expect(first.ok).toBe(false);
+  expect(second.ok).toBe(false);
+  // Both calls hit the network because the miss was not cached.
+  expect(calls).toBe(4);
+});
+
+test("resolveTitle returns movie even when the series endpoint hangs", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url.includes("/meta/series/")) {
+        await new Promise(r => setTimeout(r, 30));
+        return reply(false);
+      }
+      if (url.includes("/meta/movie/")) return reply(true, MATRIX);
+      return reply(false);
+    },
+  };
+  const typeCache = new Cache<TypeResult>(60_000);
+  const result = await resolveTitle("tt0133093", http, typeCache);
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.meta.type).toBe("movie");
+});
+
 test("returns 502 when both Cinemeta and TVMaze miss", async () => {
   const handler = createHandler({
     http: { get: async () => reply(false) },
