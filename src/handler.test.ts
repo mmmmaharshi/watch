@@ -6,7 +6,6 @@ import {
   parseActiveDomains,
   parseImdbId,
   resolveTitle,
-  searchTitles,
   selectStream,
   type HttpClient,
   type TypeResult,
@@ -256,40 +255,16 @@ test("fetchTVMaze returns null on 404", async () => {
   expect(await fetchTVMaze("tt0000001", http)).toBeNull();
 });
 
-test("searchTitles returns up to 10 deduped results", async () => {
-  const http: HttpClient = {
-    get: async (url) => {
-      if (url.includes("/catalog/movie/")) return reply(true, { metas: [{ imdb_id: "tt1", name: "M1", releaseInfo: "2020" }] });
-      if (url.includes("/catalog/series/")) return reply(true, { metas: [{ imdb_id: "tt1", name: "Dup" }, { imdb_id: "tt2", name: "S1", releaseInfo: "2021", type: "series" }] });
-      return reply(false);
-    },
-  };
-  const out = await searchTitles("m", http);
-  expect(out).toEqual([
-    { id: "tt1", name: "M1", year: "2020", type: "movie" },
-    { id: "tt2", name: "S1", year: "2021", type: "tv" },
-  ]);
-});
-
-test("searchTitles returns empty for blank query", async () => {
-  const http: HttpClient = { get: async () => reply(true, { metas: [] }) };
-  expect(await searchTitles("   ", http)).toEqual([]);
-});
-
-test("/api/search returns results", async () => {
-  const http: HttpClient = {
-    get: async (url) => url.includes("/catalog/") ? reply(true, { metas: [{ imdb_id: "tt1", name: "M1", releaseInfo: "2020" }] }) : reply(false),
-  };
+test("returns 502 when both Cinemeta and TVMaze miss", async () => {
   const handler = createHandler({
-    http,
+    http: { get: async () => reply(false) },
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
     domainCache: new Cache<string[]>(60_000),
     isLimited: () => false,
   });
-  const res = await handler(new Request("http://x/api/search?q=m"));
-  expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({ results: [{ id: "tt1", name: "M1", year: "2020", type: "movie" }] });
+  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
+  expect(res.status).toBe(502);
 });
 
 test("selectStream skips the excluded provider across tiers", async () => {

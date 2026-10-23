@@ -263,43 +263,6 @@ async function selectStream(args: {
 }
 
 // ============================================================================
-// Search — Cinemeta catalog search (movies + series)
-// ============================================================================
-
-interface SearchResult {
-  id: string;
-  name: string;
-  year?: string;
-  type: "movie" | "tv";
-}
-
-const SEARCH_TIMEOUT_MS = 5000;
-
-async function searchTitles(query: string, http: HttpClient): Promise<SearchResult[]> {
-  const q = query.trim();
-  if (!q) return [];
-  const kinds = ["movie", "series"] as const;
-  const urls = kinds.map(k => `https://v3-cinemeta.strem.io/catalog/${k}/top/search=${encodeURIComponent(q)}.json`);
-  const ress = await Promise.all(urls.map(u => http.get(u, { signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS) }).catch(() => null)));
-  const out: SearchResult[] = [];
-  const seen = new Set<string>();
-  for (const r of ress) {
-    if (!r?.ok) continue;
-    let body: { metas?: Array<{ id?: string; imdb_id?: string; name?: string; releaseInfo?: string; year?: string; type?: string }> };
-    try { body = await r.json(); } catch { continue; }
-    for (const m of body.metas ?? []) {
-      const id = m.imdb_id || m.id;
-      if (!id || seen.has(id)) continue;
-      seen.add(id);
-      out.push({ id, name: m.name || id, year: m.releaseInfo || m.year, type: m.type === "series" ? "tv" : "movie" });
-      if (out.length >= 10) break;
-    }
-    if (out.length >= 10) break;
-  }
-  return out;
-}
-
-// ============================================================================
 // Rate Limiter — Encapsulated state
 // ============================================================================
 
@@ -439,12 +402,6 @@ function createHandler(deps: {
   return async function handleRequest(req: Request, server?: RequestServer): Promise<Response> {
     const url = new URL(req.url);
 
-    if (url.pathname === "/api/search") {
-      const q = url.searchParams.get("q") ?? "";
-      const results = await searchTitles(q, http);
-      return new Response(JSON.stringify({ results }), { headers: JSON_HEADERS });
-    }
-
     if (url.pathname === "/api/watch") {
       if (isLimited(clientIpFor(req, server))) {
         return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
@@ -497,5 +454,5 @@ const handler = createHandler({
   isLimited,
 });
 
-export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, resolveTitle, selectStream, fetchTVMaze, searchTitles, Cache };
+export { handler, createHandler, createRateLimiter, parseActiveDomains, parseImdbId, resolveTitle, selectStream, fetchTVMaze, Cache };
 export type { HttpClient, TitleMeta, TypeResult };
