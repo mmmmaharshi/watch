@@ -39,6 +39,7 @@ let pendingStreamUrl: string | null = null;
 let currentProvider: string | null = null;
 let currentId: string | null = null;
 let isFetching = false;
+let loadingId: string | null = null;
 
 const RECENT_KEY = "watch.recent";
 const recent = document.getElementById("recent") as HTMLElement;
@@ -152,6 +153,7 @@ async function go() {
   }
 
   setLoading(true);
+  loadingId = value;
   setStatus("Finding a working stream...", "loading");
 
   try {
@@ -171,6 +173,7 @@ async function go() {
     input.classList.add("error");
     setTimeout(() => input.classList.remove("error"), 2000);
   } finally {
+    loadingId = null;
     setLoading(false);
   }
 }
@@ -212,10 +215,14 @@ renderRecent();
 // A shared link such as /#id=tt0133093 (or a whole IMDb link) loads right away.
 if (params.get("id")) go();
 else input.focus();
-// Recent and help links change only the hash, which does not reload the page.
-window.addEventListener("hashchange", () => {
+// Help and recent links change only the hash, which does not reload the page.
+// Same-document clicks go through the router (popstate, no hashchange);
+// back/forward can fire both, so an id that is showing or loading is skipped.
+function handleHash() {
   const shared = new URLSearchParams(location.hash.slice(1)).get("id");
-  if (!shared || shared === currentId) return;
+  if (!shared || shared === currentId || shared === loadingId) return;
   input.value = shared;
   go();
-});
+}
+window.addEventListener("hashchange", handleHash);
+window.addEventListener("popstate", handleHash);
