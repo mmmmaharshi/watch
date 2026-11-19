@@ -12,7 +12,7 @@ test("keeps the newest first, without duplicates", () => {
 test("caps the list at five entries", () => {
   let list: { id: string }[] = [];
   for (const id of ["a", "b", "c", "d", "e", "f"]) list = addRecent(list, { id });
-  expect(list.map(item => item.id)).toEqual(["f", "e", "d", "c", "b"]);
+  expect(list.map((item) => item.id)).toEqual(["f", "e", "d", "c", "b"]);
 });
 
 test("falls back to an empty list on missing or junk storage", () => {

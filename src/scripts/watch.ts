@@ -64,7 +64,7 @@ function setModalFetching(fetching: boolean) {
   modalCopy.disabled = fetching;
   modalWatch.disabled = fetching;
   modalTryAnother.disabled = fetching;
-  [modalImdb, modalUrlText].forEach(a => (a.style.pointerEvents = fetching ? "none" : ""));
+  [modalImdb, modalUrlText].forEach((a) => (a.style.pointerEvents = fetching ? "none" : ""));
 }
 
 function showModal(data: WatchData) {
@@ -134,7 +134,7 @@ modalTryAnother.addEventListener("click", async () => {
 });
 
 // Esc during a fetch would drop the open dialog, so block it until done.
-modal.addEventListener("cancel", e => {
+modal.addEventListener("cancel", (e) => {
   if (isFetching) e.preventDefault();
 });
 
@@ -206,7 +206,7 @@ function renderRecent() {
   });
 }
 
-form.addEventListener("submit", e => {
+form.addEventListener("submit", (e) => {
   e.preventDefault();
   void go();
 });

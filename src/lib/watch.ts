@@ -15,7 +15,10 @@ type LooseJson = MetaJson & Record<string, unknown>;
 export type ContentType = "movie" | "tv";
 
 export interface HttpClient {
-  get(url: string, options?: { signal?: AbortSignal }): Promise<{
+  get(
+    url: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{
     ok: boolean;
     json: () => Promise<LooseJson>;
     text: () => Promise<string>;
@@ -32,7 +35,10 @@ export const defaultHttpClient: HttpClient = {
 export class Cache<T> {
   private store = new Map<string, { value: T; expires: number }>();
 
-  constructor(private ttl: number, private maxEntries = 1000) {}
+  constructor(
+    private ttl: number,
+    private maxEntries = 1000,
+  ) {}
 
   get(key: string): T | undefined {
     const entry = this.store.get(key);
@@ -75,7 +81,7 @@ export function parseActiveDomains(html: string): string[] {
   const end = html.indexOf('id="old"', start);
   const section = html.slice(start, end === -1 ? undefined : end);
   const urls = [...section.matchAll(/data-val="([^"]+)"/g)]
-    .map(m => {
+    .map((m) => {
       try {
         const origin = new URL(m[1]).origin;
         return /^https?:\/\//.test(origin) ? origin : null;
@@ -88,7 +94,7 @@ export function parseActiveDomains(html: string): string[] {
 }
 
 function toProviders(baseUrls: string[]): Provider[] {
-  return baseUrls.map(baseUrl => ({ name: new URL(baseUrl).host, baseUrl }));
+  return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
 
 function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string): string {
@@ -136,7 +142,11 @@ interface FetchKindResult {
   transient: boolean;
 }
 
-async function fetchKind(kind: "series" | "movie", id: string, http: HttpClient): Promise<FetchKindResult> {
+async function fetchKind(
+  kind: "series" | "movie",
+  id: string,
+  http: HttpClient,
+): Promise<FetchKindResult> {
   try {
     const url = `https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`;
     const res = await http.get(url, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
@@ -158,16 +168,29 @@ async function fetchKind(kind: "series" | "movie", id: string, http: HttpClient)
   }
 }
 
-async function fetchMeta(id: string, http: HttpClient): Promise<{ meta: TitleMeta | null; transient: boolean }> {
-  const seriesPromise = fetchKind("series", id, http).then(result => ({ which: "series" as const, result }));
-  const moviePromise = fetchKind("movie", id, http).then(result => ({ which: "movie" as const, result }));
+async function fetchMeta(
+  id: string,
+  http: HttpClient,
+): Promise<{ meta: TitleMeta | null; transient: boolean }> {
+  const seriesPromise = fetchKind("series", id, http).then((result) => ({
+    which: "series" as const,
+    result,
+  }));
+  const moviePromise = fetchKind("movie", id, http).then((result) => ({
+    which: "movie" as const,
+    result,
+  }));
   const first = await Promise.race([seriesPromise, moviePromise]);
   if (first.result.meta) return first.result;
   const other = first.which === "series" ? await moviePromise : await seriesPromise;
   return { meta: other.result.meta, transient: first.result.transient || other.result.transient };
 }
 
-export async function resolveTitle(id: string, http: HttpClient, cache: Cache<TypeResult>): Promise<TypeResult> {
+export async function resolveTitle(
+  id: string,
+  http: HttpClient,
+  cache: Cache<TypeResult>,
+): Promise<TypeResult> {
   const cached = cache.get(id);
   if (cached) return cached;
 
@@ -194,12 +217,15 @@ const TVMAZE_TIMEOUT_MS = 5000;
 
 export async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMeta | null> {
   try {
-    const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, { signal: AbortSignal.timeout(TVMAZE_TIMEOUT_MS) });
+    const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, {
+      signal: AbortSignal.timeout(TVMAZE_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     const m = await res.json();
     if (typeof m.name !== "string") return null;
     const year = typeof m.premiered === "string" ? m.premiered.slice(0, 4) : undefined;
-    const summary = typeof m.summary === "string" ? m.summary.replace(/<[^>]*>/g, "").trim() : undefined;
+    const summary =
+      typeof m.summary === "string" ? m.summary.replace(/<[^>]*>/g, "").trim() : undefined;
     return { type: "tv", name: m.name, year, description: summary };
   } catch {
     return null;
@@ -228,14 +254,16 @@ export async function selectStream(args: {
   const providers = await loadProviders(http, domainCache);
   const tiers: Provider[][] = [providers, [VIDFAST]];
   const cachedName = providerCache.get(cacheKey);
-  const cached = cachedName ? [...providers, VIDFAST].find(p => p.name === cachedName) : undefined;
+  const cached = cachedName
+    ? [...providers, VIDFAST].find((p) => p.name === cachedName)
+    : undefined;
   if (cached) tiers.unshift([cached]);
 
   for (const tier of tiers) {
-    const candidates = tier.filter(p => p.name !== exclude);
+    const candidates = tier.filter((p) => p.name !== exclude);
     if (!candidates.length) continue;
     try {
-      const winner = await Promise.any(candidates.map(p => probeProvider(p, type, id, http)));
+      const winner = await Promise.any(candidates.map((p) => probeProvider(p, type, id, http)));
       providerCache.set(cacheKey, winner.provider);
       return winner;
     } catch {
@@ -247,7 +275,11 @@ export async function selectStream(args: {
 
 const MAX_TRACKED_IPS = 10_000;
 
-export function createRateLimiter(windowMs: number, maxAttempts: number, now: () => number = Date.now) {
+export function createRateLimiter(
+  windowMs: number,
+  maxAttempts: number,
+  now: () => number = Date.now,
+) {
   const attempts = new Map<string, { count: number; expires: number }>();
 
   return function isLimited(ip: string): boolean {
@@ -307,8 +339,10 @@ export interface WatchResult {
 // One shape for every transport (action, route). Status mirrors the old API.
 export async function handleWatchRequest(
   deps: WatchDeps,
-  input: { id: string; exclude?: string }
-): Promise<{ ok: true; result: WatchResult } | { ok: false; status: 400 | 502 | 503; error: string }> {
+  input: { id: string; exclude?: string },
+): Promise<
+  { ok: true; result: WatchResult } | { ok: false; status: 400 | 502 | 503; error: string }
+> {
   const { http, typeCache, providerCache, domainCache } = deps;
 
   const id = parseImdbId(input.id);
@@ -317,10 +351,20 @@ export async function handleWatchRequest(
   const typeResult = await resolveTitle(id, http, typeCache);
   if (!typeResult.ok) return { ok: false, status: 502, error: "Failed to detect content type" };
 
-  const stream = await selectStream({ http, type: typeResult.meta.type, id, exclude: input.exclude, providerCache, domainCache });
+  const stream = await selectStream({
+    http,
+    type: typeResult.meta.type,
+    id,
+    exclude: input.exclude,
+    providerCache,
+    domainCache,
+  });
   if (!stream) return { ok: false, status: 503, error: "No working providers available" };
 
-  return { ok: true, result: { id, url: stream.url, provider: stream.provider, ...typeResult.meta } };
+  return {
+    ok: true,
+    result: { id, url: stream.url, provider: stream.provider, ...typeResult.meta },
+  };
 }
 
 // Singletons for the serverless function. Per-instance only;
@@ -339,9 +383,15 @@ export function clientIp(req: Request): string {
 }
 
 // Null means allowed; a Response means limited. Middleware answers with it.
-export function limitResponse(req: Request, limited: (ip: string) => boolean = isLimited): Response | null {
+export function limitResponse(
+  req: Request,
+  limited: (ip: string) => boolean = isLimited,
+): Response | null {
   if (limited(clientIp(req))) {
-    return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
+    return new Response(JSON.stringify({ error: "Too many requests" }), {
+      status: 429,
+      headers: JSON_HEADERS,
+    });
   }
   return null;
 }

@@ -15,7 +15,9 @@ import {
   type WatchDeps,
 } from "./watch";
 
-const MATRIX = { meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." } };
+const MATRIX = {
+  meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." },
+};
 const DIRECTORY = "https://vidsrc.domains/";
 const DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vidsrc.ir"];
 
@@ -30,7 +32,7 @@ function reply(ok: boolean, json: MetaJson = {}, text = ""): HttpReply {
 // ones (in the #old section) must be ignored.
 const directoryHtml = (domains: string[]) =>
   `<section id="domains">` +
-  domains.map(d => `<button class="chip-copy" data-val="${d}">Copy</button>`).join("") +
+  domains.map((d) => `<button class="chip-copy" data-val="${d}">Copy</button>`).join("") +
   `</section><section id="old"><button data-val="https://vidsrc.me">Copy</button></section>`;
 
 // A fake network: the directory, one Cinemeta endpoint (the guessed kind), and
@@ -54,7 +56,10 @@ function makeDeps(allowed: () => string, metaKind: "movie" | "series" = "movie")
 
 test("rejects a malformed IMDB id", async () => {
   for (const bad of ["abc", "tt12345", "0133093"]) {
-    const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: bad });
+    const out = await handleWatchRequest(
+      makeDeps(() => "vidsrc.sh"),
+      { id: bad },
+    );
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.status).toBe(400);
@@ -74,7 +79,10 @@ test("parses an id out of pasted text", () => {
 
 test("accepts a full IMDb link and answers with the canonical id", async () => {
   const link = "https://www.imdb.com/title/tt0133093/?ref_=nv_sr_srsg_0";
-  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: link });
+  const out = await handleWatchRequest(
+    makeDeps(() => "vidsrc.sh"),
+    { id: link },
+  );
   expect(out.ok).toBe(true);
   if (out.ok) {
     expect(out.result.id).toBe("tt0133093");
@@ -83,7 +91,10 @@ test("accepts a full IMDb link and answers with the canonical id", async () => {
 });
 
 test("returns a working embed url and metadata for a valid id", async () => {
-  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: "tt0133093" });
+  const out = await handleWatchRequest(
+    makeDeps(() => "vidsrc.sh"),
+    { id: "tt0133093" },
+  );
   expect(out.ok).toBe(true);
   if (out.ok) {
     expect(out.result).toEqual({
@@ -100,7 +111,10 @@ test("returns a working embed url and metadata for a valid id", async () => {
 });
 
 test("builds a tv embed url when the series lookup answers", async () => {
-  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh", "series"), { id: "tt0903747" });
+  const out = await handleWatchRequest(
+    makeDeps(() => "vidsrc.sh", "series"),
+    { id: "tt0903747" },
+  );
   expect(out.ok).toBe(true);
   if (out.ok) {
     expect(out.result.type).toBe("tv");
@@ -129,19 +143,29 @@ test("falls back to known domains when the directory is unreachable", async () =
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) return reply(false);
-      const ok = url.includes("cinemeta") ? url.includes("/meta/movie/") : url.includes("vidsrc.sh");
+      const ok = url.includes("cinemeta")
+        ? url.includes("/meta/movie/")
+        : url.includes("vidsrc.sh");
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
   const out = await handleWatchRequest(
-    { http, typeCache: new Cache<TypeResult>(1), providerCache: new Cache(1), domainCache: new Cache<string[]>(1) },
-    { id: "tt0133093" }
+    {
+      http,
+      typeCache: new Cache<TypeResult>(1),
+      providerCache: new Cache(1),
+      domainCache: new Cache<string[]>(1),
+    },
+    { id: "tt0133093" },
   );
   expect(out.ok && out.result.provider).toBe("vidsrc.sh");
 });
 
 test("uses VidFast when every VidSrc domain fails", async () => {
-  const out = await handleWatchRequest(makeDeps(() => "vidfast.vc"), { id: "tt0133093" });
+  const out = await handleWatchRequest(
+    makeDeps(() => "vidfast.vc"),
+    { id: "tt0133093" },
+  );
   expect(out.ok).toBe(true);
   if (out.ok) {
     expect(out.result.provider).toBe("vidfast.vc");
@@ -150,7 +174,10 @@ test("uses VidFast when every VidSrc domain fails", async () => {
 });
 
 test("VidFast TV falls back to season 1 episode 1", async () => {
-  const out = await handleWatchRequest(makeDeps(() => "vidfast.vc", "series"), { id: "tt0903747" });
+  const out = await handleWatchRequest(
+    makeDeps(() => "vidfast.vc", "series"),
+    { id: "tt0903747" },
+  );
   expect(out.ok && out.result.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
 });
 
@@ -162,7 +189,9 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
         directoryCalls++;
         return reply(false);
       }
-      const ok = url.includes("cinemeta") ? url.includes("/meta/movie/") : url.includes("vidsrc.sh");
+      const ok = url.includes("cinemeta")
+        ? url.includes("/meta/movie/")
+        : url.includes("vidsrc.sh");
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
@@ -185,7 +214,7 @@ test("returns 502 when metadata is unavailable", async () => {
       providerCache: new Cache(60_000),
       domainCache: new Cache<string[]>(60_000),
     },
-    { id: "tt0133093" }
+    { id: "tt0133093" },
   );
   expect(out.ok).toBe(false);
   if (!out.ok) {
@@ -202,7 +231,9 @@ test("answers 429 from the limiter and null when allowed", async () => {
 });
 
 test("keys the limiter on the forwarded header, unknown without it", () => {
-  expect(clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } }))).toBe("1.2.3.4");
+  expect(
+    clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } })),
+  ).toBe("1.2.3.4");
   expect(clientIp(new Request("http://x/"))).toBe("unknown");
 });
 
@@ -316,7 +347,7 @@ test("returns 502 when both Cinemeta and TVMaze miss", async () => {
       providerCache: new Cache(60_000),
       domainCache: new Cache<string[]>(60_000),
     },
-    { id: "tt0133093" }
+    { id: "tt0133093" },
   );
   expect(out.ok).toBe(false);
   if (!out.ok) expect(out.status).toBe(502);
@@ -325,7 +356,8 @@ test("returns 502 when both Cinemeta and TVMaze miss", async () => {
 test("selectStream skips the excluded provider across tiers", async () => {
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(["https://a.test", "https://b.test"]));
+      if (url === DIRECTORY)
+        return reply(true, {}, directoryHtml(["https://a.test", "https://b.test"]));
       return reply(true);
     },
   };
@@ -379,7 +411,7 @@ test("the page prerenders and the sitemap is generated", async () => {
   const page = await Bun.file("src/pages/index.astro").text();
   expect(page).toContain("export const prerender = true");
 
-  const pkg = await Bun.file("package.json").json() as { dependencies?: Record<string, string> };
+  const pkg = (await Bun.file("package.json").json()) as { dependencies?: Record<string, string> };
   expect(pkg.dependencies?.["@astrojs/sitemap"]).toBeDefined();
 
   const robots = await Bun.file("public/robots.txt").text();
