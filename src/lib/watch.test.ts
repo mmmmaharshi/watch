@@ -381,3 +381,11 @@ test("the page prerenders and the sitemap is generated", async () => {
   const robots = await Bun.file("public/robots.txt").text();
   expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");
 });
+
+// The title ID rides in the hash, never a query link, so crawlers see one
+// indexable URL. (The client fetch to /api/watch?id=... is not link markup.)
+test("the title id rides in the hash, never a query link", async () => {
+  const page = await Bun.file("src/pages/index.astro").text();
+  expect(page).toContain('href="#id=');
+  expect(page).not.toContain('href="?id');
+});
