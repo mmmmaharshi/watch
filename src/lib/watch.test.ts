@@ -365,6 +365,7 @@ test("the Astro page keeps title, canonical and share tags", async () => {
   expect(page).toContain('property="og:title"');
   expect(page).toContain('"/og.png"');
   expect(page).toContain('name="twitter:card"');
+  expect(page).toContain("<dialog");
   // The title ID stays in the hash: a query string gives each title its own
   // URL to index, all serving the same shell.
   expect(page).toContain('src="../scripts/watch.ts"');

@@ -313,22 +313,14 @@ export const prerender = true;
     }
   }
 
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--overlay);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease;
+  dialog.modal {
+    overscroll-behavior: contain;
   }
 
-  .modal-overlay.active {
-    opacity: 1;
-    visibility: visible;
+  dialog.modal::backdrop {
+    background: var(--overlay);
+    overflow: hidden;
+    overscroll-behavior: contain;
   }
 
   .modal {
@@ -512,9 +504,7 @@ export const prerender = true;
     <p class="disclaimer">We don't host anything — we only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
   </main>
 
-  <!-- shortcut: div modal keeps a manual focus trap and inert switch, upgrade to native dialog with showModal when the next modal change ships. -->
-  <div class="modal-overlay" id="modal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <dialog class="modal" id="modal" aria-labelledby="modal-title">
       <h2 id="modal-title">Stream Found</h2>
       <p class="meta" id="modal-meta"></p>
       <p class="modal-description" id="modal-description" style="display: none;"></p>
@@ -555,8 +545,7 @@ export const prerender = true;
         </button>
         <button class="btn-primary" id="modal-watch">Watch</button>
       </div>
-    </div>
-  </div>
+  </dialog>
 
 <script src="../scripts/watch.ts"></script>
 </body>

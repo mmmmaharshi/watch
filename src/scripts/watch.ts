@@ -12,11 +12,10 @@ interface WatchData {
 }
 
 const form = document.getElementById("form") as HTMLFormElement;
-const main = document.querySelector("main") as HTMLElement;
 const input = document.getElementById("imdb") as HTMLInputElement;
 const btn = document.getElementById("go") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
-const modal = document.getElementById("modal") as HTMLElement;
+const modal = document.getElementById("modal") as HTMLDialogElement;
 const modalMeta = document.getElementById("modal-meta") as HTMLElement;
 const modalDescription = document.getElementById("modal-description") as HTMLElement;
 const modalType = document.getElementById("modal-type") as HTMLElement;
@@ -38,7 +37,6 @@ let pendingStreamUrl: string | null = null;
 let currentProvider: string | null = null;
 let currentId: string | null = null;
 let isFetching = false;
-let focusedElementBeforeModal: Element | null = null;
 
 const RECENT_KEY = "watch.recent";
 const recent = document.getElementById("recent") as HTMLElement;
@@ -64,7 +62,6 @@ function setModalFetching(fetching: boolean) {
   modalWatch.disabled = fetching;
   modalTryAnother.disabled = fetching;
   [modalImdb, modalUrlText].forEach(a => (a.style.pointerEvents = fetching ? "none" : ""));
-  (main as HTMLElement & { inert: boolean }).inert = fetching || modal.classList.contains("active");
 }
 
 function showModal(data: WatchData) {
@@ -88,45 +85,15 @@ function showModal(data: WatchData) {
   modalUrlText.href = data.url;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove("copied");
-  modal.classList.add("active");
-  (main as HTMLElement & { inert: boolean }).inert = true;
-  trapFocus();
+  if (!modal.open) modal.showModal();
+  modalCancel.focus();
 }
 
 function hideModal() {
-  modal.classList.remove("active");
+  if (modal.open) modal.close();
   pendingStreamUrl = null;
   currentProvider = null;
   currentId = null;
-  (main as HTMLElement & { inert: boolean }).inert = false;
-  releaseFocus();
-}
-
-function trapFocus() {
-  focusedElementBeforeModal = document.activeElement;
-  const focusable = modal.querySelectorAll("button:not([disabled]), input:not([disabled]), [tabindex]");
-  if (focusable.length) (focusable[0] as HTMLElement).focus();
-  modal.addEventListener("keydown", handleFocusTrap);
-}
-
-function releaseFocus() {
-  modal.removeEventListener("keydown", handleFocusTrap);
-  if (focusedElementBeforeModal) (focusedElementBeforeModal as HTMLElement).focus();
-}
-
-function handleFocusTrap(e: Event) {
-  const ke = e as KeyboardEvent;
-  if (ke.key !== "Tab") return;
-  const focusable = modal.querySelectorAll("button:not([disabled]), input:not([disabled]), [tabindex]");
-  const first = focusable[0] as HTMLElement;
-  const last = focusable[focusable.length - 1] as HTMLElement;
-  if (ke.shiftKey && document.activeElement === first) {
-    ke.preventDefault();
-    last.focus();
-  } else if (!ke.shiftKey && document.activeElement === last) {
-    ke.preventDefault();
-    first.focus();
-  }
 }
 
 modalCopy.addEventListener("click", async () => {
@@ -164,12 +131,12 @@ modalTryAnother.addEventListener("click", async () => {
     setStatus((err as Error).message || "No other providers available.", "error");
   } finally {
     setModalFetching(false);
-    (main as HTMLElement & { inert: boolean }).inert = true;
   }
 });
 
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && modal.classList.contains("active") && !isFetching) hideModal();
+// Esc during a fetch would drop the open dialog, so block it until done.
+modal.addEventListener("cancel", e => {
+  if (isFetching) e.preventDefault();
 });
 
 async function go() {
