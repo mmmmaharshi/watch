@@ -373,3 +373,16 @@ test("the Astro page keeps title, canonical and share tags", async () => {
   // Hash links do not reload the page, so the listener makes them work.
   expect(script).toContain("addEventListener(\"hashchange\"");
 });
+
+// The shell is static (CDN), only /api/watch runs on demand. The sitemap is
+// generated, not hand-written.
+test("the page prerenders and the sitemap is generated", async () => {
+  const page = await Bun.file("src/pages/index.astro").text();
+  expect(page).toContain("export const prerender = true");
+
+  const config = await Bun.file("astro.config.ts").text();
+  expect(config).toContain("@astrojs/sitemap");
+
+  const robots = await Bun.file("public/robots.txt").text();
+  expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");
+});

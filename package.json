@@ -9,6 +9,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.6",
     "@astrojs/vercel": "^11.0.22",
     "astro": "^7.4.13"
   },
