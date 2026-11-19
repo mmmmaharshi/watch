@@ -2,6 +2,7 @@
 - For syntax-aware code search, default to `ast-grep --lang <language> -p '<pattern>'` (adjust `--lang` per language); use text-only search only when explicitly requested.
 - Use `git twig new` in place of `git worktree add` when creating a worktree (see the `git-twig` skill).
 - Use Astro as much as possible. Use the Astro MCP server for the latest docs.
+- Before trusting browser-measured numbers, curl-verify the dev server serves current code (grep the response for a string from the working tree).
 - Respond to me with $simple-english and $i-have-adhd.
 - Use $simple-english for every written part in the repo.
 
