@@ -1,3 +1,3 @@
 {
-  "*": "oxfmt --write"
+  "*.{js,ts,jsx,tsx,mjs,cjs,json,jsonc}": "oxfmt --write"
 }
