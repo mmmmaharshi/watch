@@ -3,8 +3,16 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch run server.ts",
-    "start": "bun run server.ts",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "test": "bun test"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^11.0.22",
+    "astro": "^7.4.13"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.5"
   }
 }

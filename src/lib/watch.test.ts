@@ -1,6 +1,7 @@
+import { expect, test } from "bun:test";
 import {
   Cache,
-  createHandler,
+  createApiHandler,
   createRateLimiter,
   fetchTVMaze,
   parseActiveDomains,
@@ -9,7 +10,7 @@ import {
   selectStream,
   type HttpClient,
   type TypeResult,
-} from "./handler";
+} from "./watch";
 
 const MATRIX = { meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." } };
 const DIRECTORY = "https://vidsrc.domains/";
@@ -40,7 +41,7 @@ function makeHandler(allowed: () => string, limited = false, metaKind: "movie" |
       return reply(isMeta ? isMetaKind : url.includes(allowed()), isMetaKind ? MATRIX : {});
     },
   };
-  return createHandler({
+  return createApiHandler({
     http,
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
@@ -125,7 +126,7 @@ test("falls back to known domains when the directory is unreachable", async () =
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
-  const handler = createHandler({
+  const handler = createApiHandler({
     http,
     typeCache: new Cache<TypeResult>(1),
     providerCache: new Cache(1),
@@ -153,12 +154,15 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
   let directoryCalls = 0;
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) { directoryCalls++; return reply(false); }
+      if (url === DIRECTORY) {
+        directoryCalls++;
+        return reply(false);
+      }
       const ok = url.includes("cinemeta") ? url.includes("/meta/movie/") : url.includes("vidsrc.sh");
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
-  const handler = createHandler({
+  const handler = createApiHandler({
     http,
     typeCache: new Cache<TypeResult>(1),
     providerCache: new Cache(1),
@@ -171,7 +175,7 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
 });
 
 test("returns 502 when metadata is unavailable", async () => {
-  const handler = createHandler({
+  const handler = createApiHandler({
     http: { get: async () => reply(false) },
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
@@ -216,7 +220,7 @@ test("re-probes a cached provider instead of trusting it blind", async () => {
     },
   };
   const providerCache = new Cache<string>(60_000);
-  const handler = createHandler({
+  const handler = createApiHandler({
     http,
     typeCache: new Cache<TypeResult>(60_000),
     providerCache,
@@ -259,7 +263,10 @@ test("resolveTitle does not cache a transient Cinemeta failure", async () => {
   let calls = 0;
   const http: HttpClient = {
     get: async (url) => {
-      if (url.includes("cinemeta")) { calls++; throw new Error("boom"); }
+      if (url.includes("cinemeta")) {
+        calls++;
+        throw new Error("boom");
+      }
       return reply(false);
     },
   };
@@ -290,7 +297,7 @@ test("resolveTitle returns movie even when the series endpoint hangs", async () 
 });
 
 test("returns 502 when both Cinemeta and TVMaze miss", async () => {
-  const handler = createHandler({
+  const handler = createApiHandler({
     http: { get: async () => reply(false) },
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
@@ -328,9 +335,9 @@ test("caps the cache by evicting the oldest entry", () => {
   expect(cache.get("c")).toBe("3");
 });
 
-test("keys the limiter on the transport address, not a spoofed header", async () => {
+test("keys the limiter on the forwarded header", async () => {
   const seen: string[] = [];
-  const handler = createHandler({
+  const handler = createApiHandler({
     http: { get: async () => reply(false) },
     typeCache: new Cache<TypeResult>(1),
     providerCache: new Cache(1),
@@ -341,76 +348,28 @@ test("keys the limiter on the transport address, not a spoofed header", async ()
     },
   });
 
-  await handler(
-    new Request("http://x/api/watch?id=tt0133093", { headers: { "x-forwarded-for": "9.9.9.9" } }),
-    { requestIP: () => ({ address: "1.2.3.4" }) }
-  );
+  await handler(new Request("http://x/api/watch?id=tt0133093", { headers: { "x-forwarded-for": "1.2.3.4" } }));
   expect(seen).toEqual(["1.2.3.4"]);
 
-  await handler(new Request("http://x/api/watch?id=tt0133093"), { requestIP: () => null });
+  await handler(new Request("http://x/api/watch?id=tt0133093"));
   expect(seen[1]).toBe("unknown");
 });
 
-test("returns a JSON 404 for unknown routes", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const res = await handler(new Request("http://x/nope"));
-  expect(res.status).toBe(404);
-  expect(await res.json()).toEqual({ error: "Not Found" });
-});
-
-test("serves the page at /", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const res = await handler(new Request("http://x/"));
-  expect(res.status).toBe(200);
-  expect(res.headers.get("content-type")).toBe("text/html");
-});
-
-test("serves the recent-list module", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const res = await handler(new Request("http://x/recent.js"));
-  expect(res.status).toBe(200);
-  expect(res.headers.get("content-type")).toBe("text/javascript");
-});
-
-test("serves robots.txt and sitemap.xml for crawlers", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-
-  const robots = await handler(new Request("http://x/robots.txt"));
-  expect(robots.status).toBe(200);
-  expect(robots.headers.get("content-type")).toBe("text/plain");
-  expect(await robots.text()).toContain("Sitemap: https://watch.maharshi.work/sitemap.xml");
-
-  const sitemap = await handler(new Request("http://x/sitemap.xml"));
-  expect(sitemap.status).toBe(200);
-  expect(sitemap.headers.get("content-type")).toBe("application/xml");
-  expect(await sitemap.text()).toContain("<loc>https://watch.maharshi.work/</loc>");
-});
-
-test("serves the Open Graph image as a real PNG", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const res = await handler(new Request("http://x/og.png"));
-  expect(res.status).toBe(200);
-  expect(res.headers.get("content-type")).toBe("image/png");
-
-  // A base64 blob that lost its header would still answer 200, so check the
-  // PNG magic bytes and the size.
-  const png = new Uint8Array(await res.arrayBuffer());
-  expect([...png.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
-  expect(png.length).toBeGreaterThan(10_000);
-});
-
-test("gives the page a title, a canonical and share tags", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const page = await (await handler(new Request("http://x/"))).text();
+// Astro owns the page now: static files live in public/, the markup in
+// src/pages/index.astro. This guards the SEO and share-link behavior.
+test("the Astro page keeps title, canonical and share tags", async () => {
+  const page = await Bun.file("src/pages/index.astro").text();
 
   expect(page).toContain("<title>Watch Movies and TV Shows Online — Paste an IMDb ID</title>");
-  expect(page).toContain('<link rel="canonical" href="https://watch.maharshi.work/">');
+  expect(page).toContain('rel="canonical"');
   expect(page).toContain('property="og:title"');
-  expect(page).toContain('property="og:image" content="https://watch.maharshi.work/og.png"');
+  expect(page).toContain('"/og.png"');
   expect(page).toContain('name="twitter:card"');
-  // The title ID has to stay in the hash: a query string would give every
-  // title its own URL to index, all serving the same shell.
-  expect(page).toContain("location.hash");
-  // Hash links do not reload the page, so the listener is what makes them work.
-  expect(page).toContain("addEventListener('hashchange'");
+  // The title ID stays in the hash: a query string gives each title its own
+  // URL to index, all serving the same shell.
+  expect(page).toContain('src="../scripts/watch.ts"');
+  const script = await Bun.file("src/scripts/watch.ts").text();
+  expect(script).toContain("location.hash");
+  // Hash links do not reload the page, so the listener makes them work.
+  expect(script).toContain("addEventListener(\"hashchange\"");
 });
