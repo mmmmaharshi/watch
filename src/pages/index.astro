@@ -1,5 +1,6 @@
 ---
 import { SITE_URL } from "../consts";
+import { ClientRouter } from "astro:transitions";
 import "@fontsource/geist-pixel";
 
 export const prerender = true;
@@ -25,6 +26,7 @@ export const prerender = true;
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Watch Movies and TV Shows Online — Paste an IMDb ID">
 <meta name="twitter:description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show.">
+<ClientRouter />
 <style>
   :root {
     --canvas: #0A0A0A;
