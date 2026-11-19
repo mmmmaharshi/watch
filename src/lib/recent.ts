@@ -14,8 +14,9 @@ export function addRecent(list: RecentEntry[], entry: RecentEntry): RecentEntry[
 
 // localStorage may hold anything: junk, or a shape from an older version.
 export function parseRecent(raw: string | null): RecentEntry[] {
+  if (typeof raw !== "string") return [];
   try {
-    const parsed = JSON.parse(raw as string);
+    const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(item => item && typeof item.id === "string");
   } catch {

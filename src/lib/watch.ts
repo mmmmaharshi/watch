@@ -9,10 +9,15 @@ interface MetaJson {
   };
 }
 
+// Third-party JSON; call sites check the shape before use.
+type LooseJson = MetaJson & Record<string, unknown>;
+
+export type ContentType = "movie" | "tv";
+
 export interface HttpClient {
   get(url: string, options?: { signal?: AbortSignal }): Promise<{
     ok: boolean;
-    json: () => Promise<MetaJson & Record<string, any>>;
+    json: () => Promise<LooseJson>;
     text: () => Promise<string>;
   }>;
 }
@@ -20,7 +25,7 @@ export interface HttpClient {
 export const defaultHttpClient: HttpClient = {
   get: async (url, options) => {
     const res = await fetch(url, options);
-    return { ok: res.ok, json: () => res.json() as Promise<MetaJson & Record<string, any>>, text: () => res.text() };
+    return { ok: res.ok, json: () => res.json() as Promise<LooseJson>, text: () => res.text() };
   },
 };
 
@@ -59,7 +64,7 @@ export interface Provider {
   name: string;
   baseUrl: string;
   // Defaults to /embed/{type}/{id}; override for a provider with another shape.
-  path?: (type: "movie" | "tv", id: string) => string;
+  path?: (type: ContentType, id: string) => string;
 }
 
 // Active domains sit in the #domains section, each row carrying its URL in a
@@ -114,7 +119,7 @@ const VIDFAST: Provider = {
 };
 
 export interface TitleMeta {
-  type: "movie" | "tv";
+  type: ContentType;
   name: string;
   year?: string;
   rating?: string;
@@ -192,8 +197,8 @@ export async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMe
     const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, { signal: AbortSignal.timeout(TVMAZE_TIMEOUT_MS) });
     if (!res.ok) return null;
     const m = await res.json();
-    if (!m?.name) return null;
-    const year = m.premiered ? String(m.premiered).slice(0, 4) : undefined;
+    if (typeof m.name !== "string") return null;
+    const year = typeof m.premiered === "string" ? m.premiered.slice(0, 4) : undefined;
     const summary = typeof m.summary === "string" ? m.summary.replace(/<[^>]*>/g, "").trim() : undefined;
     return { type: "tv", name: m.name, year, description: summary };
   } catch {
@@ -203,7 +208,7 @@ export async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMe
 
 const PROBE_TIMEOUT_MS = 8000;
 
-async function probeProvider(provider: Provider, type: "movie" | "tv", id: string, http: HttpClient) {
+async function probeProvider(provider: Provider, type: ContentType, id: string, http: HttpClient) {
   const url = buildEmbedUrl(provider, type, id);
   const res = await http.get(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`${provider.name} unavailable`);
@@ -212,7 +217,7 @@ async function probeProvider(provider: Provider, type: "movie" | "tv", id: strin
 
 export async function selectStream(args: {
   http: HttpClient;
-  type: "movie" | "tv";
+  type: ContentType;
   id: string;
   exclude: string | undefined;
   providerCache: Cache<string>;

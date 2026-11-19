@@ -31,7 +31,8 @@ const modalWarningProvider = document.getElementById("modal-warning-provider") a
 // The ID rides in the hash so a shared link never creates a second URL for
 // search engines to index. The query form is still read for older links.
 const params = new URLSearchParams(location.search || location.hash.slice(1));
-if (params.get("id")) input.value = params.get("id") as string;
+const sharedId = params.get("id");
+if (sharedId) input.value = sharedId;
 
 let pendingStreamUrl: string | null = null;
 let currentProvider: string | null = null;
@@ -41,7 +42,7 @@ let isFetching = false;
 const RECENT_KEY = "watch.recent";
 const recent = document.getElementById("recent") as HTMLElement;
 
-function setStatus(text: string, type: string) {
+function setStatus(text: string, type?: "loading" | "error") {
   status.textContent = text;
   status.className = type ? `status ${type}` : "status";
 }
@@ -111,22 +112,22 @@ modalCancel.addEventListener("click", hideModal);
 modalWatch.addEventListener("click", () => {
   if (pendingStreamUrl) window.open(pendingStreamUrl, "_blank");
   hideModal();
-  setStatus("", "");
+  setStatus("");
 });
 
 modalTryAnother.addEventListener("click", async () => {
-  if (!currentId || isFetching) return;
+  if (!currentId || !currentProvider || isFetching) return;
   setModalFetching(true);
   setStatus("Finding another stream...", "loading");
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider as string)}`);
+    const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
     if (!res.ok) {
       const e = await res.json();
       throw new Error(e.error);
     }
     const data = await res.json();
     showModal({ ...data, id: currentId });
-    setStatus("", "");
+    setStatus("");
   } catch (err) {
     setStatus((err as Error).message || "No other providers available.", "error");
   } finally {
@@ -148,7 +149,7 @@ async function go() {
     input.classList.add("error");
     setTimeout(() => {
       input.classList.remove("error");
-      setStatus("", "");
+      setStatus("");
     }, 2000);
     return;
   }
@@ -168,7 +169,7 @@ async function go() {
     input.setAttribute("aria-invalid", "false");
     input.classList.remove("error");
     if (location.hash !== `#id=${data.id}`) history.pushState(null, "", `#id=${data.id}`);
-    setStatus("", "");
+    setStatus("");
     showModal(data);
     saveRecent(data.id, data.name);
   } catch (err) {
