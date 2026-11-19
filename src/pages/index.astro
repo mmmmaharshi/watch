@@ -214,13 +214,14 @@ export const prerender = true;
     font-size: 0.875rem;
   }
 
-  .help a {
+  /* Recent links are built by script, so they carry no scope attribute. */
+  :global(.help a) {
     color: var(--ink-secondary);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
 
-  .help a:hover {
+  :global(.help a:hover) {
     color: var(--ink);
   }
 
@@ -314,6 +315,8 @@ export const prerender = true;
   }
 
   dialog.modal {
+    inset: 0;
+    margin: auto;
     overscroll-behavior: contain;
   }
 
@@ -325,6 +328,7 @@ export const prerender = true;
 
   .modal {
     background: var(--canvas);
+    color: var(--ink);
     border: 1px solid var(--border-strong);
     border-radius: 12px;
     padding: 32px;
