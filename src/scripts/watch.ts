@@ -208,12 +208,12 @@ function renderRecent() {
 
 form.addEventListener("submit", e => {
   e.preventDefault();
-  go();
+  void go();
 });
 
 renderRecent();
 // A shared link such as /#id=tt0133093 (or a whole IMDb link) loads right away.
-if (params.get("id")) go();
+if (params.get("id")) void go();
 else input.focus();
 // Help and recent links change only the hash, which does not reload the page.
 // Same-document clicks go through the router (popstate, no hashchange);
@@ -222,7 +222,7 @@ function handleHash() {
   const shared = new URLSearchParams(location.hash.slice(1)).get("id");
   if (!shared || shared === currentId || shared === loadingId) return;
   input.value = shared;
-  go();
+  void go();
 }
 window.addEventListener("hashchange", handleHash);
 window.addEventListener("popstate", handleHash);

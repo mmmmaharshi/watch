@@ -6,6 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "lint": "oxlint --type-aware",
     "test": "bun test"
   },
   "dependencies": {
@@ -16,6 +17,8 @@
   },
   "devDependencies": {
     "bun-types": "^1.4.5",
+    "oxlint": "^1.94.0",
+    "tsrs": "^7.1.0-beta.tsrs3",
     "typescript": "^7.0.2"
   }
 }
