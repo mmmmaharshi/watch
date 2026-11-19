@@ -286,52 +286,62 @@ export const JSON_HEADERS: Record<string, string> = {
   "Cache-Control": "no-store",
 };
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
-}
-
-export function createApiHandler(deps: {
+export interface WatchDeps {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
   providerCache: Cache<string>;
   domainCache: Cache<string[]>;
-  isLimited: (ip: string) => boolean;
-}) {
-  const { http, typeCache, providerCache, domainCache, isLimited } = deps;
+}
 
-  return async function handleApiWatch(req: Request): Promise<Response> {
-    if (isLimited(req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown")) {
-      return json(429, { error: "Too many requests" });
-    }
+export interface WatchResult {
+  id: string;
+  url: string;
+  provider: string;
+  type: ContentType;
+  name: string;
+  year?: string;
+  rating?: string;
+  description?: string;
+}
 
-    const url = new URL(req.url);
-    const id = parseImdbId(url.searchParams.get("id") ?? "");
-    if (!id) return json(400, { error: "Invalid IMDB ID" });
+// One shape for every transport (action, route). Status mirrors the old API.
+export async function handleWatchRequest(
+  deps: WatchDeps,
+  input: { id: string; exclude?: string }
+): Promise<{ ok: true; result: WatchResult } | { ok: false; status: 400 | 502 | 503; error: string }> {
+  const { http, typeCache, providerCache, domainCache } = deps;
 
-    const typeResult = await resolveTitle(id, http, typeCache);
-    if (!typeResult.ok) return json(502, { error: "Failed to detect content type" });
+  const id = parseImdbId(input.id);
+  if (!id) return { ok: false, status: 400, error: "Invalid IMDB ID" };
 
-    const exclude = url.searchParams.get("exclude") || undefined;
-    const stream = await selectStream({ http, type: typeResult.meta.type, id, exclude, providerCache, domainCache });
-    if (!stream) return json(503, { error: "No working providers available" });
+  const typeResult = await resolveTitle(id, http, typeCache);
+  if (!typeResult.ok) return { ok: false, status: 502, error: "Failed to detect content type" };
 
-    return new Response(JSON.stringify({ id, url: stream.url, provider: stream.provider, ...typeResult.meta }), {
-      headers: JSON_HEADERS,
-    });
-  };
+  const stream = await selectStream({ http, type: typeResult.meta.type, id, exclude: input.exclude, providerCache, domainCache });
+  if (!stream) return { ok: false, status: 503, error: "No working providers available" };
+
+  return { ok: true, result: { id, url: stream.url, provider: stream.provider, ...typeResult.meta } };
 }
 
 // Singletons for the serverless function. Per-instance only;
 // use a shared store (e.g. Upstash) if global limits are required.
-const typeCache = new Cache<TypeResult>(60 * 60 * 1000);
-const providerCache = new Cache<string>(5 * 60 * 1000);
-const domainCache = new Cache<string[]>(24 * 60 * 60 * 1000);
-const isLimited = createRateLimiter(15 * 60 * 1000, 100);
-
-export const handleApiWatch = createApiHandler({
+export const watchDeps: WatchDeps = {
   http: defaultHttpClient,
-  typeCache,
-  providerCache,
-  domainCache,
-  isLimited,
-});
+  typeCache: new Cache<TypeResult>(60 * 60 * 1000),
+  providerCache: new Cache<string>(5 * 60 * 1000),
+  domainCache: new Cache<string[]>(24 * 60 * 60 * 1000),
+};
+
+export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
+
+export function clientIp(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+}
+
+// Null means allowed; a Response means limited. Middleware answers with it.
+export function limitResponse(req: Request, limited: (ip: string) => boolean = isLimited): Response | null {
+  if (limited(clientIp(req))) {
+    return new Response(JSON.stringify({ error: "Too many requests" }), { status: 429, headers: JSON_HEADERS });
+  }
+  return null;
+}

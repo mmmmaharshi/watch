@@ -1,3 +1,4 @@
+import { actions } from "astro:actions";
 import { addRecent, parseRecent } from "../lib/recent";
 
 interface WatchData {
@@ -120,13 +121,9 @@ modalTryAnother.addEventListener("click", async () => {
   setModalFetching(true);
   setStatus("Finding another stream...", "loading");
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(currentId)}&exclude=${encodeURIComponent(currentProvider)}`);
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error);
-    }
-    const data = await res.json();
-    showModal({ ...data, id: currentId });
+    const { data, error } = await actions.watch({ id: currentId, exclude: currentProvider });
+    if (error) throw new Error(error.message);
+    showModal(data);
     setStatus("");
   } catch (err) {
     setStatus((err as Error).message || "No other providers available.", "error");
@@ -158,12 +155,8 @@ async function go() {
   setStatus("Finding a working stream...", "loading");
 
   try {
-    const res = await fetch(`/api/watch?id=${encodeURIComponent(value)}`);
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error);
-    }
-    const data = await res.json();
+    const { data, error } = await actions.watch({ id: value });
+    if (error) throw new Error(error.message);
     // The server answers with the canonical ID, whether an ID or a link went in.
     input.value = data.id;
     input.setAttribute("aria-invalid", "false");

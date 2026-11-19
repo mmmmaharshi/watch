@@ -1,15 +1,18 @@
 import { expect, test } from "bun:test";
 import {
   Cache,
-  createApiHandler,
+  clientIp,
   createRateLimiter,
   fetchTVMaze,
+  handleWatchRequest,
+  limitResponse,
   parseActiveDomains,
   parseImdbId,
   resolveTitle,
   selectStream,
   type HttpClient,
   type TypeResult,
+  type WatchDeps,
 } from "./watch";
 
 const MATRIX = { meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." } };
@@ -32,7 +35,7 @@ const directoryHtml = (domains: string[]) =>
 
 // A fake network: the directory, one Cinemeta endpoint (the guessed kind), and
 // exactly the provider named by allowed().
-function makeHandler(allowed: () => string, limited = false, metaKind: "movie" | "series" = "movie") {
+function makeDeps(allowed: () => string, metaKind: "movie" | "series" = "movie"): WatchDeps {
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
@@ -41,20 +44,22 @@ function makeHandler(allowed: () => string, limited = false, metaKind: "movie" |
       return reply(isMeta ? isMetaKind : url.includes(allowed()), isMetaKind ? MATRIX : {});
     },
   };
-  return createApiHandler({
+  return {
     http,
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
     domainCache: new Cache<string[]>(60_000),
-    isLimited: () => limited,
-  });
+  };
 }
 
 test("rejects a malformed IMDB id", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
   for (const bad of ["abc", "tt12345", "0133093"]) {
-    const res = await handler(new Request(`http://x/api/watch?id=${bad}`));
-    expect(res.status).toBe(400);
+    const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: bad });
+    expect(out.ok).toBe(false);
+    if (!out.ok) {
+      expect(out.status).toBe(400);
+      expect(out.error).toBe("Invalid IMDB ID");
+    }
   }
 });
 
@@ -68,49 +73,51 @@ test("parses an id out of pasted text", () => {
 });
 
 test("accepts a full IMDb link and answers with the canonical id", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
   const link = "https://www.imdb.com/title/tt0133093/?ref_=nv_sr_srsg_0";
-  const res = await handler(new Request(`http://x/api/watch?id=${encodeURIComponent(link)}`));
-  expect(res.status).toBe(200);
-  const body = await res.json();
-  expect(body.id).toBe("tt0133093");
-  expect(body.url).toBe("https://vidsrc.sh/embed/movie/tt0133093");
+  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: link });
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.id).toBe("tt0133093");
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/movie/tt0133093");
+  }
 });
 
 test("returns a working embed url and metadata for a valid id", async () => {
-  const handler = makeHandler(() => "vidsrc.sh");
-  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
-  expect(res.status).toBe(200);
-  expect(await res.json()).toEqual({
-    id: "tt0133093",
-    url: "https://vidsrc.sh/embed/movie/tt0133093",
-    provider: "vidsrc.sh",
-    type: "movie",
-    name: "The Matrix",
-    year: "1999",
-    rating: "8.7",
-    description: "Neo.",
-  });
+  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh"), { id: "tt0133093" });
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result).toEqual({
+      id: "tt0133093",
+      url: "https://vidsrc.sh/embed/movie/tt0133093",
+      provider: "vidsrc.sh",
+      type: "movie",
+      name: "The Matrix",
+      year: "1999",
+      rating: "8.7",
+      description: "Neo.",
+    });
+  }
 });
 
 test("builds a tv embed url when the series lookup answers", async () => {
-  const handler = makeHandler(() => "vidsrc.sh", false, "series");
-  const res = await handler(new Request("http://x/api/watch?id=tt0903747"));
-  const body = await res.json();
-  expect(body.type).toBe("tv");
-  expect(body.url).toBe("https://vidsrc.sh/embed/tv/tt0903747");
+  const out = await handleWatchRequest(makeDeps(() => "vidsrc.sh", "series"), { id: "tt0903747" });
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.type).toBe("tv");
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/tv/tt0903747");
+  }
 });
 
 test("skips the excluded provider and picks the next one", async () => {
   let allowed = "vidsrc.sh";
-  const handler = makeHandler(() => allowed);
+  const deps = makeDeps(() => allowed);
 
-  const first = await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json();
-  expect(first.provider).toBe("vidsrc.sh");
+  const first = await handleWatchRequest(deps, { id: "tt0133093" });
+  expect(first.ok && first.result.provider).toBe("vidsrc.sh");
 
   allowed = "vidsrc.ir";
-  const second = await (await handler(new Request("http://x/api/watch?id=tt0133093&exclude=vidsrc.sh"))).json();
-  expect(second.provider).toBe("vidsrc.ir");
+  const second = await handleWatchRequest(deps, { id: "tt0133093", exclude: "vidsrc.sh" });
+  expect(second.ok && second.result.provider).toBe("vidsrc.ir");
 });
 
 test("reads active domains from the directory and ignores old ones", () => {
@@ -126,28 +133,25 @@ test("falls back to known domains when the directory is unreachable", async () =
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
-  const handler = createApiHandler({
-    http,
-    typeCache: new Cache<TypeResult>(1),
-    providerCache: new Cache(1),
-    domainCache: new Cache<string[]>(1),
-    isLimited: () => false,
-  });
-  const body = await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json();
-  expect(body.provider).toBe("vidsrc.sh");
+  const out = await handleWatchRequest(
+    { http, typeCache: new Cache<TypeResult>(1), providerCache: new Cache(1), domainCache: new Cache<string[]>(1) },
+    { id: "tt0133093" }
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
 });
 
 test("uses VidFast when every VidSrc domain fails", async () => {
-  const handler = makeHandler(() => "vidfast.vc");
-  const body = await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json();
-  expect(body.provider).toBe("vidfast.vc");
-  expect(body.url).toBe("https://vidfast.vc/movie/tt0133093");
+  const out = await handleWatchRequest(makeDeps(() => "vidfast.vc"), { id: "tt0133093" });
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.provider).toBe("vidfast.vc");
+    expect(out.result.url).toBe("https://vidfast.vc/movie/tt0133093");
+  }
 });
 
 test("VidFast TV falls back to season 1 episode 1", async () => {
-  const handler = makeHandler(() => "vidfast.vc", false, "series");
-  const body = await (await handler(new Request("http://x/api/watch?id=tt0903747"))).json();
-  expect(body.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
+  const out = await handleWatchRequest(makeDeps(() => "vidfast.vc", "series"), { id: "tt0903747" });
+  expect(out.ok && out.result.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
 });
 
 test("caches the fallback domains so a directory outage is not re-fetched", async () => {
@@ -162,34 +166,44 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
-  const handler = createApiHandler({
+  const deps: WatchDeps = {
     http,
     typeCache: new Cache<TypeResult>(1),
     providerCache: new Cache(1),
     domainCache: new Cache<string[]>(1),
-    isLimited: () => false,
-  });
-  await handler(new Request("http://x/api/watch?id=tt0133093"));
-  await handler(new Request("http://x/api/watch?id=tt0133094"));
+  };
+  await handleWatchRequest(deps, { id: "tt0133093" });
+  await handleWatchRequest(deps, { id: "tt0133094" });
   expect(directoryCalls).toBe(1);
 });
 
 test("returns 502 when metadata is unavailable", async () => {
-  const handler = createApiHandler({
-    http: { get: async () => reply(false) },
-    typeCache: new Cache<TypeResult>(60_000),
-    providerCache: new Cache(60_000),
-    domainCache: new Cache<string[]>(60_000),
-    isLimited: () => false,
-  });
-  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
-  expect(res.status).toBe(502);
+  const out = await handleWatchRequest(
+    {
+      http: { get: async () => reply(false) },
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<string[]>(60_000),
+    },
+    { id: "tt0133093" }
+  );
+  expect(out.ok).toBe(false);
+  if (!out.ok) {
+    expect(out.status).toBe(502);
+    expect(out.error).toBe("Failed to detect content type");
+  }
 });
 
-test("returns 429 when the limiter blocks the request", async () => {
-  const handler = makeHandler(() => "vidsrc.sh", true);
-  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
-  expect(res.status).toBe(429);
+test("answers 429 from the limiter and null when allowed", async () => {
+  const limited = limitResponse(new Request("http://x/_actions/watch"), () => true);
+  expect(limited?.status).toBe(429);
+  expect(await limited?.json()).toEqual({ error: "Too many requests" });
+  expect(limitResponse(new Request("http://x/_actions/watch"), () => false)).toBeNull();
+});
+
+test("keys the limiter on the forwarded header, unknown without it", () => {
+  expect(clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } }))).toBe("1.2.3.4");
+  expect(clientIp(new Request("http://x/"))).toBe("unknown");
 });
 
 test("rate limiter counts per ip and blocks after the limit", () => {
@@ -219,17 +233,17 @@ test("re-probes a cached provider instead of trusting it blind", async () => {
       return reply(url.includes("vidsrc2.ru"));
     },
   };
-  const providerCache = new Cache<string>(60_000);
-  const handler = createApiHandler({
+  const deps: WatchDeps = {
     http,
     typeCache: new Cache<TypeResult>(60_000),
-    providerCache,
+    providerCache: new Cache<string>(60_000),
     domainCache: new Cache<string[]>(60_000),
-    isLimited: () => false,
-  });
-  expect((await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json()).provider).toBe("vidsrc.sh");
+  };
+  const first = await handleWatchRequest(deps, { id: "tt0133093" });
+  expect(first.ok && first.result.provider).toBe("vidsrc.sh");
   shUp = false;
-  expect((await (await handler(new Request("http://x/api/watch?id=tt0133093"))).json()).provider).toBe("vidsrc2.ru");
+  const second = await handleWatchRequest(deps, { id: "tt0133093" });
+  expect(second.ok && second.result.provider).toBe("vidsrc2.ru");
 });
 
 test("caches a metadata miss so a repeat bad id costs nothing", async () => {
@@ -295,15 +309,17 @@ test("resolveTitle returns movie even when the series endpoint hangs", async () 
 });
 
 test("returns 502 when both Cinemeta and TVMaze miss", async () => {
-  const handler = createApiHandler({
-    http: { get: async () => reply(false) },
-    typeCache: new Cache<TypeResult>(60_000),
-    providerCache: new Cache(60_000),
-    domainCache: new Cache<string[]>(60_000),
-    isLimited: () => false,
-  });
-  const res = await handler(new Request("http://x/api/watch?id=tt0133093"));
-  expect(res.status).toBe(502);
+  const out = await handleWatchRequest(
+    {
+      http: { get: async () => reply(false) },
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<string[]>(60_000),
+    },
+    { id: "tt0133093" }
+  );
+  expect(out.ok).toBe(false);
+  if (!out.ok) expect(out.status).toBe(502);
 });
 
 test("selectStream skips the excluded provider across tiers", async () => {
@@ -333,26 +349,6 @@ test("caps the cache by evicting the oldest entry", () => {
   expect(cache.get("c")).toBe("3");
 });
 
-test("keys the limiter on the forwarded header", async () => {
-  const seen: string[] = [];
-  const handler = createApiHandler({
-    http: { get: async () => reply(false) },
-    typeCache: new Cache<TypeResult>(1),
-    providerCache: new Cache(1),
-    domainCache: new Cache<string[]>(1),
-    isLimited: (ip) => {
-      seen.push(ip);
-      return false;
-    },
-  });
-
-  await handler(new Request("http://x/api/watch?id=tt0133093", { headers: { "x-forwarded-for": "1.2.3.4" } }));
-  expect(seen).toEqual(["1.2.3.4"]);
-
-  await handler(new Request("http://x/api/watch?id=tt0133093"));
-  expect(seen[1]).toBe("unknown");
-});
-
 // Astro owns the page now: the shell prerenders to static HTML, so these
 // assert on the served contract (tags and endpoints present), not exact copy.
 test("the Astro page keeps title, canonical and share tags", async () => {
@@ -369,6 +365,14 @@ test("the Astro page keeps title, canonical and share tags", async () => {
   expect(page).toContain('src="../scripts/watch.ts"');
 });
 
+// The title ID rides in the hash, never a query link, so crawlers see one
+// indexable URL.
+test("the title id rides in the hash, never a query link", async () => {
+  const page = await Bun.file("src/pages/index.astro").text();
+  expect(page).toContain('href="#id=');
+  expect(page).not.toContain('href="?id');
+});
+
 // The shell is static (CDN), only /api/watch runs on demand. The sitemap is
 // generated, not hand-written.
 test("the page prerenders and the sitemap is generated", async () => {
@@ -382,10 +386,9 @@ test("the page prerenders and the sitemap is generated", async () => {
   expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");
 });
 
-// The title ID rides in the hash, never a query link, so crawlers see one
-// indexable URL. (The client fetch to /api/watch?id=... is not link markup.)
-test("the title id rides in the hash, never a query link", async () => {
-  const page = await Bun.file("src/pages/index.astro").text();
-  expect(page).toContain('href="#id=');
-  expect(page).not.toContain('href="?id');
+// The client talks to the action, not the retired route.
+test("the client calls the watch action", async () => {
+  const script = await Bun.file("src/scripts/watch.ts").text();
+  expect(script).toContain("actions.watch(");
+  expect(script).not.toContain("/api/watch");
 });
