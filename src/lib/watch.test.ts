@@ -5,6 +5,7 @@ import {
   createRateLimiter,
   fetchTVMaze,
   handleWatchRequest,
+  isActionRequest,
   limitResponse,
   parseActiveDomains,
   parseImdbId,
@@ -235,6 +236,13 @@ test("keys the limiter on the forwarded header, unknown without it", () => {
     clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } })),
   ).toBe("1.2.3.4");
   expect(clientIp(new Request("http://x/"))).toBe("unknown");
+});
+
+test("routes only action calls to the limiter", () => {
+  expect(isActionRequest(new Request("http://x/_actions/watch"))).toBe(true);
+  expect(isActionRequest(new Request("http://x/_actions/watch/extra"))).toBe(true);
+  expect(isActionRequest(new Request("http://x/"))).toBe(false);
+  expect(isActionRequest(new Request("http://x/robots.txt"))).toBe(false);
 });
 
 test("rate limiter counts per ip and blocks after the limit", () => {

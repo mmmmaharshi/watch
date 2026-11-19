@@ -1,17 +1,7 @@
 import { actions } from "astro:actions";
 import { addRecent, parseRecent } from "../lib/recent";
 import { shareUrl } from "../lib/share";
-
-interface WatchData {
-  id: string;
-  url: string;
-  provider: string;
-  type: string;
-  name?: string;
-  year?: string;
-  rating?: string;
-  description?: string;
-}
+import type { WatchResult as WatchData } from "../lib/watch";
 
 const form = document.getElementById("form") as HTMLFormElement;
 const input = document.getElementById("imdb") as HTMLInputElement;

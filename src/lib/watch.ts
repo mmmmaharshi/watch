@@ -97,7 +97,7 @@ function toProviders(baseUrls: string[]): Provider[] {
   return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
 
-function buildEmbedUrl(provider: Provider, type: "movie" | "tv", id: string): string {
+function buildEmbedUrl(provider: Provider, type: ContentType, id: string): string {
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
 
@@ -336,7 +336,7 @@ export interface WatchResult {
   description?: string;
 }
 
-// One shape for every transport (action, route). Status mirrors the old API.
+// One shape for every transport. Status mirrors the old API.
 export async function handleWatchRequest(
   deps: WatchDeps,
   input: { id: string; exclude?: string },
@@ -380,6 +380,12 @@ export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 export function clientIp(req: Request): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+}
+
+// The action RPC path. Kept here (not in middleware) so tests can pin it:
+// if Astro ever renames the endpoint, the limiter must follow, not silently stop.
+export function isActionRequest(req: Request): boolean {
+  return new URL(req.url).pathname.startsWith("/_actions");
 }
 
 // Null means allowed; a Response means limited. Middleware answers with it.
