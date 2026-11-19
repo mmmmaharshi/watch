@@ -1,5 +1,6 @@
 import { actions } from "astro:actions";
 import { addRecent, parseRecent } from "../lib/recent";
+import { shareUrl } from "../lib/share";
 
 interface WatchData {
   id: string;
@@ -100,9 +101,9 @@ function hideModal() {
 }
 
 modalCopy.addEventListener("click", async () => {
-  if (!pendingStreamUrl) return;
+  if (!currentId) return;
   try {
-    await navigator.clipboard.writeText(pendingStreamUrl);
+    await navigator.clipboard.writeText(shareUrl(location.origin, currentId));
     modalCopy.classList.add("copied");
     setTimeout(() => modalCopy.classList.remove("copied"), 2000);
   } catch (err) {
