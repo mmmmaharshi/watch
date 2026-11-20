@@ -12,22 +12,22 @@ export const prerender = true;
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
 <meta name="color-scheme" content="dark">
-<title>Watch movies and TV shows online. Paste an IMDb ID.</title>
+<title>Watch movies and TV shows online. Paste an IMDb or TMDB ID.</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
 <link rel="canonical" href={SITE_URL + "/"}>
-<meta name="description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show. No sign-up, no app, just a click to play.">
+<meta name="description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show. No sign-up, no app, just a click to play.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Watch">
-<meta property="og:title" content="Watch movies and TV shows online. Paste an IMDb ID.">
-<meta property="og:description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show.">
+<meta property="og:title" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID.">
+<meta property="og:description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show.">
 <meta property="og:url" content={SITE_URL + "/"}>
 <meta property="og:image" content={SITE_URL + "/og.png"}>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Watch movies and TV shows online. Paste an IMDb ID or link.">
+<meta property="og:image:alt" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID or link.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Watch movies and TV shows online. Paste an IMDb ID.">
-<meta name="twitter:description" content="Paste an IMDb ID or an IMDb link to find a working stream for any movie or TV show.">
+<meta name="twitter:title" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID.">
+<meta name="twitter:description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show.">
 <ClientRouter />
 <style>
   :root {
@@ -525,12 +525,12 @@ export const prerender = true;
   <main class="container">
     <header class="header">
       <h1>Watch movies and TV shows online</h1>
-      <p class="subtitle">Paste an IMDb ID or an IMDb link to start.</p>
+      <p class="subtitle">Paste an IMDb or TMDB ID or link to start.</p>
     </header>
 
     <form class="form-group" id="form">
-      <label class="visually-hidden" for="imdb">IMDB ID or link</label>
-      <input type="text" id="imdb" name="id" placeholder="IMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false">
+      <label class="visually-hidden" for="imdb">IMDb or TMDB ID or link</label>
+      <input type="text" id="imdb" name="id" placeholder="IMDb or TMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false">
       <button type="submit" id="go">
         <span class="spinner"></span>
         <span class="btn-text">Watch now</span>
@@ -538,7 +538,7 @@ export const prerender = true;
     </form>
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="help">Enter an IMDb ID, e.g. <a href="#id=tt1300854">tt1300854</a>, or paste an IMDb link.</p>
+    <p class="help">Enter an IMDb or TMDB ID, e.g. <a href="#id=tt1300854">tt1300854</a>, or paste an IMDb or TMDB link.</p>
     <p class="help" id="recent"></p>
     <p class="disclaimer">We don't host anything. We only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
   </main>

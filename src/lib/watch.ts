@@ -1,3 +1,6 @@
+import { parseTitleInput } from "./parse-input";
+import { resolveImdbId } from "./tmdb";
+
 // Backend for /api/watch. Pure logic, no static serving (Astro owns the page).
 interface MetaJson {
   meta?: {
@@ -233,7 +236,18 @@ async function fetchKind(
 async function fetchMeta(
   id: string,
   http: HttpClient,
+  preferred?: ContentType,
 ): Promise<{ meta: TitleMeta | null; transient: boolean }> {
+  if (preferred) {
+    const firstKind = preferred === "tv" ? "series" : "movie";
+    const secondKind = firstKind === "series" ? "movie" : "series";
+    const first = await fetchKind(firstKind, id, http);
+    if (first.meta) {
+      return first;
+    }
+    const second = await fetchKind(secondKind, id, http);
+    return { meta: second.meta, transient: first.transient || second.transient };
+  }
   const ctrl = new AbortController();
   try {
     const seriesPromise = fetchKind("series", id, http, ctrl.signal).then((result) => ({
@@ -260,13 +274,14 @@ export async function resolveTitle(
   id: string,
   http: HttpClient,
   cache: Cache<TypeResult>,
+  preferred?: ContentType,
 ): Promise<TypeResult> {
   const cached = cache.get(id);
   if (cached) {
     return cached;
   }
 
-  const fetched = await fetchMeta(id, http);
+  const fetched = await fetchMeta(id, http, preferred);
   const meta = fetched.meta;
   if (!meta) {
     const fallback = await fetchTVMaze(id, http);
@@ -406,13 +421,6 @@ export function createRateLimiter(
   };
 }
 
-// Accepts a bare IMDB ID or anything containing a full IMDb link.
-const IMDB_ID = /tt\d{7,8}(?!\d)/;
-
-export function parseImdbId(input: string): string | null {
-  return input.toLowerCase().match(IMDB_ID)?.[0] ?? null;
-}
-
 export const JSON_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
@@ -477,12 +485,25 @@ export async function handleWatchRequest(
 > {
   const { http, typeCache, providerCache, domainCache } = deps;
 
-  const id = parseImdbId(input.id);
-  if (!id) {
-    return { ok: false, status: 400, error: "Invalid IMDB ID" };
+  const parsed = parseTitleInput(input.id);
+  if (!parsed) {
+    return { ok: false, status: 400, error: "Invalid IMDb or TMDB ID" };
   }
 
-  const typeResult = await resolveTitle(id, http, typeCache);
+  let id: string;
+  let preferred: ContentType | undefined;
+  if (parsed.kind === "imdb") {
+    id = parsed.id;
+  } else {
+    const mapped = await resolveImdbId(http, parsed.type, parsed.id);
+    if (!mapped) {
+      return { ok: false, status: 502, error: "TMDB ID not found" };
+    }
+    id = mapped.id;
+    preferred = mapped.type;
+  }
+
+  const typeResult = await resolveTitle(id, http, typeCache, preferred);
   if (!typeResult.ok) {
     return { ok: false, status: 502, error: "Failed to detect content type" };
   }

@@ -2,7 +2,8 @@
 
 Context: [`src/lib/watch.ts`](../src/lib/watch.ts) builds a provider URL as
 `baseUrl + (path ? path(type, id) : /embed/${type}/${id})`, then sends one HTTP GET. An `ok` status
-means the provider is alive. The IMDb ID is bare `tt...` (from `parseImdbId`). TV titles need a
+means the provider is alive. The ID is canonical IMDb `tt...`; TMDB IDs and links are mapped to
+IMDb first by [`src/lib/tmdb.ts`](../src/lib/tmdb.ts) using Wikidata. TV titles need a
 season and episode; the current VidFast fallback uses `1/1`. Metadata comes from Cinemeta, with
 TVMaze as a series-only fallback. Only `type` (`movie`|`tv`) is load-bearing for `/api/watch`.
 

@@ -247,7 +247,7 @@ modal.addEventListener("cancel", (e) => {
 async function go() {
   const value = input.value.trim();
   if (!value) {
-    setStatus("Enter an IMDB ID or an IMDb link.", "error");
+    setStatus("Enter an IMDb or TMDB ID or link.", "error");
     input.setAttribute("aria-invalid", "true");
     input.focus();
     input.classList.add("error");

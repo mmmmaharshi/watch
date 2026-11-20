@@ -9,7 +9,6 @@ import {
   isActionRequest,
   limitResponse,
   parseActiveDomains,
-  parseImdbId,
   resolveTitle,
   selectStream,
 } from "./watch";
@@ -56,8 +55,72 @@ function makeDeps(allowed: () => string, metaKind: "movie" | "series" = "movie")
   };
 }
 
+function mappedDeps(find: (url: string) => string | null): WatchDeps {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url.includes("query.wikidata.org")) {
+        const imdb = find(url);
+        return {
+          ok: true,
+          json: async () => ({ results: { bindings: imdb ? [{ imdb: { value: imdb } }] : [] } }),
+          text: async () => "",
+        };
+      }
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(DOMAINS));
+      }
+      if (url.includes("cinemeta")) {
+        const tv = url.includes("/meta/series/");
+        return reply(true, tv ? { meta: { ...MATRIX.meta, name: "A Show" } } : MATRIX);
+      }
+      return reply(url.includes("vidsrc.sh"));
+    },
+  };
+  return {
+    http,
+    typeCache: new Cache<TypeResult>(60_000),
+    providerCache: new Cache(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
+  };
+}
+
+test("maps a TMDB id to an IMDb id before the normal lookup", async () => {
+  const out = await handleWatchRequest(
+    mappedDeps(() => "tt0133093"),
+    { id: "27205" },
+  );
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.id).toBe("tt0133093");
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/movie/tt0133093");
+  }
+});
+
+test("a TMDB TV URL uses the TV property and the TV embed path", async () => {
+  const out = await handleWatchRequest(
+    mappedDeps((url) => (url.includes("P4983") ? "tt0903747" : null)),
+    { id: "https://www.themoviedb.org/tv/1396-breaking-bad" },
+  );
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.id).toBe("tt0903747");
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/tv/tt0903747");
+  }
+});
+
+test("a bare TMDB TV id is found by trying both properties", async () => {
+  const out = await handleWatchRequest(
+    mappedDeps((url) => (url.includes("P4983") ? "tt0903747" : null)),
+    { id: "1396" },
+  );
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/tv/tt0903747");
+  }
+});
+
 test("rejects a malformed IMDB id", async () => {
-  for (const bad of ["abc", "tt12345", "0133093"]) {
+  for (const bad of ["abc", "tt12345", "tt123456789"]) {
     const out = await handleWatchRequest(
       makeDeps(() => "vidsrc.sh"),
       { id: bad },
@@ -65,18 +128,9 @@ test("rejects a malformed IMDB id", async () => {
     expect(out.ok).toBe(false);
     if (!out.ok) {
       expect(out.status).toBe(400);
-      expect(out.error).toBe("Invalid IMDB ID");
+      expect(out.error).toBe("Invalid IMDb or TMDB ID");
     }
   }
-});
-
-test("parses an id out of pasted text", () => {
-  expect(parseImdbId("tt0133093")).toBe("tt0133093");
-  expect(parseImdbId("TT0133093")).toBe("tt0133093");
-  expect(parseImdbId("https://m.imdb.com/title/tt0903747/episodes/?season=1")).toBe("tt0903747");
-  expect(parseImdbId("tt123456789")).toBe(null);
-  expect(parseImdbId("https://www.imdb.com/title/")).toBe(null);
-  expect(parseImdbId("")).toBe(null);
 });
 
 test("accepts a full IMDb link and answers with the canonical id", async () => {
