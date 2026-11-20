@@ -152,16 +152,21 @@ test("allows only VidSrc-shaped hosts plus vidfast", () => {
   expect(isAllowedProviderHost("v\u0456dsrc.to")).toBe(false);
 });
 
-test("drops unlisted directory hosts and falls back", async () => {
+test("drops unlisted directory hosts and uses VidFast", async () => {
+  let sawEvil = false;
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) {
         return reply(true, {}, directoryHtml(["https://evil.example.com"]));
       }
-      const ok = url.includes("cinemeta")
-        ? url.includes("/meta/movie/")
-        : url.includes("vidsrc.sh");
-      return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      if (url.includes("vidfast.vc")) {
+        return reply(true);
+      }
+      sawEvil = true;
+      return reply(false);
     },
   };
   const out = await handleWatchRequest(
@@ -173,31 +178,38 @@ test("drops unlisted directory hosts and falls back", async () => {
     },
     { id: "tt0133093" },
   );
-  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
+  expect(out.ok && out.result.provider).toBe("vidfast.vc");
+  expect(sawEvil).toBe(false);
 });
 
-test("falls back to known domains when the directory is unreachable", async () => {
+test("uses only VidFast when the directory is unreachable", async () => {
+  let sawVidSrc = false;
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) {
         return reply(false);
       }
-      const ok = url.includes("cinemeta")
-        ? url.includes("/meta/movie/")
-        : url.includes("vidsrc.sh");
-      return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      if (url.includes("vidfast.vc")) {
+        return reply(true);
+      }
+      sawVidSrc = true;
+      return reply(false);
     },
   };
   const out = await handleWatchRequest(
     {
       http,
-      typeCache: new Cache<TypeResult>(1),
-      providerCache: new Cache(1),
-      domainCache: new Cache<Array<string>>(1),
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
     },
     { id: "tt0133093" },
   );
-  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
+  expect(out.ok && out.result.provider).toBe("vidfast.vc");
+  expect(sawVidSrc).toBe(false);
 });
 
 test("uses VidFast when every VidSrc domain fails", async () => {
@@ -220,7 +232,7 @@ test("VidFast TV falls back to season 1 episode 1", async () => {
   expect(out.ok && out.result.url).toBe("https://vidfast.vc/tv/tt0903747/1/1");
 });
 
-test("caches the fallback domains so a directory outage is not re-fetched", async () => {
+test("retries the directory on a later request after an outage", async () => {
   let directoryCalls = 0;
   const http: HttpClient = {
     get: async (url) => {
@@ -230,19 +242,19 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
       }
       const ok = url.includes("cinemeta")
         ? url.includes("/meta/movie/")
-        : url.includes("vidsrc.sh");
+        : url.includes("vidfast.vc");
       return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
     },
   };
   const deps: WatchDeps = {
     http,
-    typeCache: new Cache<TypeResult>(1),
-    providerCache: new Cache(1),
-    domainCache: new Cache<Array<string>>(1),
+    typeCache: new Cache<TypeResult>(60_000),
+    providerCache: new Cache(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
   };
   await handleWatchRequest(deps, { id: "tt0133093" });
   await handleWatchRequest(deps, { id: "tt0133094" });
-  expect(directoryCalls).toBe(1);
+  expect(directoryCalls).toBe(2);
 });
 
 test("returns 502 when metadata is unavailable", async () => {

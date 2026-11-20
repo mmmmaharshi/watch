@@ -96,7 +96,6 @@ export class Cache<T> {
 // VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
 // still answer 200 and get picked ahead of the live one.
 const DIRECTORY_URL = "https://vidsrc.domains/";
-const FALLBACK_DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vidsrc.ir"];
 
 export interface Provider {
   name: string;
@@ -167,14 +166,9 @@ async function loadProviders(
       });
     }
   } catch {
-    // Directory unreachable — fall through to the known-good fallback below.
+    // Directory unreachable — no VidSrc domains this round; VidFast still applies.
   }
-  if (domains.length) {
-    cache.set("domains", domains);
-  } else {
-    cache.set("domains", FALLBACK_DOMAINS, 60_000);
-  }
-  return toProviders(domains.length ? domains : FALLBACK_DOMAINS);
+  return toProviders(domains);
 }
 
 // Tried only after every VidSrc domain fails. TV needs season/episode, default to 1/1.
