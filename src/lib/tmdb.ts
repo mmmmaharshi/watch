@@ -30,6 +30,10 @@ export interface ImdbMatch {
   type: "movie" | "tv";
 }
 
+export type TmdbMapping =
+  | { ok: true; match: ImdbMatch }
+  | { ok: false; reason: "not_found" | "ambiguous" };
+
 async function lookup(
   http: HttpClient,
   property: "P4947" | "P4983",
@@ -60,17 +64,24 @@ export async function resolveImdbId(
   http: HttpClient,
   type: "movie" | "tv" | undefined,
   id: string,
-): Promise<ImdbMatch | null> {
+): Promise<TmdbMapping> {
   if (type) {
     const found = await lookup(http, ID_PROPERTY[type], id);
-    return found ? { id: found, type } : null;
+    return found ? { ok: true, match: { id: found, type } } : { ok: false, reason: "not_found" };
   }
   const [movie, tv] = await Promise.all([
     lookup(http, ID_PROPERTY.movie, id),
     lookup(http, ID_PROPERTY.tv, id),
   ]);
-  if (movie) {
-    return { id: movie, type: "movie" };
+  if (movie && tv && movie !== tv) {
+    // TMDB movie and TV IDs live in separate spaces and can collide.
+    return { ok: false, reason: "ambiguous" };
   }
-  return tv ? { id: tv, type: "tv" } : null;
+  if (movie) {
+    return { ok: true, match: { id: movie, type: "movie" } };
+  }
+  if (tv) {
+    return { ok: true, match: { id: tv, type: "tv" } };
+  }
+  return { ok: false, reason: "not_found" };
 }

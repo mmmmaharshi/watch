@@ -119,6 +119,18 @@ test("a bare TMDB TV id is found by trying both properties", async () => {
   }
 });
 
+test("a bare TMDB id that matches both kinds is rejected as ambiguous", async () => {
+  const out = await handleWatchRequest(
+    mappedDeps((url) => (url.includes("P4983") ? "tt0903747" : "tt0072443")),
+    { id: "1396" },
+  );
+  expect(out.ok).toBe(false);
+  if (!out.ok) {
+    expect(out.status).toBe(400);
+    expect(out.error).toBe("TMDB ID is ambiguous. Use a movie or TV link.");
+  }
+});
+
 test("rejects a malformed IMDB id", async () => {
   for (const bad of ["abc", "tt12345", "tt123456789"]) {
     const out = await handleWatchRequest(

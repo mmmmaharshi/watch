@@ -496,11 +496,18 @@ export async function handleWatchRequest(
     id = parsed.id;
   } else {
     const mapped = await resolveImdbId(http, parsed.type, parsed.id);
-    if (!mapped) {
-      return { ok: false, status: 502, error: "TMDB ID not found" };
+    if (!mapped.ok) {
+      return {
+        ok: false,
+        status: mapped.reason === "ambiguous" ? 400 : 502,
+        error:
+          mapped.reason === "ambiguous"
+            ? "TMDB ID is ambiguous. Use a movie or TV link."
+            : "TMDB ID not found",
+      };
     }
-    id = mapped.id;
-    preferred = mapped.type;
+    id = mapped.match.id;
+    preferred = mapped.match.type;
   }
 
   const typeResult = await resolveTitle(id, http, typeCache, preferred);
