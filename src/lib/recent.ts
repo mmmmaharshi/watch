@@ -7,19 +7,35 @@ export interface RecentEntry {
 }
 
 // Newest first, no duplicates, capped. Entries without a string id are dropped.
-export function addRecent(list: RecentEntry[], entry: RecentEntry): RecentEntry[] {
-  if (!entry || typeof entry.id !== "string") return list.slice(0, RECENT_MAX);
+export function addRecent(list: Array<RecentEntry>, entry: RecentEntry): Array<RecentEntry> {
+  if (!entry || typeof entry.id !== "string") {
+    return list.slice(0, RECENT_MAX);
+  }
   return [entry, ...list.filter((item) => item && item.id !== entry.id)].slice(0, RECENT_MAX);
 }
 
 // localStorage may hold anything: junk, or a shape from an older version.
-export function parseRecent(raw: string | null): RecentEntry[] {
-  if (typeof raw !== "string") return [];
+function hasId(value: unknown): value is { id: unknown } {
+  return typeof value === "object" && value !== null && "id" in value;
+}
+
+export function parseRecent(raw: string | null): Array<RecentEntry> {
+  if (typeof raw !== "string") {
+    return [];
+  }
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item) => item && typeof item.id === "string");
+    parsed = JSON.parse(raw);
   } catch {
     return [];
   }
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  return parsed.filter((item): item is RecentEntry => {
+    if (!hasId(item) || typeof item.id !== "string") {
+      return false;
+    }
+    return true;
+  });
 }

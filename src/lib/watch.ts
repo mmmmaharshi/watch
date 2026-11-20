@@ -10,7 +10,8 @@ interface MetaJson {
 }
 
 // Third-party JSON; call sites check the shape before use.
-type LooseJson = MetaJson & Record<string, unknown>;
+type JsonValue = string | number | boolean | null | Array<JsonValue> | { [key: string]: JsonValue };
+type LooseJson = MetaJson & Record<string, JsonValue>;
 
 export type ContentType = "movie" | "tv";
 
@@ -28,6 +29,7 @@ export interface HttpClient {
 export const defaultHttpClient: HttpClient = {
   get: async (url, options) => {
     const res = await fetch(url, options);
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- res.json() is untyped third-party JSON; every call site narrows the fields it reads.
     return { ok: res.ok, json: () => res.json() as Promise<LooseJson>, text: () => res.text() };
   },
 };
@@ -55,7 +57,9 @@ export class Cache<T> {
   set(key: string, value: T, ttl: number = this.ttl): void {
     if (!this.store.has(key) && this.store.size >= this.maxEntries) {
       const oldest = this.store.keys().next().value;
-      if (oldest !== undefined) this.store.delete(oldest);
+      if (oldest !== undefined) {
+        this.store.delete(oldest);
+      }
     }
     this.store.set(key, { value, expires: Date.now() + ttl });
   }
@@ -82,28 +86,30 @@ const ALLOWED_HOST = /^(?:[a-z0-9-]+\.)*vidsrc\d*\.[a-z.]{2,}$/i;
 
 export function isAllowedProviderHost(host: string): boolean {
   const lower = host.toLowerCase();
-  if (lower === "vidfast.vc") return true;
+  if (lower === "vidfast.vc") {
+    return true;
+  }
   return ALLOWED_HOST.test(lower);
 }
-export function parseActiveDomains(html: string): string[] {
+export function parseActiveDomains(html: string): Array<string> {
   const start = html.indexOf('id="domains"');
-  if (start === -1) return [];
+  if (start === -1) {
+    return [];
+  }
   const end = html.indexOf('id="old"', start);
   const section = html.slice(start, end === -1 ? undefined : end);
-  const urls = [...section.matchAll(/data-val="([^"]+)"/g)]
-    .map((m) => {
-      try {
-        const origin = new URL(m[1]).origin;
-        return /^https?:\/\//.test(origin) ? origin : null;
-      } catch {
-        return null;
-      }
-    })
-    .filter((u): u is string => u !== null);
+  const urls = [...section.matchAll(/data-val="([^"]+)"/g)].flatMap((m) => {
+    try {
+      const origin = new URL(m[1]).origin;
+      return /^https?:\/\//.test(origin) ? [origin] : [];
+    } catch {
+      return [];
+    }
+  });
   return [...new Set(urls)];
 }
 
-function toProviders(baseUrls: string[]): Provider[] {
+function toProviders(baseUrls: Array<string>): Array<Provider> {
   return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
 
@@ -111,11 +117,16 @@ function buildEmbedUrl(provider: Provider, type: ContentType, id: string): strin
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
 
-async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<Provider[]> {
+async function loadProviders(
+  http: HttpClient,
+  cache: Cache<Array<string>>,
+): Promise<Array<Provider>> {
   const cached = cache.get("domains");
-  if (cached) return toProviders(cached);
+  if (cached) {
+    return toProviders(cached);
+  }
 
-  let domains: string[] = [];
+  let domains: Array<string> = [];
   try {
     const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
@@ -130,8 +141,11 @@ async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<
   } catch {
     // Directory unreachable — fall through to the known-good fallback below.
   }
-  if (domains.length) cache.set("domains", domains);
-  else cache.set("domains", FALLBACK_DOMAINS, 60_000);
+  if (domains.length) {
+    cache.set("domains", domains);
+  } else {
+    cache.set("domains", FALLBACK_DOMAINS, 60_000);
+  }
   return toProviders(domains.length ? domains : FALLBACK_DOMAINS);
 }
 
@@ -172,9 +186,13 @@ async function fetchKind(
     const res = await http.get(url, {
       signal: parent ? AbortSignal.any([timeout, parent]) : timeout,
     });
-    if (!res.ok) return { meta: null, transient: false };
+    if (!res.ok) {
+      return { meta: null, transient: false };
+    }
     const m = (await res.json()).meta;
-    if (!m?.name) return { meta: null, transient: false };
+    if (!m?.name) {
+      return { meta: null, transient: false };
+    }
     return {
       meta: {
         type: kind === "series" ? "tv" : "movie",
@@ -205,7 +223,9 @@ async function fetchMeta(
       result,
     }));
     const first = await Promise.race([seriesPromise, moviePromise]);
-    if (first.result.meta) return first.result;
+    if (first.result.meta) {
+      return first.result;
+    }
     const other = first.which === "series" ? await moviePromise : await seriesPromise;
     return { meta: other.result.meta, transient: first.result.transient || other.result.transient };
   } finally {
@@ -220,7 +240,9 @@ export async function resolveTitle(
   cache: Cache<TypeResult>,
 ): Promise<TypeResult> {
   const cached = cache.get(id);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   const fetched = await fetchMeta(id, http);
   const meta = fetched.meta;
@@ -232,7 +254,9 @@ export async function resolveTitle(
       return result;
     }
     const miss: TypeResult = { ok: false, reason: "Metadata not found" };
-    if (!fetched.transient) cache.set(id, miss, NEGATIVE_TTL_MS);
+    if (!fetched.transient) {
+      cache.set(id, miss, NEGATIVE_TTL_MS);
+    }
     return miss;
   }
 
@@ -248,12 +272,16 @@ export async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMe
     const res = await http.get(`https://api.tvmaze.com/lookup/shows?imdb=${id}`, {
       signal: AbortSignal.timeout(TVMAZE_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     const m = await res.json();
-    if (typeof m.name !== "string") return null;
+    if (typeof m.name !== "string") {
+      return null;
+    }
     const year = typeof m.premiered === "string" ? m.premiered.slice(0, 4) : undefined;
     const summary =
-      typeof m.summary === "string" ? m.summary.replace(/<[^>]*>/g, "").trim() : undefined;
+      typeof m.summary === "string" ? m.summary.replaceAll(/<[^>]*>/g, "").trim() : undefined;
     return { type: "tv", name: m.name, year, description: summary };
   } catch {
     return null;
@@ -274,7 +302,9 @@ async function probeProvider(
   const res = await http.get(url, {
     signal: parent ? AbortSignal.any([timeout, parent]) : timeout,
   });
-  if (!res.ok) throw new Error(`${provider.name} unavailable`);
+  if (!res.ok) {
+    throw new Error(`${provider.name} unavailable`);
+  }
   return { url, provider: provider.name };
 }
 
@@ -284,21 +314,25 @@ export async function selectStream(args: {
   id: string;
   exclude: string | undefined;
   providerCache: Cache<string>;
-  domainCache: Cache<string[]>;
+  domainCache: Cache<Array<string>>;
 }): Promise<{ url: string; provider: string } | null> {
   const { http, type, id, exclude, providerCache, domainCache } = args;
   const cacheKey = `${type}:${id}`;
   const providers = await loadProviders(http, domainCache);
-  const tiers: Provider[][] = [providers, [VIDFAST]];
+  const tiers: Array<Array<Provider>> = [providers, [VIDFAST]];
   const cachedName = providerCache.get(cacheKey);
   const cached = cachedName
     ? [...providers, VIDFAST].find((p) => p.name === cachedName)
     : undefined;
-  if (cached) tiers.unshift([cached]);
+  if (cached) {
+    tiers.unshift([cached]);
+  }
 
   for (const tier of tiers) {
     const candidates = tier.filter((p) => p.name !== exclude);
-    if (!candidates.length) continue;
+    if (!candidates.length) {
+      continue;
+    }
     const ctrl = new AbortController();
     try {
       const winner = await Promise.any(
@@ -330,10 +364,16 @@ export function createRateLimiter(
     const entry = attempts.get(ip);
     if (!entry || entry.expires < at) {
       if (attempts.size >= MAX_TRACKED_IPS) {
-        for (const [key, e] of attempts) if (e.expires < at) attempts.delete(key);
+        for (const [key, e] of attempts) {
+          if (e.expires < at) {
+            attempts.delete(key);
+          }
+        }
         if (attempts.size >= MAX_TRACKED_IPS) {
           const oldest = attempts.keys().next().value;
-          if (oldest !== undefined) attempts.delete(oldest);
+          if (oldest !== undefined) {
+            attempts.delete(oldest);
+          }
         }
       }
       attempts.set(ip, { count: 1, expires: at + windowMs });
@@ -351,7 +391,7 @@ export function parseImdbId(input: string): string | null {
   return input.toLowerCase().match(IMDB_ID)?.[0] ?? null;
 }
 
-export const JSON_HEADERS: Record<string, string> = {
+export const JSON_HEADERS = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
@@ -359,13 +399,13 @@ export const JSON_HEADERS: Record<string, string> = {
   "Content-Type": "application/json",
   "Content-Security-Policy": "default-src 'none'",
   "Cache-Control": "no-store",
-};
+} satisfies Record<string, string>;
 
 export interface WatchDeps {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
   providerCache: Cache<string>;
-  domainCache: Cache<string[]>;
+  domainCache: Cache<Array<string>>;
 }
 
 export interface WatchResult {
@@ -389,10 +429,14 @@ export async function handleWatchRequest(
   const { http, typeCache, providerCache, domainCache } = deps;
 
   const id = parseImdbId(input.id);
-  if (!id) return { ok: false, status: 400, error: "Invalid IMDB ID" };
+  if (!id) {
+    return { ok: false, status: 400, error: "Invalid IMDB ID" };
+  }
 
   const typeResult = await resolveTitle(id, http, typeCache);
-  if (!typeResult.ok) return { ok: false, status: 502, error: "Failed to detect content type" };
+  if (!typeResult.ok) {
+    return { ok: false, status: 502, error: "Failed to detect content type" };
+  }
 
   const stream = await selectStream({
     http,
@@ -402,7 +446,9 @@ export async function handleWatchRequest(
     providerCache,
     domainCache,
   });
-  if (!stream) return { ok: false, status: 503, error: "No working providers available" };
+  if (!stream) {
+    return { ok: false, status: 503, error: "No working providers available" };
+  }
 
   return {
     ok: true,
@@ -416,7 +462,7 @@ export const watchDeps: WatchDeps = {
   http: defaultHttpClient,
   typeCache: new Cache<TypeResult>(60 * 60 * 1000),
   providerCache: new Cache<string>(5 * 60 * 1000),
-  domainCache: new Cache<string[]>(24 * 60 * 60 * 1000),
+  domainCache: new Cache<Array<string>>(24 * 60 * 60 * 1000),
 };
 
 export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
@@ -426,7 +472,7 @@ export function clientIp(req: Request): string {
   // by the caller) are ignored. Direct spoofing of the last entry is not
   // possible through the edge: it always appends the connecting IP.
   const forwarded = req.headers.get("x-forwarded-for")?.split(",");
-  const last = forwarded?.[forwarded.length - 1]?.trim();
+  const last = forwarded?.at(-1)?.trim();
   return last || "unknown";
 }
 

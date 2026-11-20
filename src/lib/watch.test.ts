@@ -12,10 +12,8 @@ import {
   parseImdbId,
   resolveTitle,
   selectStream,
-  type HttpClient,
-  type TypeResult,
-  type WatchDeps,
 } from "./watch";
+import type { HttpClient, TypeResult, WatchDeps } from "./watch";
 
 const MATRIX = {
   meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." },
@@ -32,7 +30,7 @@ function reply(ok: boolean, json: MetaJson = {}, text = ""): HttpReply {
 
 // The directory page shape we parse: active domains carry a data-val URL, old
 // ones (in the #old section) must be ignored.
-const directoryHtml = (domains: string[]) =>
+const directoryHtml = (domains: Array<string>) =>
   `<section id="domains">` +
   domains.map((d) => `<button class="chip-copy" data-val="${d}">Copy</button>`).join("") +
   `</section><section id="old"><button data-val="https://vidsrc.me">Copy</button></section>`;
@@ -42,7 +40,9 @@ const directoryHtml = (domains: string[]) =>
 function makeDeps(allowed: () => string, metaKind: "movie" | "series" = "movie"): WatchDeps {
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(DOMAINS));
+      }
       const isMeta = url.includes("cinemeta");
       const isMetaKind = url.includes(`/meta/${metaKind}/`);
       return reply(isMeta ? isMetaKind : url.includes(allowed()), isMetaKind ? MATRIX : {});
@@ -52,7 +52,7 @@ function makeDeps(allowed: () => string, metaKind: "movie" | "series" = "movie")
     http,
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache(60_000),
-    domainCache: new Cache<string[]>(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
   };
 }
 
@@ -155,7 +155,9 @@ test("allows only VidSrc-shaped hosts plus vidfast", () => {
 test("drops unlisted directory hosts and falls back", async () => {
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(["https://evil.example.com"]));
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(["https://evil.example.com"]));
+      }
       const ok = url.includes("cinemeta")
         ? url.includes("/meta/movie/")
         : url.includes("vidsrc.sh");
@@ -167,7 +169,7 @@ test("drops unlisted directory hosts and falls back", async () => {
       http,
       typeCache: new Cache<TypeResult>(60_000),
       providerCache: new Cache(60_000),
-      domainCache: new Cache<string[]>(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
     },
     { id: "tt0133093" },
   );
@@ -177,7 +179,9 @@ test("drops unlisted directory hosts and falls back", async () => {
 test("falls back to known domains when the directory is unreachable", async () => {
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(false);
+      if (url === DIRECTORY) {
+        return reply(false);
+      }
       const ok = url.includes("cinemeta")
         ? url.includes("/meta/movie/")
         : url.includes("vidsrc.sh");
@@ -189,7 +193,7 @@ test("falls back to known domains when the directory is unreachable", async () =
       http,
       typeCache: new Cache<TypeResult>(1),
       providerCache: new Cache(1),
-      domainCache: new Cache<string[]>(1),
+      domainCache: new Cache<Array<string>>(1),
     },
     { id: "tt0133093" },
   );
@@ -234,7 +238,7 @@ test("caches the fallback domains so a directory outage is not re-fetched", asyn
     http,
     typeCache: new Cache<TypeResult>(1),
     providerCache: new Cache(1),
-    domainCache: new Cache<string[]>(1),
+    domainCache: new Cache<Array<string>>(1),
   };
   await handleWatchRequest(deps, { id: "tt0133093" });
   await handleWatchRequest(deps, { id: "tt0133094" });
@@ -247,7 +251,7 @@ test("returns 502 when metadata is unavailable", async () => {
       http: { get: async () => reply(false) },
       typeCache: new Cache<TypeResult>(60_000),
       providerCache: new Cache(60_000),
-      domainCache: new Cache<string[]>(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
     },
     { id: "tt0133093" },
   );
@@ -288,7 +292,7 @@ test("rate limiter counts per ip and blocks after the limit", () => {
 });
 
 test("rate limiter window expires on the injected clock", () => {
-  let at = 1_000;
+  let at = 1000;
   const limited = createRateLimiter(60_000, 1, () => at);
   expect(limited("1.1.1.1")).toBe(false);
   expect(limited("1.1.1.1")).toBe(true);
@@ -300,9 +304,15 @@ test("re-probes a cached provider instead of trusting it blind", async () => {
   let shUp = true;
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY) return reply(true, {}, directoryHtml(DOMAINS));
-      if (url.includes("cinemeta")) return reply(url.includes("/meta/movie/"), MATRIX);
-      if (url.includes("vidsrc.sh")) return reply(shUp);
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(DOMAINS));
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      if (url.includes("vidsrc.sh")) {
+        return reply(shUp);
+      }
       return reply(url.includes("vidsrc2.ru"));
     },
   };
@@ -310,7 +320,7 @@ test("re-probes a cached provider instead of trusting it blind", async () => {
     http,
     typeCache: new Cache<TypeResult>(60_000),
     providerCache: new Cache<string>(60_000),
-    domainCache: new Cache<string[]>(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
   };
   const first = await handleWatchRequest(deps, { id: "tt0133093" });
   expect(first.ok && first.result.provider).toBe("vidsrc.sh");
@@ -323,7 +333,9 @@ test("caches a metadata miss so a repeat bad id costs nothing", async () => {
   let metaCalls = 0;
   const http: HttpClient = {
     get: async (url) => {
-      if (url.includes("cinemeta")) metaCalls++;
+      if (url.includes("cinemeta")) {
+        metaCalls++;
+      }
       return reply(false);
     },
   };
@@ -370,15 +382,21 @@ test("resolveTitle returns movie even when the series endpoint hangs", async () 
   const http: HttpClient = {
     get: (url) => {
       // Never settles: the movie answer must win the race on its own.
-      if (url.includes("/meta/series/")) return new Promise<HttpReply>(() => {});
-      if (url.includes("/meta/movie/")) return Promise.resolve(reply(true, MATRIX));
+      if (url.includes("/meta/series/")) {
+        return new Promise<HttpReply>(() => {});
+      }
+      if (url.includes("/meta/movie/")) {
+        return Promise.resolve(reply(true, MATRIX));
+      }
       return Promise.resolve(reply(false));
     },
   };
   const typeCache = new Cache<TypeResult>(60_000);
   const result = await resolveTitle("tt0133093", http, typeCache);
   expect(result.ok).toBe(true);
-  if (result.ok) expect(result.meta.type).toBe("movie");
+  if (result.ok) {
+    expect(result.meta.type).toBe("movie");
+  }
 });
 
 test("returns 502 when both Cinemeta and TVMaze miss", async () => {
@@ -387,19 +405,22 @@ test("returns 502 when both Cinemeta and TVMaze miss", async () => {
       http: { get: async () => reply(false) },
       typeCache: new Cache<TypeResult>(60_000),
       providerCache: new Cache(60_000),
-      domainCache: new Cache<string[]>(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
     },
     { id: "tt0133093" },
   );
   expect(out.ok).toBe(false);
-  if (!out.ok) expect(out.status).toBe(502);
+  if (!out.ok) {
+    expect(out.status).toBe(502);
+  }
 });
 
 test("selectStream skips the excluded provider across tiers", async () => {
   const http: HttpClient = {
     get: async (url) => {
-      if (url === DIRECTORY)
+      if (url === DIRECTORY) {
         return reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"]));
+      }
       return reply(true);
     },
   };
@@ -409,7 +430,7 @@ test("selectStream skips the excluded provider across tiers", async () => {
     id: "tt0133093",
     exclude: "a.vidsrc.test",
     providerCache: new Cache<string>(60_000),
-    domainCache: new Cache<string[]>(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
   });
   expect(winner?.provider).toBe("b.vidsrc.test");
 });
@@ -427,10 +448,11 @@ test("aborts losing probes once a winner resolves", async () => {
   const pending = new Map<string, { resolve: (r: HttpReply) => void; signal?: AbortSignal }>();
   const http: HttpClient = {
     get: (url, options) => {
-      if (url === DIRECTORY)
+      if (url === DIRECTORY) {
         return Promise.resolve(
           reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"])),
         );
+      }
       return new Promise<HttpReply>((resolve) => {
         pending.set(url, { resolve, signal: options?.signal });
       });
@@ -442,10 +464,12 @@ test("aborts losing probes once a winner resolves", async () => {
     id: "tt0133093",
     exclude: undefined,
     providerCache: new Cache<string>(60_000),
-    domainCache: new Cache<string[]>(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
   });
   // Drain the microtask chain until both probes are in flight (no timers).
-  for (let i = 0; i < 50 && pending.size < 2; i++) await Promise.resolve();
+  for (let i = 0; i < 50 && pending.size < 2; i++) {
+    await Promise.resolve();
+  }
   expect(pending.size).toBe(2);
   pending.get("https://a.vidsrc.test/embed/movie/tt0133093")!.resolve(reply(true));
   const result = await winner;
@@ -483,8 +507,8 @@ test("the page prerenders and the sitemap is generated", async () => {
   const page = await Bun.file("src/pages/index.astro").text();
   expect(page).toContain("export const prerender = true");
 
-  const pkg = (await Bun.file("package.json").json()) as { dependencies?: Record<string, string> };
-  expect(pkg.dependencies?.["@astrojs/sitemap"]).toBeDefined();
+  const pkg = await Bun.file("package.json").json();
+  expect(pkg).toMatchObject({ dependencies: { "@astrojs/sitemap": expect.any(String) } });
 
   const robots = await Bun.file("public/robots.txt").text();
   expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");

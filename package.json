@@ -17,6 +17,7 @@
     "astro": "^7.4.13"
   },
   "devDependencies": {
+    "@cloudflare/oxlint-config": "^0.1.0",
     "bun-types": "^1.4.5",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.1",

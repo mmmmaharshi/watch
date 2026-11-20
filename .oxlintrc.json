@@ -1,4 +1,0 @@
-{
-  "$schema": "https://cdn.jsdelivr.net/gh/oxc-project/oxlint@main/assets/oxlint.schema.json",
-  "ignorePatterns": [".agents/", "dist/", ".astro/", ".vercel/", "out-live/", "public/"]
-}
