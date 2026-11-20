@@ -148,7 +148,10 @@ modalCopy.addEventListener("click", async () => {
 
 modalCancel.addEventListener("click", hideModal);
 modalWatch.addEventListener("click", () => {
-  if (pendingStreamUrl) window.open(pendingStreamUrl, "_blank");
+  if (pendingStreamUrl) {
+    const popup = window.open(pendingStreamUrl, "_blank", "noopener");
+    if (popup) popup.opener = null;
+  }
   hideModal();
   setStatus("");
 });

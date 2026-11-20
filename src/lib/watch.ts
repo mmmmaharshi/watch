@@ -75,6 +75,16 @@ export interface Provider {
 
 // Active domains sit in the #domains section, each row carrying its URL in a
 // data-val copy button.
+
+// Directory entries are untrusted: only hosts that look like VidSrc (plus the
+// hardcoded VidFast host) pass. Anything else falls through to the fallbacks.
+const ALLOWED_HOST = /^(?:[a-z0-9-]+\.)*vidsrc\d*\.[a-z.]{2,}$/i;
+
+export function isAllowedProviderHost(host: string): boolean {
+  const lower = host.toLowerCase();
+  if (lower === "vidfast.vc") return true;
+  return ALLOWED_HOST.test(lower);
+}
 export function parseActiveDomains(html: string): string[] {
   const start = html.indexOf('id="domains"');
   if (start === -1) return [];
@@ -108,7 +118,15 @@ async function loadProviders(http: HttpClient, cache: Cache<string[]>): Promise<
   let domains: string[] = [];
   try {
     const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) domains = parseActiveDomains(await res.text());
+    if (res.ok) {
+      domains = parseActiveDomains(await res.text()).filter((d) => {
+        try {
+          return isAllowedProviderHost(new URL(d).host);
+        } catch {
+          return false;
+        }
+      });
+    }
   } catch {
     // Directory unreachable — fall through to the known-good fallback below.
   }
@@ -146,10 +164,14 @@ async function fetchKind(
   kind: "series" | "movie",
   id: string,
   http: HttpClient,
+  parent?: AbortSignal,
 ): Promise<FetchKindResult> {
   try {
     const url = `https://v3-cinemeta.strem.io/meta/${kind}/${id}.json`;
-    const res = await http.get(url, { signal: AbortSignal.timeout(META_TIMEOUT_MS) });
+    const timeout = AbortSignal.timeout(META_TIMEOUT_MS);
+    const res = await http.get(url, {
+      signal: parent ? AbortSignal.any([timeout, parent]) : timeout,
+    });
     if (!res.ok) return { meta: null, transient: false };
     const m = (await res.json()).meta;
     if (!m?.name) return { meta: null, transient: false };
@@ -172,18 +194,24 @@ async function fetchMeta(
   id: string,
   http: HttpClient,
 ): Promise<{ meta: TitleMeta | null; transient: boolean }> {
-  const seriesPromise = fetchKind("series", id, http).then((result) => ({
-    which: "series" as const,
-    result,
-  }));
-  const moviePromise = fetchKind("movie", id, http).then((result) => ({
-    which: "movie" as const,
-    result,
-  }));
-  const first = await Promise.race([seriesPromise, moviePromise]);
-  if (first.result.meta) return first.result;
-  const other = first.which === "series" ? await moviePromise : await seriesPromise;
-  return { meta: other.result.meta, transient: first.result.transient || other.result.transient };
+  const ctrl = new AbortController();
+  try {
+    const seriesPromise = fetchKind("series", id, http, ctrl.signal).then((result) => ({
+      which: "series" as const,
+      result,
+    }));
+    const moviePromise = fetchKind("movie", id, http, ctrl.signal).then((result) => ({
+      which: "movie" as const,
+      result,
+    }));
+    const first = await Promise.race([seriesPromise, moviePromise]);
+    if (first.result.meta) return first.result;
+    const other = first.which === "series" ? await moviePromise : await seriesPromise;
+    return { meta: other.result.meta, transient: first.result.transient || other.result.transient };
+  } finally {
+    // Losers would otherwise run to their own timeouts.
+    ctrl.abort();
+  }
 }
 
 export async function resolveTitle(
@@ -234,9 +262,18 @@ export async function fetchTVMaze(id: string, http: HttpClient): Promise<TitleMe
 
 const PROBE_TIMEOUT_MS = 8000;
 
-async function probeProvider(provider: Provider, type: ContentType, id: string, http: HttpClient) {
+async function probeProvider(
+  provider: Provider,
+  type: ContentType,
+  id: string,
+  http: HttpClient,
+  parent?: AbortSignal,
+) {
   const url = buildEmbedUrl(provider, type, id);
-  const res = await http.get(url, { signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+  const timeout = AbortSignal.timeout(PROBE_TIMEOUT_MS);
+  const res = await http.get(url, {
+    signal: parent ? AbortSignal.any([timeout, parent]) : timeout,
+  });
   if (!res.ok) throw new Error(`${provider.name} unavailable`);
   return { url, provider: provider.name };
 }
@@ -262,12 +299,18 @@ export async function selectStream(args: {
   for (const tier of tiers) {
     const candidates = tier.filter((p) => p.name !== exclude);
     if (!candidates.length) continue;
+    const ctrl = new AbortController();
     try {
-      const winner = await Promise.any(candidates.map((p) => probeProvider(p, type, id, http)));
+      const winner = await Promise.any(
+        candidates.map((p) => probeProvider(p, type, id, http, ctrl.signal)),
+      );
       providerCache.set(cacheKey, winner.provider);
       return winner;
     } catch {
       // This tier failed — try the next one.
+    } finally {
+      // Losers would otherwise run to their own timeouts.
+      ctrl.abort();
     }
   }
   return null;
@@ -379,7 +422,12 @@ export const watchDeps: WatchDeps = {
 export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 export function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "unknown";
+  // Vercel appends the verified client IP last, so earlier entries (spoofable
+  // by the caller) are ignored. Direct spoofing of the last entry is not
+  // possible through the edge: it always appends the connecting IP.
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",");
+  const last = forwarded?.[forwarded.length - 1]?.trim();
+  return last || "unknown";
 }
 
 // The action RPC path. Kept here (not in middleware) so tests can pin it:

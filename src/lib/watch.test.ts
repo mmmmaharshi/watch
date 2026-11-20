@@ -5,6 +5,7 @@ import {
   createRateLimiter,
   fetchTVMaze,
   handleWatchRequest,
+  isAllowedProviderHost,
   isActionRequest,
   limitResponse,
   parseActiveDomains,
@@ -140,6 +141,39 @@ test("reads active domains from the directory and ignores old ones", () => {
   expect(parseActiveDomains("")).toEqual([]);
 });
 
+test("allows only VidSrc-shaped hosts plus vidfast", () => {
+  expect(isAllowedProviderHost("vidsrc.sh")).toBe(true);
+  expect(isAllowedProviderHost("vidsrc2.ru")).toBe(true);
+  expect(isAllowedProviderHost("a.vidsrc.to")).toBe(true);
+  expect(isAllowedProviderHost("VIDFAST.VC")).toBe(true);
+  expect(isAllowedProviderHost("evil.com")).toBe(false);
+  expect(isAllowedProviderHost("vidsrc-evil.com")).toBe(false);
+  expect(isAllowedProviderHost("evilvidsrc.com")).toBe(false);
+  expect(isAllowedProviderHost("v\u0456dsrc.to")).toBe(false);
+});
+
+test("drops unlisted directory hosts and falls back", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) return reply(true, {}, directoryHtml(["https://evil.example.com"]));
+      const ok = url.includes("cinemeta")
+        ? url.includes("/meta/movie/")
+        : url.includes("vidsrc.sh");
+      return reply(ok, url.includes("/meta/movie/") ? MATRIX : {});
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<string[]>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
+});
+
 test("falls back to known domains when the directory is unreachable", async () => {
   const http: HttpClient = {
     get: async (url) => {
@@ -231,10 +265,10 @@ test("answers 429 from the limiter and null when allowed", async () => {
   expect(limitResponse(new Request("http://x/_actions/watch"), () => false)).toBeNull();
 });
 
-test("keys the limiter on the forwarded header, unknown without it", () => {
+test("keys the limiter on the last forwarded address, unknown without it", () => {
   expect(
-    clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } })),
-  ).toBe("1.2.3.4");
+    clientIp(new Request("http://x/", { headers: { "x-forwarded-for": "spoofed, 5.6.7.8" } })),
+  ).toBe("5.6.7.8");
   expect(clientIp(new Request("http://x/"))).toBe("unknown");
 });
 
@@ -365,7 +399,7 @@ test("selectStream skips the excluded provider across tiers", async () => {
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY)
-        return reply(true, {}, directoryHtml(["https://a.test", "https://b.test"]));
+        return reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"]));
       return reply(true);
     },
   };
@@ -373,11 +407,11 @@ test("selectStream skips the excluded provider across tiers", async () => {
     http,
     type: "movie",
     id: "tt0133093",
-    exclude: "a.test",
+    exclude: "a.vidsrc.test",
     providerCache: new Cache<string>(60_000),
     domainCache: new Cache<string[]>(60_000),
   });
-  expect(winner?.provider).toBe("b.test");
+  expect(winner?.provider).toBe("b.vidsrc.test");
 });
 
 test("caps the cache by evicting the oldest entry", () => {
@@ -387,6 +421,36 @@ test("caps the cache by evicting the oldest entry", () => {
   cache.set("c", "3");
   expect(cache.get("a")).toBe(undefined);
   expect(cache.get("c")).toBe("3");
+});
+
+test("aborts losing probes once a winner resolves", async () => {
+  const pending = new Map<string, { resolve: (r: HttpReply) => void; signal?: AbortSignal }>();
+  const http: HttpClient = {
+    get: (url, options) => {
+      if (url === DIRECTORY)
+        return Promise.resolve(
+          reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"])),
+        );
+      return new Promise<HttpReply>((resolve) => {
+        pending.set(url, { resolve, signal: options?.signal });
+      });
+    },
+  };
+  const winner = selectStream({
+    http,
+    type: "movie",
+    id: "tt0133093",
+    exclude: undefined,
+    providerCache: new Cache<string>(60_000),
+    domainCache: new Cache<string[]>(60_000),
+  });
+  // Drain the microtask chain until both probes are in flight (no timers).
+  for (let i = 0; i < 50 && pending.size < 2; i++) await Promise.resolve();
+  expect(pending.size).toBe(2);
+  pending.get("https://a.vidsrc.test/embed/movie/tt0133093")!.resolve(reply(true));
+  const result = await winner;
+  expect(result?.provider).toBe("a.vidsrc.test");
+  expect(pending.get("https://b.vidsrc.test/embed/movie/tt0133093")!.signal?.aborted).toBe(true);
 });
 
 // Astro owns the page now: the shell prerenders to static HTML, so these
