@@ -43,7 +43,7 @@ export type ContentType = "movie" | "tv";
 export interface HttpClient {
   get(
     url: string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; headers?: Record<string, string> },
   ): Promise<{
     ok: boolean;
     json: () => Promise<LooseJson>;
