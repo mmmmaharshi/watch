@@ -26,5 +26,5 @@ test("falls back to an empty list on missing or junk storage", () => {
 
 test("drops entries without a string id", () => {
   expect(parseRecent('[{"id":1},{"name":"x"},null]')).toEqual([]);
-  expect(addRecent([{ id: "tt0000001" }], {} as { id: string })).toEqual([{ id: "tt0000001" }]);
+  expect(addRecent([{ id: "tt0000001" }], {})).toEqual([{ id: "tt0000001" }]);
 });

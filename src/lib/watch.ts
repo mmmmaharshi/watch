@@ -11,7 +11,29 @@ interface MetaJson {
 
 // Third-party JSON; call sites check the shape before use.
 type JsonValue = string | number | boolean | null | Array<JsonValue> | { [key: string]: JsonValue };
-type LooseJson = MetaJson & Record<string, JsonValue>;
+type LooseJson = MetaJson & { [key: string]: JsonValue };
+
+function isJsonValue(value: unknown): value is JsonValue {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every(isJsonValue);
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return Object.values(value).every(isJsonValue);
+}
+
+function isLooseJson(value: unknown): value is LooseJson {
+  return isJsonValue(value) && typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export type ContentType = "movie" | "tv";
 
@@ -29,8 +51,14 @@ export interface HttpClient {
 export const defaultHttpClient: HttpClient = {
   get: async (url, options) => {
     const res = await fetch(url, options);
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- res.json() is untyped third-party JSON; every call site narrows the fields it reads.
-    return { ok: res.ok, json: () => res.json() as Promise<LooseJson>, text: () => res.text() };
+    return {
+      ok: res.ok,
+      json: async () => {
+        const value: unknown = await res.json();
+        return isLooseJson(value) ? value : {};
+      },
+      text: () => res.text(),
+    };
   },
 };
 
@@ -400,6 +428,33 @@ export const JSON_HEADERS = {
   "Content-Security-Policy": "default-src 'none'",
   "Cache-Control": "no-store",
 } satisfies Record<string, string>;
+
+interface UnknownResult {
+  id?: unknown;
+  url?: unknown;
+  provider?: unknown;
+  name?: unknown;
+  type?: unknown;
+  error?: unknown;
+  message?: unknown;
+}
+
+export function isRecord(value: unknown): value is UnknownResult {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isWatchResult(value: unknown): value is WatchResult {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value.id === "string" &&
+    typeof value.url === "string" &&
+    typeof value.provider === "string" &&
+    typeof value.name === "string" &&
+    (value.type === "movie" || value.type === "tv")
+  );
+}
 
 export interface WatchDeps {
   http: HttpClient;

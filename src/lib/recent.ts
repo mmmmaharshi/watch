@@ -7,11 +7,15 @@ export interface RecentEntry {
 }
 
 // Newest first, no duplicates, capped. Entries without a string id are dropped.
-export function addRecent(list: Array<RecentEntry>, entry: RecentEntry): Array<RecentEntry> {
+export function addRecent(
+  list: Array<RecentEntry>,
+  entry: Partial<RecentEntry> | null | undefined,
+): Array<RecentEntry> {
   if (!entry || typeof entry.id !== "string") {
     return list.slice(0, RECENT_MAX);
   }
-  return [entry, ...list.filter((item) => item && item.id !== entry.id)].slice(0, RECENT_MAX);
+  const valid: RecentEntry = { id: entry.id, name: entry.name };
+  return [valid, ...list.filter((item) => item && item.id !== valid.id)].slice(0, RECENT_MAX);
 }
 
 // localStorage may hold anything: junk, or a shape from an older version.
