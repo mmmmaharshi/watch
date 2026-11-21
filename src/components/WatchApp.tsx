@@ -26,6 +26,11 @@ function errMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
+function candidateMeta(candidate: TitleCandidate): string {
+  const kind = candidate.kind === "tv" ? "TV show" : candidate.kind === "movie" ? "Film" : null;
+  return [kind, candidate.year].filter(Boolean).join(" · ");
+}
+
 async function lookup(value: string, exclude?: string): Promise<WatchResult> {
   const result: unknown = await actions.watch({ id: value, exclude });
   return unwrapActionResult(result);
@@ -362,9 +367,7 @@ export default function WatchApp() {
                 onClick={() => chooseCandidate(candidate)}
               >
                 <span className="text-sm font-medium">{candidate.name}</span>
-                <span className="text-sm text-black/64">
-                  {candidate.description ?? candidate.year}
-                </span>
+                <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
               </button>
             </li>
           ))}

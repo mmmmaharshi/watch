@@ -146,7 +146,7 @@ components:
 
 watch is one plain screen with three parts: a short wordmark and intro, one input with one primary action, and a dialog that shows the found stream link. The page is white, the ink is black, and the only colour is a functional focus state. There is no accent filling the primary action; the action is ink on paper.
 
-The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now. A title is searched on Wikidata and shown as a short list of films and shows; picking one runs the normal lookup. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
+The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now. A title is searched on Cinemeta, with TVMaze as a fallback for shows, and shown as a short list of films and shows; picking one runs the normal lookup. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
 - One input, one primary action, one result dialog.
@@ -272,8 +272,8 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 ### Title Search
 
 - **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action. A bare number is tried as a TMDB ID first; if TMDB has no such title, the number is searched as a title. A link that is not an IMDb title link or a TMDB movie/TV link is rejected with a message.
-- **Server:** `src/lib/search.ts` asks Wikidata `wbsearchentities`, batches the hits through `wbgetentities`, and keeps only `P31` films and shows with a `tt` IMDb ID. It drops people, games, seasons, and episodes. Results are capped at 6 per query and cached for 10 minutes per instance.
-- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left`; the name is `text-sm font-medium`, the second line is the Wikidata description or the year in `text-sm text-black/64`. Hover and focus use `bg-black/5`; the focus ring is 2px ink.
+- **Server:** `src/lib/search.ts` asks the Cinemeta movie and series catalogs in parallel. Each row already carries an IMDb ID, a name, and a release year. If Cinemeta fails or returns nothing, TVMaze searches shows as a fallback and keeps scores of 0.5 or more. The merge alternates the two sources, lifts exact title matches, dedupes by IMDb ID, and caps at 6. Results are cached for 10 minutes per instance.
+- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left`; the name is `text-sm font-medium`, the second line reads "Film · 1999" or "TV show · 2005" in `text-sm text-black/64`. Hover and focus use `bg-black/5`; the focus ring is 2px ink.
 - **Picking:** sets the input to the IMDb ID, clears the list, and runs the normal lookup. A failed or empty search reports through the status line.
 - **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
 

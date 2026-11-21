@@ -28,7 +28,7 @@ const search = mock(async (_input: { query: string }) => ({
       imdbId: string;
       name: string;
       year?: string;
-      description?: string;
+      kind?: "movie" | "tv";
     }>,
   },
 }));
@@ -64,8 +64,8 @@ test("a title shows candidates and picking one opens the result", async () => {
   search.mockResolvedValueOnce({
     data: {
       candidates: [
-        { imdbId: "tt0133093", name: "The Matrix", year: "1999", description: "1999 film" },
-        { imdbId: "tt0234215", name: "The Matrix Reloaded", year: "2003" },
+        { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" },
+        { imdbId: "tt0234215", name: "The Matrix Reloaded", year: "2003", kind: "movie" },
       ],
     },
   });
@@ -75,7 +75,7 @@ test("a title shows candidates and picking one opens the result", async () => {
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
 
-  const first = await screen.findByRole("button", { name: /The Matrix 1999/ });
+  const first = await screen.findByRole("button", { name: /The Matrix Film/ });
   fireEvent.click(first);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
@@ -106,7 +106,7 @@ test("an ID skips the title search and goes straight to the lookup", async () =>
 test("a bare number falls back to a title search when no TMDB title matches", async () => {
   lookup.mockRejectedValueOnce(new Error("TMDB ID not found"));
   search.mockResolvedValueOnce({
-    data: { candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019" }] },
+    data: { candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019", kind: "movie" }] },
   });
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });

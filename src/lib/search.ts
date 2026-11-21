@@ -1,33 +1,28 @@
 import { Cache, defaultHttpClient } from "./watch";
 import type { HttpClient, LooseJson } from "./watch";
 
-const API = "https://www.wikidata.org/w/api.php";
+const CINEMETA = "https://v3-cinemeta.strem.io/catalog";
+const TVMAZE = "https://api.tvmaze.com/search/shows?q=";
 const USER_AGENT = "watch-app/1.0 (+https://github.com/mmmmaharshi/watch)";
-const SEARCH_LIMIT = 20;
-const MAX_CANDIDATES = 6;
 const TIMEOUT_MS = 5000;
-
-// Only films and shows are streamable. People, games, seasons, episodes and
-// franchises also carry an IMDb ID, so an allowlist beats a denylist here.
-const TITLE_CLASSES = new Set([
-  "Q11424", // film
-  "Q506240", // television film
-  "Q5398426", // television series
-  "Q1259759", // miniseries
-  "Q15416", // television program
-]);
+const MAX_CANDIDATES = 6;
+// TVMaze scores the best match around 1.2. Below 0.5 the results stop sharing
+// a title with the query.
+const TVMAZE_SCORE_FLOOR = 0.5;
 
 export interface TitleCandidate {
   imdbId: string;
   name: string;
   year?: string;
-  description?: string;
+  kind?: "movie" | "tv";
 }
 
 export interface SearchDeps {
   http: HttpClient;
   cache: Cache<Array<TitleCandidate>>;
 }
+
+export type SearchOutcome = { ok: true; candidates: Array<TitleCandidate> } | { ok: false };
 
 function isObject(value: unknown): value is LooseJson {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -37,153 +32,117 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function searchHits(value: unknown): Array<{ id: string; label?: string; description?: string }> {
-  if (!isObject(value) || !Array.isArray(value.search)) {
-    return [];
+function validImdb(value: unknown): string | undefined {
+  return typeof value === "string" && /^tt\d{7,8}$/.test(value) ? value : undefined;
+}
+
+function yearOf(value: unknown): string | undefined {
+  return asString(value)?.match(/^\d{4}/)?.[0];
+}
+
+// Null means the payload was not the shape we expect. An empty array is a
+// valid "no results" answer.
+export function parseCinemeta(
+  payload: unknown,
+  kind: "movie" | "tv",
+): Array<TitleCandidate> | null {
+  if (!isObject(payload) || !Array.isArray(payload.metas)) {
+    return null;
   }
-  return value.search.flatMap((hit: unknown) => {
-    if (!isObject(hit) || typeof hit.id !== "string") {
+  return payload.metas.flatMap((meta: unknown) => {
+    if (!isObject(meta)) {
       return [];
     }
-    return [
-      {
-        id: hit.id,
-        label: asString(hit.label),
-        description: asString(hit.description),
-      },
-    ];
+    const imdbId = validImdb(meta.imdb_id);
+    const name = asString(meta.name);
+    if (!imdbId || !name) {
+      return [];
+    }
+    return [{ imdbId, name, year: yearOf(meta.releaseInfo), kind }];
   });
 }
 
-function entityMap(value: unknown): LooseJson {
-  return isObject(value) && isObject(value.entities) ? value.entities : {};
-}
-
-// Claim values are strings (P345), entity references (P31) or time objects
-// (P577). Callers narrow the one they need.
-function claimValues(entity: unknown, property: string): Array<unknown> {
-  if (!isObject(entity) || !isObject(entity.claims)) {
-    return [];
+export function parseTVMaze(payload: unknown): Array<TitleCandidate> | null {
+  if (!Array.isArray(payload)) {
+    return null;
   }
-  const claims = entity.claims[property];
-  if (!Array.isArray(claims)) {
-    return [];
-  }
-  return claims.flatMap((claim: unknown) => {
-    if (!isObject(claim) || !isObject(claim.mainsnak) || !isObject(claim.mainsnak.datavalue)) {
+  return payload.flatMap((item: unknown) => {
+    if (!isObject(item) || !isObject(item.show)) {
       return [];
     }
-    return [claim.mainsnak.datavalue.value];
+    const score = typeof item.score === "number" ? item.score : 0;
+    if (score < TVMAZE_SCORE_FLOOR) {
+      return [];
+    }
+    const show = item.show;
+    const imdbId = isObject(show.externals) ? validImdb(show.externals.imdb) : undefined;
+    const name = asString(show.name);
+    if (!imdbId || !name) {
+      return [];
+    }
+    return [{ imdbId, name, year: yearOf(show.premiered), kind: "tv" as const }];
   });
 }
 
-function imdbId(entity: unknown): string | undefined {
-  return claimValues(entity, "P345").find(
-    (value): value is string => typeof value === "string" && /^tt\d{7,8}$/.test(value),
-  );
+function normalize(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/^the\s+/, "")
+    .trim();
 }
 
-function classes(entity: unknown): Array<string> {
-  return claimValues(entity, "P31").flatMap((value) =>
-    isObject(value) && typeof value.id === "string" ? [value.id] : [],
-  );
-}
-
-function year(entity: unknown): string | undefined {
-  const years = claimValues(entity, "P577").flatMap((value) => {
-    if (!isObject(value) || typeof value.time !== "string") {
-      return [];
-    }
-    const match = value.time.match(/^[+-]?(\d{4})/);
-    return match ? [Number(match[1])] : [];
-  });
-  return years.length > 0 ? String(Math.min(...years)) : undefined;
-}
-
-function label(entity: unknown, hit: { label?: string }, language: string): string | undefined {
-  if (!isObject(entity) || !isObject(entity.labels)) {
-    return hit.label;
-  }
-  const entry = entity.labels[language];
-  return isObject(entry) ? (asString(entry.value) ?? hit.label) : hit.label;
-}
-
-function description(
-  entity: unknown,
-  hit: { description?: string },
-  language: string,
-): string | undefined {
-  if (!isObject(entity) || !isObject(entity.descriptions)) {
-    return hit.description;
-  }
-  const entry = entity.descriptions[language];
-  return isObject(entry) ? (asString(entry.value) ?? hit.description) : hit.description;
-}
-
-function parseFromHits(
-  hits: ReturnType<typeof searchHits>,
-  entitiesJson: unknown,
+// Alternate the two sources, then lift exact title matches to the top. A movie
+// and a show can share a name ("The Office", "Dune"), so both stay visible.
+export function mergeCandidates(
+  query: string,
+  movies: Array<TitleCandidate>,
+  shows: Array<TitleCandidate>,
 ): Array<TitleCandidate> {
-  const entities = entityMap(entitiesJson);
+  const wanted = normalize(query);
   const seen = new Set<string>();
-  const candidates: Array<TitleCandidate> = [];
+  const merged: Array<TitleCandidate> = [];
 
-  for (const hit of hits) {
-    if (candidates.length >= MAX_CANDIDATES) {
-      break;
+  for (let i = 0; i < Math.max(movies.length, shows.length); i++) {
+    for (const candidate of [movies[i], shows[i]]) {
+      if (candidate && !seen.has(candidate.imdbId)) {
+        seen.add(candidate.imdbId);
+        merged.push(candidate);
+      }
     }
-    const entity = entities[hit.id];
-    if (!entity || !classes(entity).some((id) => TITLE_CLASSES.has(id))) {
-      continue;
-    }
-    const id = imdbId(entity);
-    if (!id || seen.has(id)) {
-      continue;
-    }
-    const name = label(entity, hit, "en");
-    if (!name) {
-      continue;
-    }
-    seen.add(id);
-    candidates.push({
-      imdbId: id,
-      name,
-      year: year(entity),
-      description: description(entity, hit, "en"),
-    });
   }
 
-  return candidates;
+  return merged
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      exact: normalize(candidate.name) === wanted ? 1 : 0,
+    }))
+    .sort((a, b) => b.exact - a.exact || a.index - b.index)
+    .slice(0, MAX_CANDIDATES)
+    .map((entry) => entry.candidate);
 }
 
-export function parseCandidates(searchJson: unknown, entitiesJson: unknown): Array<TitleCandidate> {
-  return parseFromHits(searchHits(searchJson), entitiesJson);
+function cinemetaUrl(kind: "movie" | "series", query: string): string {
+  return `${CINEMETA}/${kind}/top/search=${encodeURIComponent(query)}.json`;
 }
 
-function isSearchBody(value: unknown): boolean {
-  return isObject(value) && Array.isArray(value.search);
+async function fetchWith<T>(
+  http: HttpClient,
+  url: string,
+  headers: Record<string, string>,
+  parse: (value: unknown) => T | null,
+): Promise<T | null> {
+  try {
+    const res = await http.get(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers });
+    if (!res.ok) {
+      return null;
+    }
+    const value: unknown = JSON.parse(await res.text());
+    return parse(value);
+  } catch {
+    return null;
+  }
 }
-
-function isEntitiesBody(value: unknown): boolean {
-  return isObject(value) && isObject(value.entities);
-}
-
-function searchUrl(query: string): string {
-  return (
-    `${API}?action=wbsearchentities&format=json&language=en&uselang=en` +
-    `&type=item&limit=${SEARCH_LIMIT}&search=${encodeURIComponent(query)}`
-  );
-}
-
-function entitiesUrl(ids: Array<string>): string {
-  return (
-    `${API}?action=wbgetentities&format=json&languages=en` +
-    `&props=${encodeURIComponent("claims|labels|descriptions")}` +
-    `&ids=${encodeURIComponent(ids.join("|"))}`
-  );
-}
-
-export type SearchOutcome = { ok: true; candidates: Array<TitleCandidate> } | { ok: false };
 
 export async function searchTitles(deps: SearchDeps, query: string): Promise<SearchOutcome> {
   const cleaned = query.trim();
@@ -197,47 +156,47 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     return { ok: true, candidates: cached };
   }
 
-  try {
-    const headers = { "User-Agent": USER_AGENT };
-    const searchRes = await deps.http.get(searchUrl(cleaned), {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers,
-    });
-    if (!searchRes.ok) {
-      return { ok: false };
-    }
-    const searchJson = await searchRes.json();
-    if (!isSearchBody(searchJson)) {
-      return { ok: false };
-    }
-    const hits = searchHits(searchJson);
-    if (hits.length === 0) {
-      deps.cache.set(key, []);
-      return { ok: true, candidates: [] };
-    }
+  const headers = { "User-Agent": USER_AGENT };
+  const [movies, shows] = await Promise.all([
+    fetchWith(deps.http, cinemetaUrl("movie", cleaned), headers, (value) =>
+      parseCinemeta(value, "movie"),
+    ),
+    fetchWith(deps.http, cinemetaUrl("series", cleaned), headers, (value) =>
+      parseCinemeta(value, "tv"),
+    ),
+  ]);
+  const cinemetaAnswered = movies !== null || shows !== null;
+  const merged = mergeCandidates(cleaned, movies ?? [], shows ?? []);
 
-    const entitiesRes = await deps.http.get(entitiesUrl(hits.map((hit) => hit.id)), {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers,
-    });
-    if (!entitiesRes.ok) {
-      return { ok: false };
-    }
-    const entitiesJson = await entitiesRes.json();
-    if (!isEntitiesBody(entitiesJson)) {
-      return { ok: false };
-    }
+  if (merged.length > 0) {
+    deps.cache.set(key, merged);
+    return { ok: true, candidates: merged };
+  }
 
-    const candidates = parseFromHits(hits, entitiesJson);
+  // Cinemeta is undocumented, so shows get a second source.
+  const tvmaze = await fetchWith(
+    deps.http,
+    TVMAZE + encodeURIComponent(cleaned),
+    headers,
+    parseTVMaze,
+  );
+
+  if (tvmaze && tvmaze.length > 0) {
+    const candidates = mergeCandidates(cleaned, [], tvmaze);
     deps.cache.set(key, candidates);
     return { ok: true, candidates };
-  } catch {
+  }
+
+  if (!cinemetaAnswered && !tvmaze) {
     return { ok: false };
   }
+
+  deps.cache.set(key, []);
+  return { ok: true, candidates: [] };
 }
 
-// Per-instance, like the watch caches. Searches are cheap to repeat but the
-// Wikidata API is shared infrastructure.
+// Per-instance, like the watch caches. The Cinemeta and TVMaze endpoints are
+// shared infrastructure, so repeats stay local.
 export const searchDeps: SearchDeps = {
   http: defaultHttpClient,
   cache: new Cache<Array<TitleCandidate>>(10 * 60 * 1000),
