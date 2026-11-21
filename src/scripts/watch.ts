@@ -29,6 +29,7 @@ const input = reqEl("imdb");
 const btn = reqEl("go");
 const status = reqEl("status");
 const modal = reqEl("modal");
+const modalTitle = reqEl("modal-title");
 const modalMeta = reqEl("modal-meta");
 const modalDescription = reqEl("modal-description");
 const modalType = reqEl("modal-type");
@@ -93,8 +94,9 @@ function showModal(data: WatchData) {
   currentProvider = data.provider;
   currentId = data.id;
   const title = data.name || data.id.toUpperCase();
-  const bits = [data.year, data.rating ? `★ ${data.rating}` : null].filter(Boolean).join(" · ");
-  modalMeta.textContent = title + (bits ? `, ${bits}` : "");
+  const bits = [data.year, data.rating ? `IMDb ${data.rating}` : null].filter(Boolean).join(" · ");
+  modalTitle.textContent = title;
+  modalMeta.textContent = bits;
   if (data.description) {
     modalDescription.textContent = data.description;
     modalDescription.style.display = "block";

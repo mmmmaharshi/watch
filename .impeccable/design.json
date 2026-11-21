@@ -4,170 +4,173 @@
   "title": "Design System: watch",
   "extensions": {
     "colorMeta": {
-      "navy": {
+      "ink": {
         "role": "primary",
-        "displayName": "Carrier Navy",
-        "canonical": "#16324F",
+        "displayName": "Ink Black",
+        "canonical": "#0A0A0A",
         "tonalRamp": [
-          "#071522",
-          "#0B2033",
-          "#102B44",
-          "#16324F",
-          "#2B4D70",
-          "#4F7092",
-          "#8CA9C2",
-          "#DCE6EF"
+          "#000000",
+          "#1A1A1A",
+          "#303030",
+          "#4A4A4A",
+          "#666666",
+          "#858585",
+          "#B0B0B0",
+          "#E0E0E0"
         ]
       },
-      "navy-glow": {
-        "role": "neutral",
-        "displayName": "Radial Navy",
-        "canonical": "#1E4062",
-        "tonalRamp": [
-          "#0A1927",
-          "#10263A",
-          "#173550",
-          "#1E4062",
-          "#335C83",
-          "#5A84A9",
-          "#95B6CE",
-          "#E0EAF2"
-        ]
-      },
-      "red": {
+      "ink-hover": {
         "role": "primary",
-        "displayName": "Jet Red",
-        "canonical": "#C0392B",
+        "displayName": "Ink Lift",
+        "canonical": "#2B2B2B",
         "tonalRamp": [
-          "#3A0F0A",
-          "#611A11",
-          "#8C271B",
-          "#C0392B",
-          "#D2584A",
-          "#E07E73",
-          "#EFAFA6",
-          "#FBE3DF"
-        ]
-      },
-      "purple": {
-        "role": "secondary",
-        "displayName": "Carbon Purple",
-        "canonical": "#5B3E74",
-        "tonalRamp": [
-          "#1A1122",
-          "#2A1B37",
-          "#3F2A52",
-          "#5B3E74",
-          "#775795",
-          "#9A7EB4",
-          "#C3B0D5",
-          "#E9E1F0"
-        ]
-      },
-      "coupon": {
-        "role": "neutral",
-        "displayName": "Coupon White",
-        "canonical": "#F7F4EA",
-        "tonalRamp": [
-          "#3B382E",
-          "#595444",
-          "#7A735F",
-          "#A69E86",
-          "#C9C2AC",
-          "#E2DCC9",
-          "#F7F4EA",
-          "#FFFDF6"
+          "#101010",
+          "#262626",
+          "#3D3D3D",
+          "#575757",
+          "#737373",
+          "#919191",
+          "#B8B8B8",
+          "#E8E8E8"
         ]
       },
       "paper": {
         "role": "neutral",
         "displayName": "Paper",
-        "canonical": "#FFFDF6",
+        "canonical": "#FAFAFA",
         "tonalRamp": [
-          "#4A483F",
-          "#6B685C",
-          "#8F8B7C",
-          "#B9B4A4",
-          "#D8D3C3",
-          "#EDE9DC",
-          "#FFFDF6",
+          "#2E2E2E",
+          "#4A4A4A",
+          "#666666",
+          "#858585",
+          "#A6A6A6",
+          "#C7C7C7",
+          "#E4E4E4",
+          "#FAFAFA"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White Surface",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#333333",
+          "#4F4F4F",
+          "#6B6B6B",
+          "#8A8A8A",
+          "#ACACAC",
+          "#CCCCCC",
+          "#E8E8E8",
           "#FFFFFF"
         ]
       },
-      "navy-deep": {
+      "gray": {
         "role": "neutral",
-        "displayName": "Desk Navy",
-        "canonical": "#0F2537",
+        "displayName": "Secondary Gray",
+        "canonical": "#6B6B6B",
         "tonalRamp": [
-          "#050E16",
-          "#081722",
-          "#0B1E2D",
-          "#0F2537",
-          "#1E3B52",
-          "#335871",
-          "#6B8AA3",
-          "#D3DEE7"
+          "#1F1F1F",
+          "#303030",
+          "#414141",
+          "#555555",
+          "#6B6B6B",
+          "#8E8E8E",
+          "#B4B4B4",
+          "#DCDCDC"
         ]
       },
-      "muted": {
+      "scrollbar": {
         "role": "neutral",
-        "displayName": "Muted Ink",
-        "canonical": "#7C838C",
+        "displayName": "Scrollbar Thumb",
+        "canonical": "#C9C9C9",
         "tonalRamp": [
-          "#23272B",
-          "#3A4045",
-          "#565D65",
-          "#7C838C",
-          "#989FA7",
-          "#B9BFC5",
-          "#D9DDE0",
-          "#F2F4F5"
+          "#4A4A4A",
+          "#666666",
+          "#858585",
+          "#A5A5A5",
+          "#B8B8B8",
+          "#C9C9C9",
+          "#DEDEDE",
+          "#F2F2F2"
         ]
       },
       "line": {
         "role": "neutral",
-        "displayName": "Hairline Rule",
-        "canonical": "rgba(22, 50, 79, 0.25)",
+        "displayName": "Hairline",
+        "canonical": "#E4E4E4",
         "tonalRamp": [
-          "rgba(22, 50, 79, 0.05)",
-          "rgba(22, 50, 79, 0.1)",
-          "rgba(22, 50, 79, 0.15)",
-          "rgba(22, 50, 79, 0.25)",
-          "rgba(22, 50, 79, 0.35)",
-          "rgba(22, 50, 79, 0.5)",
-          "rgba(22, 50, 79, 0.7)",
-          "rgba(22, 50, 79, 0.9)"
+          "#4D4D4D",
+          "#6B6B6B",
+          "#8A8A8A",
+          "#AAAAAA",
+          "#C8C8C8",
+          "#DCDCDC",
+          "#E4E4E4",
+          "#FFFFFF"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Ticket title in the result dialog; Barlow Condensed airline-grotesk caps, self-hosted via Fontsource."
+        "purpose": "The movie title in the result h2 — self-hosted Archivo, tight-tracked, with text-wrap: balance so long titles wrap evenly."
       },
-      "headline": {
-        "displayName": "Headline",
-        "purpose": "The 'watch' brand tab of the coupon head."
+      "display-mobile": {
+        "displayName": "Display Mobile",
+        "purpose": "The responsive step-down of the movie title at the narrow breakpoint."
+      },
+      "result-meta": {
+        "displayName": "Result Meta",
+        "purpose": "The year and 'IMDb <rating>' line directly beneath the movie title, in secondary gray."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "The small tracked 'watch' caps; its subline uses 500 weight and wider tracking."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Input, field values, notices and status; IBM Plex Mono self-hosted via Fontsource, with tabular figures."
+        "purpose": "Description, row values, warning, and notice copy."
+      },
+      "field": {
+        "displayName": "Field",
+        "purpose": "The ID input, with tabular figures on by default."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "FROM / CARRIER / TO and field caps; Barlow Condensed uppercase."
+        "purpose": "Uppercase keys (IMDb / Provider / Stream URL) and the type line."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "Primary button caps."
+      },
+      "action-small": {
+        "displayName": "Action Small",
+        "purpose": "Ghost, icon, and small-primary button caps."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Status, hint, and recent-lookup text."
+      },
+      "fine-print": {
+        "displayName": "Fine Print",
+        "purpose": "The warning and the safety note at the foot of the page."
       }
     },
     "shadows": [
       {
-        "name": "coupon-lift",
-        "value": "0 28px 60px rgba(0, 0, 0, 0.35)",
-        "purpose": "The single ambient shadow under the coupon; nothing else in the system lifts."
+        "name": "record-shadow",
+        "value": "0 12px 30px rgba(10, 10, 10, 0.06)",
+        "purpose": "The single soft-offset shadow under the found record."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px rgba(10, 10, 10, 0.08)",
+        "purpose": "A faint ink ring on the focused input, paired with an ink border."
       },
       {
         "name": "modal-scrim",
-        "value": "rgba(22, 50, 79, 0.12)",
-        "purpose": "A light navy wash behind the result dialog; it tints the desk rather than dimming it."
+        "value": "rgba(10, 10, 10, 0.18)",
+        "purpose": "The light wash behind the result dialog."
       }
     ],
     "motion": [
@@ -179,7 +182,7 @@
       {
         "name": "spinner-spin",
         "value": "0.7s linear infinite",
-        "purpose": "Continuous rotation of the 14px loading spinner."
+        "purpose": "Continuous rotation of the 14px loading spinner and the icon buttons while loading."
       },
       {
         "name": "reduced-motion",
@@ -199,138 +202,139 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The red Watch now action that issues the ticket; solid jet red with a loading spinner state.",
+      "description": "The single ink-black Watch now action; the only emphasis on the screen, with a loading spinner state.",
       "html": "<button class=\"ds-btn-primary\" type=\"button\"><span class=\"ds-btn-spinner\"></span><span>WATCH NOW</span></button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 26px; border: 0; border-radius: 0; background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-btn-primary:hover { background: #A63225; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; } .ds-btn-primary:disabled { background: var(--muted, #7C838C); cursor: wait; } .ds-btn-spinner { width: 14px; height: 14px; border: 2px solid var(--coupon, #F7F4EA); border-top-color: transparent; border-radius: 50%; opacity: 0; transition: opacity 0.15s ease; } .ds-btn-primary.is-loading .ds-btn-spinner { opacity: 1; animation: ds-spin 0.7s linear infinite; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 58px; padding: 0 26px; border: 1px solid var(--ink, #0A0A0A); border-radius: 4px; background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-btn-primary:hover { background: var(--ink-hover, #2B2B2B); border-color: var(--ink-hover, #2B2B2B); } .ds-btn-primary:active { transform: scale(0.99); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ink, #0A0A0A); outline-offset: 3px; } .ds-btn-primary:disabled { background: var(--gray, #6B6B6B); border-color: var(--gray, #6B6B6B); cursor: wait; } .ds-btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(250, 250, 250, 0.45); border-top-color: var(--paper, #FAFAFA); border-radius: 50%; opacity: 0; transition: opacity 0.15s ease; } .ds-btn-primary.is-loading .ds-btn-spinner { opacity: 1; animation: ds-spin 0.7s linear infinite; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
     },
     {
       "name": "Small Primary Button",
       "kind": "button",
-      "refersTo": "button-watch",
-      "description": "The red Watch action in the result dialog; the jet-red proof of success.",
-      "html": "<button class=\"ds-btn-watch\" type=\"button\">WATCH</button>",
-      "css": ".ds-btn-watch { height: 38px; padding: 0 20px; border: 0; border-radius: 0; background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-btn-watch:hover { background: #A63225; } .ds-btn-watch:active { transform: scale(0.98); } .ds-btn-watch:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+      "refersTo": "button-primary-small",
+      "description": "The compact ink-black Watch action in the result dialog.",
+      "html": "<button class=\"ds-btn-primary-small\" type=\"button\">WATCH</button>",
+      "css": ".ds-btn-primary-small { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 24px; border: 1px solid var(--ink, #0A0A0A); border-radius: 4px; background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-btn-primary-small:hover { background: var(--ink-hover, #2B2B2B); border-color: var(--ink-hover, #2B2B2B); } .ds-btn-primary-small:active { transform: scale(0.99); } .ds-btn-primary-small:focus-visible { outline: 2px solid var(--ink, #0A0A0A); outline-offset: 3px; }"
     },
     {
-      "name": "Secondary Button",
+      "name": "Ghost Button",
       "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "Cancel and icon actions in the result dialog; hairline outline, no fill.",
-      "html": "<button class=\"ds-btn-secondary\" type=\"button\">CANCEL</button>",
-      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 20px; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-radius: 0; background: transparent; color: var(--navy, #16324F); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-btn-secondary:hover { background: rgba(22, 50, 79, 0.06); } .ds-btn-secondary.copied { border-color: #1E7A46; color: #1E7A46; } .ds-btn-secondary:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+      "refersTo": "button-ghost",
+      "description": "The quiet Cancel action in the result dialog; hairline outline, no fill.",
+      "html": "<button class=\"ds-btn-ghost\" type=\"button\">CANCEL</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 20px; border: 1px solid var(--line, #E4E4E4); border-radius: 4px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-btn-ghost:hover { border-color: var(--ink, #0A0A0A); } .ds-btn-ghost:active { transform: scale(0.99); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--ink, #0A0A0A); outline-offset: 3px; }"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "The square retry and copy controls in the result dialog; fills with ink when copied.",
+      "html": "<button class=\"ds-btn-icon\" type=\"button\" aria-label=\"Copy link\"><svg aria-hidden=\"true\" focusable=\"false\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg></button>",
+      "css": ".ds-btn-icon { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line, #E4E4E4); border-radius: 4px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); cursor: pointer; } .ds-btn-icon svg { width: 16px; height: 16px; } .ds-btn-icon:hover { border-color: var(--ink, #0A0A0A); } .ds-btn-icon.copied { background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); border-color: var(--ink, #0A0A0A); } .ds-btn-icon.is-loading svg { animation: ds-spin 0.7s linear infinite; } .ds-btn-icon:active { transform: scale(0.99); } .ds-btn-icon:focus-visible { outline: 2px solid var(--ink, #0A0A0A); outline-offset: 3px; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
     },
     {
       "name": "Text Input",
       "kind": "input",
       "refersTo": "input",
-      "description": "The single ID field; paper well, hairline border, purple focus, red error, and themed caret and selection.",
+      "description": "The single ID field; white well, hairline border, ink focus ring, tabular figures.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"IMDb or TMDB ID or link\" aria-label=\"IMDb or TMDB ID or link\">",
-      "css": ".ds-input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-radius: 0; background: var(--paper, #FFFDF6); color: var(--navy, #16324F); caret-color: var(--red, #C0392B); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-variant-numeric: tabular-nums; } .ds-input::placeholder { color: var(--muted, #7C838C); font-style: italic; } .ds-input::selection { background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); } .ds-input:focus { border-color: var(--purple, #5B3E74); } .ds-input.error { border-color: var(--red, #C0392B); } .ds-input.loading { border-color: var(--purple, #5B3E74); } .ds-input:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+      "css": ".ds-input { width: 100%; height: 58px; padding: 0 18px; border: 1px solid var(--line, #E4E4E4); border-radius: 4px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); caret-color: var(--ink, #0A0A0A); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; font-variant-numeric: tabular-nums; outline: none; } .ds-input::placeholder { color: var(--gray, #6B6B6B); } .ds-input::selection { background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); } .ds-input:focus { border-color: var(--ink, #0A0A0A); box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08); } .ds-input.error { border-color: var(--ink, #0A0A0A); border-width: 2px; }"
     },
     {
-      "name": "Coupon Head",
-      "kind": "custom",
-      "refersTo": "coupon-head",
-      "description": "The carbon-purple tab at the top of the coupon carrying the brand and pass meta.",
-      "html": "<div class=\"ds-coupon-head\"><span class=\"ds-brand\">watch</span><span class=\"ds-head-meta\">STREAM PASS · ONE-WAY · NO. 0001</span></div>",
-      "css": ".ds-coupon-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 28px 12px; background: var(--purple, #5B3E74); color: var(--coupon, #F7F4EA); } .ds-brand { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.08em; line-height: 1; text-transform: uppercase; } .ds-head-meta { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }"
-    },
-    {
-      "name": "Ticket Card",
+      "name": "Ruled Record",
       "kind": "card",
-      "refersTo": "ticket",
-      "description": "The coupon body that prints the route fields FROM / CARRIER / TO from ID to stream.",
-      "html": "<div class=\"ds-ticket\"><div class=\"ds-main\"><div class=\"ds-ticket-title\">STREAM FOUND</div><div class=\"ds-ticket-meta\">PROVIDER · MOVIE</div><div class=\"ds-fields\"><div><div class=\"ds-f-label\">From</div><div class=\"ds-f-val\">tt1300854</div></div><div><div class=\"ds-f-label\">Carrier</div><div class=\"ds-f-val\">Provider</div></div><div><div class=\"ds-f-label\">To / Stream</div><div class=\"ds-f-val\">https://provider.example/embed</div></div></div></div></div>",
-      "css": ".ds-ticket { display: flex; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-top: 3px double var(--navy, #16324F); background: var(--coupon, #F7F4EA); color: var(--navy, #16324F); } .ds-main { flex: 1; min-width: 0; padding: 20px 24px 18px; } .ds-ticket-title { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: 0.01em; } .ds-ticket-meta { margin-top: 8px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--purple, #5B3E74); } .ds-fields { display: grid; grid-template-columns: 1fr 2.2fr; gap: 18px; margin-top: 20px; } .ds-f-label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted, #7C838C); border-bottom: 1px solid var(--line, rgba(22, 50, 79, 0.25)); padding-bottom: 5px; } .ds-f-val { margin-top: 8px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.4; word-break: break-all; }"
+      "refersTo": "record",
+      "description": "The found-link record: one white card with a soft-offset shadow; the movie title leads, with a year-and-rating line and ruled rows beneath.",
+      "html": "<div class=\"ds-record\"><h2 class=\"ds-record-title\">The Matrix</h2><p class=\"ds-record-meta\">1999 · IMDb 8.7</p><div class=\"ds-record-type\">Movie</div></div>",
+      "css": ".ds-record { border: 1px solid var(--line, #E4E4E4); border-radius: 6px; padding: 34px 36px 26px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); box-shadow: 0 12px 30px rgba(10, 10, 10, 0.06); } .ds-record-title { margin: 0; font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 34px; font-weight: 600; line-height: 1.12; letter-spacing: -0.035em; text-wrap: balance; } .ds-record-meta { margin: 8px 0 0; font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; color: var(--gray, #6B6B6B); } .ds-record-type { margin-top: 14px; font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray, #6B6B6B); }"
     },
     {
-      "name": "Stub with Notches",
+      "name": "Ruled Row",
       "kind": "custom",
-      "refersTo": "stub",
-      "description": "The fixed tear-off edge of the ticket with two punched navy-deep notches and a barcode strip.",
-      "html": "<div class=\"ds-stub\"><div class=\"ds-s-label\">Class</div><div class=\"ds-s-val\">STANDARD</div><div class=\"ds-s-label\">Gate</div><div class=\"ds-s-val\">01</div><div class=\"ds-barcode\" aria-hidden=\"true\"></div></div>",
-      "css": ".ds-stub { position: relative; flex: none; width: 190px; padding: 20px 16px; border-left: 1px dashed var(--line, rgba(22, 50, 79, 0.25)); } .ds-stub::before, .ds-stub::after { content: \"\"; position: absolute; left: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--navy-deep, #0F2537); } .ds-stub::before { top: -10px; } .ds-stub::after { bottom: -10px; } .ds-s-label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted, #7C838C); } .ds-s-val { margin: 5px 0 14px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-variant-numeric: tabular-nums; } .ds-barcode { height: 26px; margin-top: 10px; background: repeating-linear-gradient(90deg, var(--navy, #16324F) 0 2px, transparent 2px 4px, var(--navy, #16324F) 4px 5px, transparent 5px 8px); }"
+      "refersTo": "row",
+      "description": "A key/value line inside the record, divided by a hairline rule; the link is the product.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-row-key\">IMDb</span><span class=\"ds-row-value\"><a href=\"#\">tt1300854</a></span></div>",
+      "css": ".ds-row { display: flex; gap: 20px; padding: 13px 0; border-bottom: 1px solid var(--line, #E4E4E4); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; } .ds-row-key { width: 110px; flex: none; padding-top: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gray, #6B6B6B); } .ds-row-value { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; word-break: break-all; } .ds-row-value a { color: var(--ink, #0A0A0A); text-decoration: underline; text-underline-offset: 2px; } .ds-row-value a:hover { opacity: 0.7; } .ds-row-value a:focus-visible { outline: 2px solid var(--ink, #0A0A0A); outline-offset: 3px; }"
     },
     {
-      "name": "VALID Stamp",
+      "name": "Wordmark",
       "kind": "custom",
-      "refersTo": "stamp",
-      "description": "The rotated double-rule mark that certifies a working stream link.",
-      "html": "<div class=\"ds-stamp\">VALID</div>",
-      "css": ".ds-stamp { position: absolute; right: 12px; bottom: 16px; padding: 5px 10px; border: 3px double var(--red, #C0392B); color: var(--red, #C0392B); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.2em; transform: rotate(-12deg); }"
+      "refersTo": "brand",
+      "description": "The small tracked 'watch' wordmark with a quieter subline; no logo asset or display face.",
+      "html": "<div class=\"ds-brand\">watch<span>Look up. Play.</span></div>",
+      "css": ".ds-brand { text-align: center; font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.36em; text-transform: uppercase; color: var(--ink, #0A0A0A); } .ds-brand span { display: block; margin-top: 9px; font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gray, #6B6B6B); }"
     },
     {
-      "name": "Type Tag",
-      "kind": "chip",
-      "refersTo": "type-tag",
-      "description": "The small jet-red outlined chip that labels the stream type.",
-      "html": "<span class=\"ds-tag\">MOVIE</span>",
-      "css": ".ds-tag { display: inline-block; margin-top: 12px; padding: 3px 8px; border: 1px solid var(--red, #C0392B); border-radius: 0; background: transparent; color: var(--red, #C0392B); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }"
-    },
-    {
-      "name": "Dialog Carrier Head",
+      "name": "Safety Notice",
       "kind": "custom",
-      "refersTo": "ticket-head",
-      "description": "The purple head that opens the result ticket inside the dialog.",
-      "html": "<div class=\"ds-ticket-head\"><b>watch</b><span>Stream pass · Issued</span></div>",
-      "css": ".ds-ticket-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 24px; background: var(--purple, #5B3E74); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; } .ds-ticket-head b { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; } .ds-ticket-head span { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }"
+      "refersTo": "notice",
+      "description": "The quiet fine print at the foot stating the app hosts nothing and links to third parties.",
+      "html": "<div class=\"ds-notice\"><p>We don't host anything. We only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p></div>",
+      "css": ".ds-notice { width: 100%; border-top: 1px solid var(--line, #E4E4E4); padding-top: 16px; text-align: center; } .ds-notice p { max-width: 620px; margin: 0 auto; font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 11px; line-height: 1.8; color: var(--gray, #6B6B6B); }"
     }
   ],
   "narrative": {
-    "northStar": "Ticket Wallet",
-    "overview": "A stream lookup is a ticket, not a search page. The working link is a stamped coupon with a carrier and a destination; the category's centered hero-and-card shell is refused. Ticket Wallet treats the pasted ID as the start of a short route: FROM, CARRIER, TO, and a stamp that says it worked.\n\nThe desk is a radial navy field, lit at the center and deep at the edges. A single pale coupon sits on it with generous margins, its tab in carbon purple and its figures set as monospaced tabular data. Hairline rules do the structuring; surfaces stay square and unrounded, and depth is one coupon shadow over a light scrim. The stamp and the coupon's fixed fields are recognizable with all content removed, so the shape carries the idea before the words do.\n\nThe visitor sees a ticket being issued: their ID in the FROM field, the provider as CARRIER, the stream URL as TO. The stamp tells them it worked; the warning tells them it is third-party. The themed caret and selection carry the red signal into the text. Provenance: ticket wallet world, seed 7a0f6ff53762f44b, from the surface direction contract.",
+    "northStar": "Monochrome Product Canon",
+    "overview": "A stream lookup is a plain product screen, not a themed object. The answer is one typographic record on a white field; the ticket metaphor and its costume are refused. Monochrome Product Canon treats the pasted ID as the shortest path to a link, with no ornament between the visitor and the answer.\n\nThe field is paper-white and the ink is near-black. One centered column, hairline rules, and strict monochrome do all the structuring; a single soft-offset shadow under the found record is the only depth. One workhorse grotesk, self-hosted Archivo, speaks at every role — there is no second display face and no monospace costume for identifiers. The found link resolves into one quiet, ruled record: the movie title as the lead line, a small year-and-rating line beneath it, then IMDb ID, provider, and full stream URL, with a single ink-black primary action and nothing else asking for attention.\n\nThe visitor pastes an ID, presses Watch now, and reads that record before leaving for the provider. Black is the only emphasis; the link is the product. A quiet line at the foot states that the app hosts nothing. Recognizable with all content removed by its centered column, thin rules, and strict monochrome. Provenance: Monochrome Product Canon, seed 7a0f6ff53762f44b, from the surface direction contract (safer re-roll, grounded card 1 of 2).",
     "keyCharacteristics": [
-      "One input, one action, one result dialog.",
-      "Coupon on a dark radial field; square corners and hairline rules.",
-      "Airline-grotesk caps for heads, monospaced tabular figures for IDs and URLs.",
-      "Jet red drives the primary action, the VALID stamp, and the themed caret/selection.",
-      "Third-party warning stays readable beneath the result."
+      "One input, one action, one ruled result record.",
+      "Centered 720px column on a paper-white field, hairline rules, strict monochrome.",
+      "One workhorse grotesk at every role; no second display face, no monospace costume.",
+      "A single ink-black primary action is the only emphasis; the link is the product.",
+      "The exact provider, IMDb ID, and stream URL show before the user leaves; the safety note stays readable."
     ],
     "rules": [
       {
-        "name": "The Jet Red Rule",
-        "body": "Jet red marks the primary action, the VALID stamp, and the themed caret/selection; when it appears, the ticket acted or succeeded.",
+        "name": "The Strict Monochrome Rule",
+        "body": "Strict monochrome: near-black ink, paper field, white surfaces, gray secondary, hairline rules. Ink is the only emphasis; the link is the product.",
         "section": "colors"
       },
       {
-        "name": "The Airline-Caps Rule",
-        "body": "Airline-grotesk caps carry tabbed heads; monospaced tabular figures carry IDs and URLs.",
+        "name": "The One-Voice Rule",
+        "body": "One workhorse grotesk — self-hosted Archivo — at every role, with no second display face and no monospace costume. One real type scale.",
+        "section": "typography"
+      },
+      {
+        "name": "The Balanced Lead Rule",
+        "body": "The movie title is the lead: it wraps with balance and carries a quiet year-and-rating line beneath, with no separate label above it.",
         "section": "typography"
       },
       {
         "name": "The One-Screen Rule",
-        "body": "One page, one input, one primary action; the result appears in a dialog over the same coupon, with the exact destination shown before the user leaves.",
+        "body": "One page, one input, one action. The answer is one quiet, ruled record on a white field, and the exact destination shows before the user leaves.",
         "section": "layout"
       },
       {
-        "name": "The Single-Lift Rule",
-        "body": "The coupon is the only surface that floats; the desk and dialog stay flat.",
+        "name": "The Soft-Offset Rule",
+        "body": "The record carries one soft-offset shadow; the field, surfaces, and dialog stay flat. Hairline rules do the structuring.",
         "section": "elevation"
       },
       {
         "name": "The Content-Removed Rule",
-        "body": "The stamp and the coupon's fixed fields are recognizable with all content removed.",
+        "body": "Recognizable with all content removed by its centered column, thin rules, and strict monochrome.",
         "section": "shapes"
       }
     ],
     "dos": [
       "Do show the exact provider, canonical IMDb ID, and full stream URL before the user leaves the site.",
-      "Do keep the third-party warning and safety notice readable beneath the result.",
-      "Do keep hairline rules, square corners, the stub notch, and the barcode strip on every ticket.",
-      "Do keep the 3px jet-red focus outline, themed caret and selection, keyboard-accessible dialog, focus return, and reduced-motion override.",
-      "Do use tabular figures for IDs, gate, class, and URLs."
+      "Do keep the third-party warning and safety note quiet and readable beneath the result.",
+      "Do keep the centered column, hairline rules, and strict monochrome recognizable with all content removed.",
+      "Do keep one workhorse grotesk and one real type scale at every role.",
+      "Do keep the labelled input, keyboard-accessible dialog, focus return, and reduced-motion support.",
+      "Do keep the single ink-black primary action as the only emphasis; the link is the product."
     ],
     "donts": [
-      "Don't add rounded cards or extra shadows; the radial field is the desk's only gradient.",
-      "Don't use jet red for decoration; it drives the primary action and certifies the stamp.",
-      "Don't turn this into a search page with navigation, hero, or discovery cards.",
-      "Don't hide or reword the third-party warning; the product states it hosts nothing."
+      "Don't add a second display face or a monospace costume for IDs and URLs; Archivo carries every role.",
+      "Don't add color accents, gradients, or themed carets and selection; the field stays paper-white and the ink near-black.",
+      "Don't theme this as a ticket, coupon, or discovery page with navigation, hero, or cards; the ticket metaphor is refused.",
+      "Don't round beyond the small control radius or stack extra shadows; the record carries one soft-offset shadow on a white field.",
+      "Don't hide or reword the third-party warning; the product states it hosts nothing.",
+      "Don't put a \"Stream Found\" label above the movie title; the title is the lead."
     ],
     "provenance": {
-      "world": "ticket-wallet",
-      "worldName": "Ticket Wallet",
+      "world": "monochrome-product-canon",
+      "worldName": "Monochrome Product Canon",
       "seed": "7a0f6ff53762f44b",
-      "directionContract": ".impeccable/surfaces/src-pages-index-astro.md"
+      "directionContract": ".impeccable/surfaces/src-pages-index-astro.md",
+      "formNote": "safer re-roll grounded card 1 of 2"
     }
   }
 }
