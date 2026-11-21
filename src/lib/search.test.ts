@@ -240,6 +240,27 @@ test("accepts an empty TVMaze answer when only the series half failed", async ()
   ).toEqual({ ok: true, candidates: [] });
 });
 
+test("orders loose prefix matches by newest year", () => {
+  const candidates: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "Dune: Prophecy", year: "2020", kind: "tv" },
+    { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
+  ];
+
+  expect(mergeCandidates("Dune", candidates, []).map((c) => c.year)).toEqual(["2024", "2020"]);
+});
+
+test("keeps a title-word match above a loose match even when older", () => {
+  const candidates: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "Dunen", year: "2026", kind: "movie" },
+    { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
+  ];
+
+  expect(mergeCandidates("Dune", candidates, []).map((c) => c.imdbId)).toEqual([
+    "tt2222222",
+    "tt1111111",
+  ]);
+});
+
 test("keeps the merged order when exact matches have no year", () => {
   const movies: Array<TitleCandidate> = [
     { imdbId: "tt1111111", name: "The Office", kind: "movie" },
@@ -252,28 +273,47 @@ test("keeps the merged order when exact matches have no year", () => {
   ]);
 });
 
+function switchableHttp(down: () => boolean) {
+  const http: HttpClient = {
+    get: async (url: string) => {
+      if (down()) {
+        return { ok: false, json: async () => ({}), text: async () => "" };
+      }
+      const body = url.includes("catalog/movie")
+        ? cinemetaMovie
+        : url.includes("catalog/series")
+          ? cinemetaSeries
+          : {};
+      return { ok: true, json: async () => ({}), text: async () => JSON.stringify(body) };
+    },
+  };
+  return http;
+}
+
 test("does not cache a partial outage", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: true, body: {} },
-    series: { ok: true, body: { metas: [] } },
-  });
-  const deps = { http, cache: new Cache<Array<TitleCandidate>>(60_000) };
+  let down = true;
+  const deps = {
+    http: switchableHttp(() => down),
+    cache: new Cache<Array<TitleCandidate>>(60_000),
+  };
 
   expect(await searchTitles(deps, "The Office")).toEqual({ ok: false });
-  expect(await searchTitles(deps, "The Office")).toEqual({ ok: false });
-  expect(calls).toHaveLength(6);
+
+  down = false;
+  const out = await searchTitles(deps, "The Office");
+  expect(out.ok && out.candidates.length > 0).toBe(true);
 });
 
 test("caches a query and ignores case and outer spaces", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
-    series: { ok: true, body: cinemetaSeries },
-  });
-  const deps = { http, cache: new Cache<Array<TitleCandidate>>(60_000) };
+  let down = false;
+  const deps = {
+    http: switchableHttp(() => down),
+    cache: new Cache<Array<TitleCandidate>>(60_000),
+  };
 
-  await searchTitles(deps, "The Matrix");
+  const first = await searchTitles(deps, "The Matrix");
+  down = true;
   const second = await searchTitles(deps, "  the matrix ");
 
-  expect(second.ok).toBe(true);
-  expect(calls).toHaveLength(2);
+  expect(second).toEqual(first);
 });

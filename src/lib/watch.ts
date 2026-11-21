@@ -1,4 +1,5 @@
-import { parseTitleInput, TMDB_NOT_FOUND } from "./parse-input";
+import { TMDB_NOT_FOUND } from "./messages";
+import { parseTitleInput } from "./parse-input";
 import { resolveImdbId } from "./tmdb";
 
 // Backend for /api/watch. Pure logic, no static serving (Astro owns the page).
@@ -34,7 +35,7 @@ function isJsonValue(value: unknown): value is JsonValue {
   return Object.values(value).every(isJsonValue);
 }
 
-function isLooseJson(value: unknown): value is LooseJson {
+export function isLooseJson(value: unknown): value is LooseJson {
   return isJsonValue(value) && typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

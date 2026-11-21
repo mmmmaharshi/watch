@@ -13,7 +13,8 @@ import {
 } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { parseTitleInput, TMDB_NOT_FOUND } from "../lib/parse-input";
+import { SEARCH_FAILED, TMDB_NOT_FOUND } from "../lib/messages";
+import { parseTitleInput } from "../lib/parse-input";
 import { shareUrl } from "../lib/share";
 import { unwrapActionResult } from "../lib/watch";
 import type { WatchResult } from "../lib/watch";
@@ -133,11 +134,11 @@ export default function WatchApp() {
     try {
       const response = await actions.search({ query });
       if (response.error) {
-        throw new Error(response.error.message || "Title search failed. Try an ID.");
+        throw new Error(response.error.message || SEARCH_FAILED);
       }
       const list = response.data?.candidates;
       if (!Array.isArray(list)) {
-        throw new Error("Title search failed. Try an ID.");
+        throw new Error(SEARCH_FAILED);
       }
       if (list.length === 0) {
         // A valid query with no hits is not an invalid field.
@@ -148,8 +149,7 @@ export default function WatchApp() {
       setCandidateList(list);
     } catch (error) {
       setStatus({
-        text:
-          errMessage(error, "Title search failed. Try an ID.") || "Title search failed. Try an ID.",
+        text: errMessage(error, SEARCH_FAILED) || SEARCH_FAILED,
         kind: "error",
       });
     } finally {
@@ -214,7 +214,8 @@ export default function WatchApp() {
         await runSearch(input);
         return;
       }
-      showError(message);
+      // A provider or metadata failure is not a malformed field.
+      setStatus({ text: message, kind: "error" });
     } finally {
       loadingId.current = null;
       setLoading(false);

@@ -1,5 +1,5 @@
-import { Cache, defaultHttpClient } from "./watch";
-import type { HttpClient, LooseJson } from "./watch";
+import { Cache, defaultHttpClient, isLooseJson } from "./watch";
+import type { HttpClient } from "./watch";
 
 const CINEMETA = "https://v3-cinemeta.strem.io/catalog";
 const TVMAZE = "https://api.tvmaze.com/search/shows?q=";
@@ -12,6 +12,10 @@ const SOURCE_LIMIT = 6;
 // TVMaze scores the best match around 1.2. Below 0.5 the results stop sharing
 // a title with the query.
 const TVMAZE_SCORE_FLOOR = 0.5;
+const KIND_BY_TYPE = new Map<string, "movie" | "tv">([
+  ["movie", "movie"],
+  ["series", "tv"],
+]);
 
 export interface TitleCandidate {
   imdbId: string;
@@ -26,10 +30,6 @@ export interface SearchDeps {
 }
 
 export type SearchOutcome = { ok: true; candidates: Array<TitleCandidate> } | { ok: false };
-
-function isObject(value: unknown): value is LooseJson {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
@@ -49,11 +49,11 @@ export function parseCinemeta(
   payload: unknown,
   kind: "movie" | "tv",
 ): Array<TitleCandidate> | null {
-  if (!isObject(payload) || !Array.isArray(payload.metas)) {
+  if (!isLooseJson(payload) || !Array.isArray(payload.metas)) {
     return null;
   }
   return payload.metas.flatMap((meta: unknown) => {
-    if (!isObject(meta)) {
+    if (!isLooseJson(meta)) {
       return [];
     }
     const imdbId = validImdb(meta.imdb_id);
@@ -61,7 +61,7 @@ export function parseCinemeta(
     if (!imdbId || !name) {
       return [];
     }
-    const rowKind = meta.type === "series" ? "tv" : meta.type === "movie" ? "movie" : kind;
+    const rowKind = KIND_BY_TYPE.get(asString(meta.type) ?? "") ?? kind;
     return [{ imdbId, name, year: yearOf(meta.releaseInfo), kind: rowKind }];
   });
 }
@@ -71,7 +71,7 @@ export function parseTVMaze(payload: unknown): Array<TitleCandidate> | null {
     return null;
   }
   return payload.flatMap((item: unknown) => {
-    if (!isObject(item) || !isObject(item.show)) {
+    if (!isLooseJson(item) || !isLooseJson(item.show)) {
       return [];
     }
     const score = typeof item.score === "number" ? item.score : 0;
@@ -79,7 +79,7 @@ export function parseTVMaze(payload: unknown): Array<TitleCandidate> | null {
       return [];
     }
     const show = item.show;
-    const imdbId = isObject(show.externals) ? validImdb(show.externals.imdb) : undefined;
+    const imdbId = isLooseJson(show.externals) ? validImdb(show.externals.imdb) : undefined;
     const name = asString(show.name);
     if (!imdbId || !name) {
       return [];
@@ -101,9 +101,19 @@ function releaseYear(candidate: TitleCandidate): number {
   return candidate.year ? Number(candidate.year) : 0;
 }
 
-// Alternate the two sources, then lift exact title matches and show the newest
-// release first. A movie and a show can share a name ("The Office", "Dune"), so
-// both stay visible.
+// 2 for the same title, 1 for a title that starts with the query, 0 otherwise.
+function relevance(name: string, wanted: string): number {
+  if (name === wanted) {
+    return 2;
+  }
+  const startsWithWord =
+    name.startsWith(`${wanted} `) || name.startsWith(`${wanted}:`) || name.startsWith(`${wanted}'`);
+  return startsWithWord ? 1 : 0;
+}
+
+// Alternate the two sources, then order by relevance tier and newest release.
+// A movie and a show can share a name ("The Office", "Dune"), so both stay
+// visible.
 export function mergeCandidates(
   query: string,
   movies: Array<TitleCandidate>,
@@ -133,18 +143,12 @@ export function mergeCandidates(
     .map((candidate, index) => ({
       candidate,
       index,
-      exact: normalize(candidate.name) === wanted ? 1 : 0,
+      tier: relevance(normalize(candidate.name), wanted),
     }))
-    .sort((a, b) => {
-      if (a.exact !== b.exact) {
-        return b.exact - a.exact;
-      }
-      // A year sort only makes sense within the same title. Loose matches keep
-      // the catalog's relevance order so "Dünen" cannot outrank "Dune".
-      return a.exact === 1
-        ? releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index
-        : a.index - b.index;
-    })
+    .sort(
+      (a, b) =>
+        b.tier - a.tier || releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index,
+    )
     .slice(0, MAX_CANDIDATES)
     .map((entry) => entry.candidate);
 }

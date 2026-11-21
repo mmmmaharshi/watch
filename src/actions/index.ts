@@ -1,5 +1,6 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
+import { SEARCH_FAILED } from "../lib/messages";
 import { handleWatchRequest, watchDeps } from "../lib/watch";
 import { searchDeps, searchTitles } from "../lib/search";
 
@@ -27,7 +28,7 @@ export const server = {
       if (!out.ok) {
         throw new ActionError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Title search failed. Try an ID.",
+          message: SEARCH_FAILED,
         });
       }
       return { candidates: out.candidates };

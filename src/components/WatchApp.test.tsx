@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { TMDB_NOT_FOUND } from "../lib/parse-input";
+import { TMDB_NOT_FOUND } from "../lib/messages";
 
 // Bun cannot resolve astro:actions, so stub the action before the island loads.
 const MATRIX = {
@@ -181,6 +181,18 @@ test("a search failure shows the error without marking the field invalid", async
   fireEvent.submit(input.closest("form")!);
 
   expect(await screen.findByText("Search is down")).toBeTruthy();
+  expect(input.getAttribute("aria-invalid")).toBe("false");
+});
+
+test("a lookup failure does not mark the field invalid", async () => {
+  lookup.mockRejectedValueOnce(new Error("No working providers available"));
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "tt0133093" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByText("No working providers available")).toBeTruthy();
   expect(input.getAttribute("aria-invalid")).toBe("false");
 });
 
