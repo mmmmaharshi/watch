@@ -1,7 +1,7 @@
 import { actions } from "astro:actions";
 import { addRecent, parseRecent } from "../lib/recent";
 import { shareUrl } from "../lib/share";
-import { isRecord, isWatchResult } from "../lib/watch";
+import { unwrapActionResult } from "../lib/watch";
 import type { WatchResult as WatchData } from "../lib/watch";
 
 function reqEl(id: "form"): HTMLFormElement;
@@ -109,20 +109,8 @@ async function lookup(value: string, exclude?: string): Promise<WatchData> {
       }
     }
   }
-  // astro:actions is a virtual module that tsrs resolves as any. Narrow the
-  // result through runtime guards before it enters typed code.
   const result: unknown = await actions.watch({ id: value, exclude });
-  if (!isRecord(result)) {
-    throw new Error("Something went wrong. Try again.");
-  }
-  if (isRecord(result.error)) {
-    const message = result.error.message;
-    throw new Error(typeof message === "string" ? message : "Something went wrong. Try again.");
-  }
-  if (!isWatchResult(result)) {
-    throw new Error("Something went wrong. Try again.");
-  }
-  return result;
+  return unwrapActionResult(result);
 }
 const recent = reqEl("recent");
 

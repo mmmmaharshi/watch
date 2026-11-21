@@ -438,11 +438,26 @@ interface UnknownResult {
   name?: unknown;
   type?: unknown;
   error?: unknown;
+  data?: unknown;
   message?: unknown;
 }
 
 export function isRecord(value: unknown): value is UnknownResult {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function unwrapActionResult(value: unknown): WatchResult {
+  const fallback = "Something went wrong. Try again.";
+  if (!isRecord(value)) {
+    throw new Error(fallback);
+  }
+  if (isRecord(value.error) && typeof value.error.message === "string") {
+    throw new Error(value.error.message);
+  }
+  if (isWatchResult(value.data)) {
+    return value.data;
+  }
+  throw new Error(fallback);
 }
 
 export function isWatchResult(value: unknown): value is WatchResult {

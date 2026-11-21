@@ -11,6 +11,7 @@ import {
   parseActiveDomains,
   resolveTitle,
   selectStream,
+  unwrapActionResult,
 } from "./watch";
 import type { HttpClient, TypeResult, WatchDeps } from "./watch";
 
@@ -19,6 +20,28 @@ const MATRIX = {
 };
 const DIRECTORY = "https://vidsrc.domains/";
 const DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vidsrc.ir"];
+
+const VALID_RESULT = {
+  id: "tt38336631",
+  url: "https://vidsrc.sh/embed/tv/tt38336631",
+  provider: "vidsrc.sh",
+  type: "tv" as const,
+  name: "The Blue Road",
+};
+
+test("unwraps a successful action result", () => {
+  expect(unwrapActionResult({ data: VALID_RESULT, error: undefined })).toEqual(VALID_RESULT);
+});
+
+test("surfaces an action error message", () => {
+  expect(() => unwrapActionResult({ data: undefined, error: { message: "No providers" } })).toThrow(
+    "No providers",
+  );
+});
+
+test("rejects an action result without usable data", () => {
+  expect(() => unwrapActionResult({})).toThrow("Something went wrong");
+});
 
 type HttpReply = Awaited<ReturnType<HttpClient["get"]>>;
 type MetaJson = Awaited<ReturnType<HttpReply["json"]>>;
