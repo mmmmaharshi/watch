@@ -31,6 +31,10 @@ function candidateMeta(candidate: TitleCandidate): string {
   return [kind, candidate.year].filter(Boolean).join(" · ");
 }
 
+function matchLabel(count: number): string {
+  return `${count} ${count === 1 ? "match" : "matches"}. Choose one.`;
+}
+
 async function lookup(value: string, exclude?: string): Promise<WatchResult> {
   const result: unknown = await actions.watch({ id: value, exclude });
   return unwrapActionResult(result);
@@ -87,7 +91,6 @@ function CopyIcon() {
 
 export default function WatchApp() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const statusRef = useRef<HTMLParagraphElement>(null);
   const currentId = useRef<string | null>(null);
   const loadingId = useRef<string | null>(null);
 
@@ -99,6 +102,12 @@ export default function WatchApp() {
   const [result, setResult] = useState<WatchResult | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [candidates, setCandidates] = useState<Array<TitleCandidate>>([]);
+  const candidatesRef = useRef<Array<TitleCandidate>>([]);
+
+  function setCandidateList(list: Array<TitleCandidate>) {
+    candidatesRef.current = list;
+    setCandidates(list);
+  }
 
   function showError(text: string) {
     setStatus({ text, kind: "error" });
@@ -113,7 +122,7 @@ export default function WatchApp() {
 
   async function runSearch(query: string) {
     setLoading(true);
-    setCandidates([]);
+    setCandidateList([]);
     setStatus({ text: "Searching titles...", kind: "loading" });
     try {
       const response = await actions.search({ query });
@@ -126,8 +135,8 @@ export default function WatchApp() {
         setStatus({ text: "No title found. Try an ID or the full link.", kind: "error" });
         return;
       }
-      setStatus({ text: `${list.length} ${list.length === 1 ? "match" : "matches"}. Choose one.` });
-      setCandidates(list);
+      setStatus({ text: matchLabel(list.length) });
+      setCandidateList(list);
     } catch (error) {
       setStatus({
         text:
@@ -140,10 +149,8 @@ export default function WatchApp() {
   }
 
   function chooseCandidate(candidate: TitleCandidate) {
-    setCandidates([]);
+    // Keep the list: after closing the dialog the user may pick another title.
     setValue(candidate.imdbId);
-    // The clicked button is about to unmount, so keep focus on the status.
-    statusRef.current?.focus();
     void runLookup(candidate.imdbId);
   }
 
@@ -172,7 +179,6 @@ export default function WatchApp() {
 
   async function runLookup(raw: string) {
     const input = raw.trim();
-    setCandidates([]);
     setLoading(true);
     loadingId.current = input;
     setStatus({ text: "Finding a working stream...", kind: "loading" });
@@ -185,7 +191,9 @@ export default function WatchApp() {
       if (location.hash !== `#id=${data.id}`) {
         history.pushState(null, "", `#id=${data.id}`);
       }
-      setStatus({ text: "" });
+      // Keep the list usable after the dialog closes.
+      const count = candidatesRef.current.length;
+      setStatus({ text: count > 0 ? matchLabel(count) : "" });
       showResults(data);
     } catch (error) {
       const message =
@@ -305,7 +313,7 @@ export default function WatchApp() {
             value={value}
             onChange={(next) => {
               setValue(next);
-              setCandidates([]);
+              setCandidateList([]);
               if (invalid) {
                 setInvalid(false);
                 setStatus({ text: "" });
@@ -343,14 +351,12 @@ export default function WatchApp() {
 
       <p
         id="status"
-        ref={statusRef}
-        tabIndex={-1}
         role="status"
         aria-live="polite"
         className={
           // The line keeps its height when empty, so an error does not shift
           // the centered page.
-          "mt-3 min-h-[1.625em] text-sm leading-relaxed focus:outline-none " +
+          "mt-3 min-h-[1.625em] text-sm leading-relaxed " +
           (status.kind === "error" ? "font-medium text-black" : "text-black/64")
         }
       >

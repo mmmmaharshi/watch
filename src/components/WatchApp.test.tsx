@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // Bun cannot resolve astro:actions, so stub the action before the island loads.
 const MATRIX = {
@@ -80,6 +80,27 @@ test("a title shows candidates and picking one opens the result", async () => {
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: undefined });
+});
+
+test("keeps the candidates after opening and closing a result", async () => {
+  search.mockResolvedValueOnce({
+    data: {
+      candidates: [{ imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" }],
+    },
+  });
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "The Matrix" } });
+  fireEvent.submit(input.closest("form")!);
+  fireEvent.click(await screen.findByRole("button", { name: /The Matrix Film/ }));
+  await screen.findByRole("dialog", { name: "The Matrix" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  expect(screen.getByRole("status").textContent).toBe("1 match. Choose one.");
+  expect(screen.getByRole("button", { name: /The Matrix Film/ })).toBeTruthy();
 });
 
 test("a title with no matches shows an error", async () => {
