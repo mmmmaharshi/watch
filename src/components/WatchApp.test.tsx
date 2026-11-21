@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { TMDB_NOT_FOUND } from "../lib/parse-input";
 
 // Bun cannot resolve astro:actions, so stub the action before the island loads.
 const MATRIX = {
@@ -43,10 +44,12 @@ beforeEach(() => {
   lookup.mockImplementation(async () => ({ data: MATRIX }));
   search.mockReset();
   search.mockImplementation(async () => ({ data: { candidates: [] } }));
+  Object.defineProperty(window, "open", { value: mock(() => null), configurable: true });
 });
 
 afterEach(() => {
   cleanup();
+  Object.defineProperty(navigator, "maxTouchPoints", { value: 0, configurable: true });
 });
 
 test("does not autofocus the input on a touch device", () => {
@@ -54,8 +57,6 @@ test("does not autofocus the input on a touch device", () => {
   render(<WatchApp />);
 
   expect(document.activeElement).not.toBe(screen.getByRole("textbox", { name: /imdb or tmdb/i }));
-
-  Object.defineProperty(navigator, "maxTouchPoints", { value: 0, configurable: true });
 });
 
 test("empty submit shows an error, marks the field invalid and focuses it", () => {
@@ -114,6 +115,27 @@ test("keeps the candidates after opening and closing a result", async () => {
   expect(input).toHaveProperty("value", "The Matrix");
 });
 
+test("keeps the match count after watching", async () => {
+  search.mockResolvedValueOnce({
+    data: {
+      candidates: [{ imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" }],
+    },
+  });
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "The Matrix" } });
+  fireEvent.submit(input.closest("form")!);
+  fireEvent.click(await screen.findByRole("button", { name: /The Matrix Film/ }));
+  await screen.findByRole("dialog", { name: "The Matrix" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Watch" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  expect(screen.getByRole("status").textContent).toBe("1 match. Choose one.");
+  expect(screen.getByRole("button", { name: /The Matrix Film/ })).toBeTruthy();
+});
+
 test("a title with no matches shows an error", async () => {
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
@@ -136,7 +158,7 @@ test("an ID skips the title search and goes straight to the lookup", async () =>
 });
 
 test("a bare number falls back to a title search when no TMDB title matches", async () => {
-  lookup.mockRejectedValueOnce(new Error("TMDB ID not found"));
+  lookup.mockRejectedValueOnce(new Error(TMDB_NOT_FOUND));
   search.mockResolvedValueOnce({
     data: { candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019", kind: "movie" }] },
   });

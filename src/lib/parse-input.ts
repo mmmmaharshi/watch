@@ -1,3 +1,7 @@
+// Shared by the server and the client so the numeric-title fallback cannot
+// drift when the message changes.
+export const TMDB_NOT_FOUND = "TMDB ID not found";
+
 export type TitleInput =
   | { kind: "imdb"; id: string }
   | { kind: "tmdb"; type?: "movie" | "tv"; id: string };

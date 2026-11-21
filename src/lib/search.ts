@@ -98,7 +98,7 @@ function normalize(name: string): string {
 }
 
 function releaseYear(candidate: TitleCandidate): number {
-  return candidate.year ? Number(candidate.year) : -Infinity;
+  return candidate.year ? Number(candidate.year) : 0;
 }
 
 // Alternate the two sources, then lift exact title matches and show the newest
@@ -196,7 +196,6 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     fetchWith(deps.http, cinemetaUrl("movie", cleaned), (value) => parseCinemeta(value, "movie")),
     fetchWith(deps.http, cinemetaUrl("series", cleaned), (value) => parseCinemeta(value, "tv")),
   ]);
-  const cinemetaComplete = movies !== null && shows !== null;
   const moviePool = movies?.slice(0, SOURCE_LIMIT) ?? [];
   const showPool = shows?.slice(0, SOURCE_LIMIT) ?? [];
   const baseMerged = mergeCandidates(cleaned, moviePool, showPool);
@@ -217,9 +216,12 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     return respond(deps, key, candidates);
   }
 
-  // A partial Cinemeta answer plus a failed or empty TVMaze is an outage, not
-  // an empty result. Leave it uncached so the next attempt can recover.
-  if (!cinemetaComplete && (tvmaze === null || tvmaze.length === 0)) {
+  // An empty list is only verified when both media types answered: movies from
+  // Cinemeta, shows from Cinemeta or TVMaze. Otherwise leave it uncached so the
+  // next attempt can recover.
+  const moviesAnswered = movies !== null;
+  const showsAnswered = shows !== null || tvmaze !== null;
+  if (!moviesAnswered || !showsAnswered) {
     return { ok: false };
   }
 

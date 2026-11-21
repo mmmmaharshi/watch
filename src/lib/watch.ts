@@ -1,4 +1,4 @@
-import { parseTitleInput } from "./parse-input";
+import { parseTitleInput, TMDB_NOT_FOUND } from "./parse-input";
 import { resolveImdbId } from "./tmdb";
 
 // Backend for /api/watch. Pure logic, no static serving (Astro owns the page).
@@ -518,7 +518,7 @@ export async function handleWatchRequest(
         error:
           mapped.reason === "ambiguous"
             ? "TMDB ID is ambiguous. Use a movie or TV link."
-            : "TMDB ID not found",
+            : TMDB_NOT_FOUND,
       };
     }
     id = mapped.match.id;

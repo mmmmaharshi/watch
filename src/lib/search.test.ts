@@ -228,6 +228,30 @@ test("reports a failure when every source fails", async () => {
   });
 });
 
+test("accepts an empty TVMaze answer when only the series half failed", async () => {
+  const { http } = fakeHttp({
+    movie: { ok: true, body: { metas: [] } },
+    series: { ok: false, body: {} },
+    tvmaze: { ok: true, body: [] },
+  });
+
+  expect(
+    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "Nothing"),
+  ).toEqual({ ok: true, candidates: [] });
+});
+
+test("keeps the merged order when exact matches have no year", () => {
+  const movies: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "The Office", kind: "movie" },
+  ];
+  const shows: Array<TitleCandidate> = [{ imdbId: "tt2222222", name: "The Office", kind: "tv" }];
+
+  expect(mergeCandidates("The Office", movies, shows).map((c) => c.imdbId)).toEqual([
+    "tt1111111",
+    "tt2222222",
+  ]);
+});
+
 test("does not cache a partial outage", async () => {
   const { http, calls } = fakeHttp({
     movie: { ok: true, body: {} },

@@ -13,7 +13,7 @@ import {
 } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { parseTitleInput } from "../lib/parse-input";
+import { parseTitleInput, TMDB_NOT_FOUND } from "../lib/parse-input";
 import { shareUrl } from "../lib/share";
 import { unwrapActionResult } from "../lib/watch";
 import type { WatchResult } from "../lib/watch";
@@ -135,7 +135,10 @@ export default function WatchApp() {
       if (response.error) {
         throw new Error(response.error.message || "Title search failed. Try an ID.");
       }
-      const list = response.data?.candidates ?? [];
+      const list = response.data?.candidates;
+      if (!Array.isArray(list)) {
+        throw new Error("Title search failed. Try an ID.");
+      }
       if (list.length === 0) {
         // A valid query with no hits is not an invalid field.
         setStatus({ text: "No title found. Try an ID or the full link.", kind: "error" });
@@ -207,7 +210,7 @@ export default function WatchApp() {
       const message =
         errMessage(error, "Something went wrong. Try again.") || "Something went wrong. Try again.";
       // A bare number may be a title ("1917") rather than a TMDB ID.
-      if (/^[1-9]\d{0,7}$/.test(input) && message === "TMDB ID not found") {
+      if (/^[1-9]\d{0,7}$/.test(input) && message === TMDB_NOT_FOUND) {
         await runSearch(input);
         return;
       }
@@ -254,7 +257,9 @@ export default function WatchApp() {
       window.open(result.url, "_blank", "noopener");
     }
     handleOpenChange(false);
-    setStatus({ text: "" });
+    // The list stays behind the dialog, so keep its count with it.
+    const count = candidatesRef.current.length;
+    setStatus({ text: count > 0 ? matchLabel(count) : "" });
   }
 
   function handleOpenChange(open: boolean) {
