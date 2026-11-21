@@ -145,7 +145,7 @@ function showModal(data: WatchData) {
   currentId = data.id;
   const title = data.name || data.id.toUpperCase();
   const bits = [data.year, data.rating ? `★ ${data.rating}` : null].filter(Boolean).join(" · ");
-  modalMeta.textContent = title + (bits ? ` — ${bits}` : "");
+  modalMeta.textContent = title + (bits ? `, ${bits}` : "");
   if (data.description) {
     modalDescription.textContent = data.description;
     modalDescription.style.display = "block";
