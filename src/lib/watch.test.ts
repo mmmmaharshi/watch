@@ -589,17 +589,16 @@ test("the Astro page keeps title, canonical and share tags", async () => {
   expect(page).toContain("og:image");
   expect(page).toContain("/og.png");
   expect(page).toContain("twitter:card");
-  expect(page).toContain("<dialog");
-  expect(page).not.toContain('role="dialog"');
-  expect(page).toContain('src="../scripts/watch.ts"');
+  expect(page).toContain("<WatchApp");
+  expect(page).toContain("client:load");
 });
 
 // The title ID rides in the hash, never a query link, so crawlers see one
 // indexable URL.
 test("the title id rides in the hash, never a query link", async () => {
-  const page = await Bun.file("src/pages/index.astro").text();
-  expect(page).toContain('href="#id=');
-  expect(page).not.toContain('href="?id');
+  const island = await Bun.file("src/components/WatchApp.tsx").text();
+  expect(island).toContain('href="#id=');
+  expect(island).not.toContain('href="?id');
 });
 
 // The shell is static (CDN), only /api/watch runs on demand. The sitemap is
@@ -617,7 +616,7 @@ test("the page prerenders and the sitemap is generated", async () => {
 
 // The client talks to the action, not the retired route.
 test("the client calls the watch action", async () => {
-  const script = await Bun.file("src/scripts/watch.ts").text();
-  expect(script).toContain("actions.watch(");
-  expect(script).not.toContain("/api/watch");
+  const island = await Bun.file("src/components/WatchApp.tsx").text();
+  expect(island).toContain("actions.watch(");
+  expect(island).not.toContain("/api/watch");
 });
