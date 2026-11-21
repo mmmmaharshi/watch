@@ -6,8 +6,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "build:timings": "astro build --timings",
+    "sync": "astro sync",
     "lint": "oxlint --type-aware --type-check",
     "test": "bun test",
+    "e2e": "playwright test",
+    "check": "bun run sync && bun run lint && bun test && bun run build",
     "prepare": "husky"
   },
   "dependencies": {
@@ -26,6 +29,7 @@
   "devDependencies": {
     "@cloudflare/oxlint-config": "^0.1.0",
     "@happy-dom/global-registrator": "^21.0.4",
+    "@playwright/test": "^1.65.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.3.0",

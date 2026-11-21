@@ -242,6 +242,7 @@ test("a shared link runs the lookup and opens the result dialog", async () => {
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined });
+  expect(window.location.hash).toBe("#id=tt0133093");
 });
 
 test("copy writes the share link and shows the toast", async () => {
