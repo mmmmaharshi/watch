@@ -11,4 +11,5 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [sitemap()],
   server: { host: true },
+  devToolbar: { enabled: false },
 });
