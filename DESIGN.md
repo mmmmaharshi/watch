@@ -304,7 +304,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Search and watch.".
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "watch your fave movie or show. free. say less.".
 - **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 
