@@ -11,17 +11,6 @@ declare module "astro:actions" {
     data?: unknown;
     error?: unknown;
   }
-  export interface TitleMetaResult {
-    type?: "movie" | "tv";
-    name?: string;
-    year?: string;
-    rating?: string;
-    description?: string;
-  }
-  export interface ResolveResponse {
-    data?: { meta: TitleMetaResult | null };
-    error?: { message?: string };
-  }
   export interface SearchInput {
     query: string;
   }
@@ -31,7 +20,6 @@ declare module "astro:actions" {
   }
   export const actions: {
     watch(input: WatchInput): Promise<WatchResponse>;
-    resolve(input: { id: string }): Promise<ResolveResponse>;
     search(input: SearchInput): Promise<SearchResponse>;
   };
 }

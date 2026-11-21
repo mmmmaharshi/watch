@@ -270,20 +270,6 @@ async function fetchMeta(
   }
 }
 
-// Resolve a canonical IMDb ID without probing providers. Shared links use this
-// to show the title in the input instead of opening the dialog.
-export async function resolveTitleMeta(
-  deps: Pick<WatchDeps, "http" | "typeCache">,
-  id: string,
-): Promise<TitleMeta | null> {
-  const parsed = parseTitleInput(id);
-  if (!parsed || parsed.kind !== "imdb") {
-    return null;
-  }
-  const result = await resolveTitle(parsed.id, deps.http, deps.typeCache);
-  return result.ok ? result.meta : null;
-}
-
 export async function resolveTitle(
   id: string,
   http: HttpClient,

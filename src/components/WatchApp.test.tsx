@@ -33,11 +33,7 @@ const search = mock(async (_input: { query: string }) => ({
   },
 }));
 
-const resolve = mock(async (_input: { id: string }) => ({
-  data: { meta: { name: "The Matrix", year: "1999" } },
-}));
-
-await mock.module("astro:actions", () => ({ actions: { watch: lookup, resolve, search } }));
+await mock.module("astro:actions", () => ({ actions: { watch: lookup, search } }));
 
 const { default: WatchApp } = await import("./WatchApp");
 
@@ -45,10 +41,6 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
   lookup.mockReset();
   lookup.mockImplementation(async () => ({ data: MATRIX }));
-  resolve.mockReset();
-  resolve.mockImplementation(async () => ({
-    data: { meta: { name: "The Matrix", year: "1999" } },
-  }));
   search.mockReset();
   search.mockImplementation(async () => ({ data: { candidates: [] } }));
 });
@@ -56,15 +48,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
 });
-
-async function openSharedResult() {
-  window.history.replaceState(null, "", "/#id=tt0133093");
-  render(<WatchApp />);
-  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
-  await waitFor(() => expect(input).toHaveProperty("value", "The Matrix"));
-  fireEvent.submit(input.closest("form")!);
-  return screen.findByRole("dialog", { name: "The Matrix" });
-}
 
 test("does not autofocus the input on a touch device", () => {
   Object.defineProperty(navigator, "maxTouchPoints", { value: 5, configurable: true });
@@ -206,38 +189,25 @@ test("the error clears when the user types", () => {
   expect(input.getAttribute("aria-describedby")).toBe("hint");
 });
 
-test("a shared link resolves the title without opening the dialog", async () => {
+test("a shared link runs the lookup and opens the result dialog", async () => {
   window.history.replaceState(null, "", "/#id=tt0133093");
 
   render(<WatchApp />);
-  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
-
-  await waitFor(() => expect(input).toHaveProperty("value", "The Matrix"));
-  expect(screen.queryByRole("dialog")).toBeNull();
-  expect(lookup).not.toHaveBeenCalled();
-});
-
-test("Watch now opens a resolved shared link directly", async () => {
-  window.history.replaceState(null, "", "/#id=tt0133093");
-
-  render(<WatchApp />);
-  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
-  await waitFor(() => expect(input).toHaveProperty("value", "The Matrix"));
-
-  fireEvent.submit(input.closest("form")!);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined });
 });
 
 test("copy writes the share link and shows the toast", async () => {
+  window.history.replaceState(null, "", "/#id=tt0133093");
   const writeText = mock(async () => {});
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText },
     configurable: true,
   });
 
-  await openSharedResult();
+  render(<WatchApp />);
+  await screen.findByRole("dialog", { name: "The Matrix" });
 
   fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
 
@@ -248,8 +218,10 @@ test("copy writes the share link and shows the toast", async () => {
 test("try another asks for a new stream without the current provider", async () => {
   lookup.mockResolvedValueOnce({ data: MATRIX });
   lookup.mockResolvedValueOnce({ data: OTHER });
+  window.history.replaceState(null, "", "/#id=tt0133093");
 
-  await openSharedResult();
+  render(<WatchApp />);
+  await screen.findByRole("dialog", { name: "The Matrix" });
 
   fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
 
@@ -260,7 +232,10 @@ test("try another asks for a new stream without the current provider", async () 
 });
 
 test("a backdrop click does not close the dialog", async () => {
-  const dialog = await openSharedResult();
+  window.history.replaceState(null, "", "/#id=tt0133093");
+
+  render(<WatchApp />);
+  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
 
   const backdrop = document.querySelector('[data-slot="modal-backdrop"]')!;
   fireEvent.pointerDown(backdrop);
@@ -275,8 +250,10 @@ test("a backdrop click does not close the dialog", async () => {
 test("Escape does not close the dialog while the next stream loads", async () => {
   lookup.mockResolvedValueOnce({ data: MATRIX });
   lookup.mockImplementationOnce(() => new Promise(() => {}));
+  window.history.replaceState(null, "", "/#id=tt0133093");
 
-  const dialog = await openSharedResult();
+  render(<WatchApp />);
+  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
 
   fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
   await screen.findByText("Finding another stream...");
