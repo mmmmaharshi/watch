@@ -149,9 +149,8 @@ export default function WatchApp() {
   }
 
   function chooseCandidate(candidate: TitleCandidate) {
-    // Keep the list: after closing the dialog the user may pick another title.
-    setValue(candidate.imdbId);
-    void runLookup(candidate.imdbId);
+    // Keep the list and the typed title: the user may pick another one.
+    void runLookup(candidate.imdbId, true);
   }
 
   async function handleSubmit(raw: string) {
@@ -177,7 +176,7 @@ export default function WatchApp() {
     await runLookup(input);
   }
 
-  async function runLookup(raw: string) {
+  async function runLookup(raw: string, keepInput = false) {
     const input = raw.trim();
     setLoading(true);
     loadingId.current = input;
@@ -186,7 +185,10 @@ export default function WatchApp() {
     try {
       const data = await lookup(input);
       // The server answers with the canonical ID, whether an ID or a link went in.
-      setValue(data.id);
+      // A title pick leaves the typed title in the field.
+      if (!keepInput) {
+        setValue(data.id);
+      }
       setInvalid(false);
       if (location.hash !== `#id=${data.id}`) {
         history.pushState(null, "", `#id=${data.id}`);

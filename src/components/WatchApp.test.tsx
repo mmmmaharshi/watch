@@ -80,6 +80,7 @@ test("a title shows candidates and picking one opens the result", async () => {
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: undefined });
+  expect(input).toHaveProperty("value", "The Matrix");
 });
 
 test("keeps the candidates after opening and closing a result", async () => {
@@ -101,6 +102,7 @@ test("keeps the candidates after opening and closing a result", async () => {
 
   expect(screen.getByRole("status").textContent).toBe("1 match. Choose one.");
   expect(screen.getByRole("button", { name: /The Matrix Film/ })).toBeTruthy();
+  expect(input).toHaveProperty("value", "The Matrix");
 });
 
 test("a title with no matches shows an error", async () => {
