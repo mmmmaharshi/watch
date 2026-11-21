@@ -214,13 +214,13 @@ test("the error clears when the user types", () => {
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
 
   fireEvent.submit(input.closest("form")!);
-  expect(input.getAttribute("aria-describedby")).toBe("hint status");
+  expect(input.getAttribute("aria-describedby")).toBe("status");
 
   fireEvent.change(input, { target: { value: "tt0133093" } });
 
   expect(screen.getByRole("status").textContent).toBe("");
   expect(input.getAttribute("aria-invalid")).toBe("false");
-  expect(input.getAttribute("aria-describedby")).toBe("hint");
+  expect(input.getAttribute("aria-describedby")).toBeNull();
 });
 
 test("a shared link runs the lookup and opens the result dialog", async () => {

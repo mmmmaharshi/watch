@@ -597,8 +597,8 @@ test("the Astro page keeps title, canonical and share tags", async () => {
 // indexable URL.
 test("the title id rides in the hash, never a query link", async () => {
   const island = await Bun.file("src/components/WatchApp.tsx").text();
-  expect(island).toContain('href="#id=');
-  expect(island).not.toContain('href="?id');
+  expect(island).toContain("#id=");
+  expect(island).not.toContain("?id=");
 });
 
 // The shell is static (CDN), only /api/watch runs on demand. The sitemap is

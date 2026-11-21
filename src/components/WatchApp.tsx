@@ -347,7 +347,7 @@ export default function WatchApp() {
               spellCheck={false}
               enterKeyHint="go"
               aria-invalid={invalid}
-              aria-describedby={invalid ? "hint status" : "hint"}
+              aria-describedby={invalid ? "status" : undefined}
             />
           </TextField>
           <Button
@@ -393,14 +393,6 @@ export default function WatchApp() {
           ))}
         </ul>
       )}
-
-      <p id="hint" className="mt-2 text-sm leading-relaxed text-black/64">
-        IMDb or TMDB ID, the full link, or a title. Example:{" "}
-        <a className="font-mono text-black underline underline-offset-2" href="#id=tt1300854">
-          tt1300854
-        </a>
-        .
-      </p>
 
       <Toast.Provider placement="bottom" />
 

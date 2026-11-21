@@ -1,6 +1,6 @@
 ---
 name: watch
-description: Paste an IMDb or TMDB ID, a link, or a title; get a working stream link in one quiet, left-aligned record.
+description: Search a title or paste an IMDb/TMDB ID or link; get a working stream link in one quiet, left-aligned record.
 colors:
   canvas: "#FFFFFF"
   ink: "#000000"
@@ -65,7 +65,7 @@ typography:
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.5
-  hint:
+  status:
     fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
@@ -168,7 +168,7 @@ The palette is neutral. The page is white and the ink is black. Intermediate ton
 
 ### Neutral
 
-- **Secondary Ink** (`colors.secondary-ink`) — the intro line, the meta line, the type line, row keys, the hint, the status, and both safety notes.
+- **Secondary Ink** (`colors.secondary-ink`) — the intro line, the meta line, the type line, row keys, the status, and both safety notes.
 - **Tertiary Ink** (`colors.tertiary-ink`) — nonessential glyphs only. It does not reach 4.5:1 on white.
 - **Border** (`colors.border`) — the header and footer rules, the dialog outline, and row dividers.
 - **Strong Border** (`colors.strong-border`) — the input outline.
@@ -189,7 +189,7 @@ The palette is neutral. The page is white and the ink is black. Intermediate ton
 **Faces:** Two faces from one family, each with one job.
 
 - **Goeist Sans** (`--font-sans`, family name `Goeist`) carries the interface: the wordmark, intro, card title, description, row keys, provider, buttons, status, and notes. It is loaded from `goeist/sans.css`.
-- **Goeist Mono** (`--font-mono`) carries identifiers: the IMDb ID, the stream URL, and the example ID in the hint. It is loaded from `goeist/mono.css`.
+- **Goeist Mono** (`--font-mono`) carries identifiers: the IMDb ID and the stream URL. It is loaded from `goeist/mono.css`.
 
 Both are variable fonts from 100 to 900. There is no serif. There is no styled casing: the wordmark is "watch", the buttons read "Watch now" and "Watch", and the row keys read "IMDb", "Provider", and "Stream URL" as written.
 
@@ -204,7 +204,7 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 - **Value** (`typography.value`): `text-sm tabular-nums` for the provider. The IMDb ID and the stream URL add `font-mono` (`typography.identifier`). Links add `underline underline-offset-2`.
 - **Action** (`typography.action`): the button base, `text-sm font-medium`, sentence case.
 - **Field** (`typography.field`): `text-base`.
-- **Hint** (`typography.hint`): `text-sm leading-relaxed text-black/64` for the status line and the hint.
+- **Status** (`typography.status`): `text-sm leading-relaxed text-black/64` for the status line.
 - **Footer** (`typography.footer`): `text-xs leading-relaxed text-black/64` for the page safety note.
 
 ### Named Rules
@@ -219,7 +219,7 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 
 The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
-`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. The status line follows with `mt-3` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types. The hint follows with `mt-2`. Both are left aligned.
+`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. The status line follows with `mt-3` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
 
 The footer is pushed to the bottom by `justify-between` and keeps `mt-14`. It has `border-t border-black/10 pt-5`, and its paragraph is left aligned.
 
@@ -266,7 +266,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
-- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` is `hint`, and adds `status` only while the field is invalid, so the error text is not read before it appears. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
+- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` points at `status` only while the field is invalid, so the error text is not read before it appears. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
 - **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
 
 ### Title Search
@@ -304,7 +304,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID, a link, or a title to get a working stream link.".
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Search a title, or paste an ID or link, and watch.".
 - **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 
@@ -324,7 +324,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 - Don't add an accent colour, a gradient, or a themed card fill.
 - Don't use pill buttons or uppercase labels.
 - Don't use Goeist Mono for prose, labels, or controls. It is for identifiers only.
-- Don't center the prose. Left-align the wordmark, hint, status, and footer.
+- Don't center the prose. Left-align the wordmark, status, and footer.
 - Don't stack a second shadow on the dialog. The overlay shadow is the only lift.
 - Don't hide or reword the safety notes. The product states that it hosts nothing.
 - Don't replace the `sr-only` label with a placeholder alone.
