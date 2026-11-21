@@ -17,12 +17,16 @@ The verifier starts with fresh context. It gets three things:
 
 It does not get the diff, the conversation, the tests, or the source. If it
 reads the source, it starts to test what was built instead of what was promised.
+It re-reads `docs/agents/acceptance.md` from disk at the start of every run. A
+memory of the criteria is not the contract.
 
 ## What it may do
 
 - Use a real browser on the live app. Never infer behavior from code.
 - Walk the app as a person would, including paths the criteria do not list.
-- Read the browser console and network log. A hidden error is a bug.
+- Read the browser console and network log. A console error or a failed action
+  is a bug even when the screen looks right.
+- Check a phone viewport. This app is mostly used on a phone.
 
 It may not edit `docs/agents/acceptance.md`, `e2e/`, or the source. It reports.
 Someone else fixes.
@@ -70,3 +74,13 @@ LIVE_URL=https://watch.maharshi.work bun run e2e:live
 
 The scripted suite covers the listed criteria. The verifier still explores by
 hand, because a script only finds what it was told to look for.
+
+The live project runs twice: once as a desktop browser, once as a phone. Add the
+`run-live-qa` label to a pull request to run it there too.
+
+## Measure the grade, not the suite
+
+The number that matters is defects found per run, not tests written. So the
+report carries the criteria counts and the bug sections, and nothing else. A run
+with no bugs is fine when it says which paths it walked. A run that quietly
+repeats the happy path for six weeks is not proof; extend the walk.

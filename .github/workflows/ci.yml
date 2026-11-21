@@ -17,9 +17,35 @@ jobs:
       - run: bun run check
       - run: bunx playwright install --with-deps chromium
       - run: bun run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 7
 
-  # Vercel deploys on its own, so wait for this commit's deployment and then
-  # load the live site. A green build alone hid a broken preset for weeks.
+  # Third-party providers make the live criteria slow and flaky, so they do not
+  # block every pull request. Add the `run-live-qa` label to ask for one.
+  pr-live:
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-live-qa')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run e2e:live
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: live-test-results
+          path: test-results/
+          retention-days: 7
+
+  # Vercel deploys on its own, so wait for this commit's deployment, then grade
+  # the deployed site. A green build alone hid a broken preset for weeks.
   live:
     needs: check
     if: github.ref == 'refs/heads/master'
@@ -31,6 +57,17 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - run: bun install --frozen-lockfile
       - run: bun scripts/deploy-check.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run e2e:live
+        env:
+          LIVE_URL: https://watch.maharshi.work
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: production-test-results
+          path: test-results/
+          retention-days: 7

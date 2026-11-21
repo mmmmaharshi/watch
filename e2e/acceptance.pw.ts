@@ -10,6 +10,27 @@ const BAD_LINK = "Use an IMDb title link or a TMDB movie or TV link.";
 const NO_PROVIDERS = "No other providers available.";
 const MATRIX = "tt0133093";
 
+// A hidden console error is a bug the screenshots never show. Every test fails
+// if the page logged one or threw.
+const consoleErrors = new WeakMap<Page, Array<string>>();
+
+test.beforeEach(({ page }) => {
+  const errors: Array<string> = [];
+  consoleErrors.set(page, errors);
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+  });
+});
+
+test.afterEach(({ page }) => {
+  expect(consoleErrors.get(page) ?? []).toEqual([]);
+});
+
 async function open(page: Page, path = "/") {
   await page.goto(path);
   // Astro drops the ssr marker once React takes over the island.
