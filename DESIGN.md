@@ -277,6 +277,13 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 - **Picking:** keeps the typed title in the input, runs the normal lookup, and updates the hash to the IMDb ID. The list stays in place, so after the dialog closes the user can pick another title. A failed or empty search reports through the status line.
 - **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
 
+### Shared Link
+
+- A URL with `#id=` (or an older `?id=`) calls the `resolve` action. That action fetches title metadata only, with no provider probe.
+- The title replaces the ID in the input and the dialog stays closed. A hash change does the same.
+- Watch now opens that resolved title directly, without a second search. The field keeps the title.
+- If the title cannot be resolved, the raw ID stays in the field.
+
 ### Result Dialog
 
 - **`Modal.Backdrop`** uses the theme scrim. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.

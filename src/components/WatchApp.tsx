@@ -93,6 +93,7 @@ export default function WatchApp() {
   const inputRef = useRef<HTMLInputElement>(null);
   const currentId = useRef<string | null>(null);
   const loadingId = useRef<string | null>(null);
+  const sharedRef = useRef<{ id: string; name: string } | null>(null);
 
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<Status>({ text: "" });
@@ -118,6 +119,20 @@ export default function WatchApp() {
     currentId.current = data.id;
     setResult(data);
     setIsOpen(true);
+  }
+
+  async function resolveShared(id: string) {
+    try {
+      const response = await actions.resolve({ id });
+      const name = response.data?.meta?.name;
+      if (!name) {
+        return;
+      }
+      sharedRef.current = { id, name };
+      setValue((current) => (current === id || current === "" ? name : current));
+    } catch {
+      // Keep the raw ID in the field.
+    }
   }
 
   async function runSearch(query: string) {
@@ -150,6 +165,7 @@ export default function WatchApp() {
 
   function chooseCandidate(candidate: TitleCandidate) {
     // Keep the list and the typed title: the user may pick another one.
+    sharedRef.current = null;
     void runLookup(candidate.imdbId, true);
   }
 
@@ -158,6 +174,12 @@ export default function WatchApp() {
     if (!input) {
       showError("Enter an IMDb or TMDB ID, link, or title.");
       inputRef.current?.focus();
+      return;
+    }
+
+    const shared = sharedRef.current;
+    if (shared && input === shared.name && location.hash === `#id=${shared.id}`) {
+      await runLookup(shared.id, true);
       return;
     }
 
@@ -261,10 +283,10 @@ export default function WatchApp() {
   useEffect(() => {
     const shared = parseSharedId(location.search, location.hash);
     if (shared) {
-      // The URL is the source of truth on mount; the lookup below corrects it.
+      // A shared link resolves quietly into the input; the dialog stays closed.
       // eslint-disable-next-line react/set-state-in-effect
       setValue(shared);
-      void runLookup(shared);
+      void resolveShared(shared);
     } else {
       inputRef.current?.focus();
     }
@@ -276,8 +298,9 @@ export default function WatchApp() {
       if (!id || id === currentId.current || id === loadingId.current) {
         return;
       }
+      sharedRef.current = null;
       setValue(id);
-      void runLookup(id);
+      void resolveShared(id);
     }
     window.addEventListener("hashchange", handleHash);
     window.addEventListener("popstate", handleHash);

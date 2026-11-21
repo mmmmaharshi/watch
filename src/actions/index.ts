@@ -1,6 +1,6 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
-import { handleWatchRequest, watchDeps } from "../lib/watch";
+import { handleWatchRequest, resolveTitleMeta, watchDeps } from "../lib/watch";
 import { searchDeps, searchTitles } from "../lib/search";
 
 export const server = {
@@ -19,6 +19,10 @@ export const server = {
       }
       return out.result;
     },
+  }),
+  resolve: defineAction({
+    input: z.object({ id: z.string().min(1).max(100) }),
+    handler: async ({ id }) => ({ meta: await resolveTitleMeta(watchDeps, id) }),
   }),
   search: defineAction({
     input: z.object({ query: z.string().trim().min(1).max(200) }),
