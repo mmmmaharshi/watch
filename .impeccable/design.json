@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-21T00:00:00Z",
+  "title": "Design System: watch",
+  "extensions": {
+    "colorMeta": {
+      "navy": {
+        "role": "primary",
+        "displayName": "Carrier Navy",
+        "canonical": "#16324F",
+        "tonalRamp": [
+          "#071522",
+          "#0B2033",
+          "#102B44",
+          "#16324F",
+          "#2B4D70",
+          "#4F7092",
+          "#8CA9C2",
+          "#DCE6EF"
+        ]
+      },
+      "navy-glow": {
+        "role": "neutral",
+        "displayName": "Radial Navy",
+        "canonical": "#1E4062",
+        "tonalRamp": [
+          "#0A1927",
+          "#10263A",
+          "#173550",
+          "#1E4062",
+          "#335C83",
+          "#5A84A9",
+          "#95B6CE",
+          "#E0EAF2"
+        ]
+      },
+      "red": {
+        "role": "primary",
+        "displayName": "Jet Red",
+        "canonical": "#C0392B",
+        "tonalRamp": [
+          "#3A0F0A",
+          "#611A11",
+          "#8C271B",
+          "#C0392B",
+          "#D2584A",
+          "#E07E73",
+          "#EFAFA6",
+          "#FBE3DF"
+        ]
+      },
+      "purple": {
+        "role": "secondary",
+        "displayName": "Carbon Purple",
+        "canonical": "#5B3E74",
+        "tonalRamp": [
+          "#1A1122",
+          "#2A1B37",
+          "#3F2A52",
+          "#5B3E74",
+          "#775795",
+          "#9A7EB4",
+          "#C3B0D5",
+          "#E9E1F0"
+        ]
+      },
+      "coupon": {
+        "role": "neutral",
+        "displayName": "Coupon White",
+        "canonical": "#F7F4EA",
+        "tonalRamp": [
+          "#3B382E",
+          "#595444",
+          "#7A735F",
+          "#A69E86",
+          "#C9C2AC",
+          "#E2DCC9",
+          "#F7F4EA",
+          "#FFFDF6"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#FFFDF6",
+        "tonalRamp": [
+          "#4A483F",
+          "#6B685C",
+          "#8F8B7C",
+          "#B9B4A4",
+          "#D8D3C3",
+          "#EDE9DC",
+          "#FFFDF6",
+          "#FFFFFF"
+        ]
+      },
+      "navy-deep": {
+        "role": "neutral",
+        "displayName": "Desk Navy",
+        "canonical": "#0F2537",
+        "tonalRamp": [
+          "#050E16",
+          "#081722",
+          "#0B1E2D",
+          "#0F2537",
+          "#1E3B52",
+          "#335871",
+          "#6B8AA3",
+          "#D3DEE7"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#7C838C",
+        "tonalRamp": [
+          "#23272B",
+          "#3A4045",
+          "#565D65",
+          "#7C838C",
+          "#989FA7",
+          "#B9BFC5",
+          "#D9DDE0",
+          "#F2F4F5"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline Rule",
+        "canonical": "rgba(22, 50, 79, 0.25)",
+        "tonalRamp": [
+          "rgba(22, 50, 79, 0.05)",
+          "rgba(22, 50, 79, 0.1)",
+          "rgba(22, 50, 79, 0.15)",
+          "rgba(22, 50, 79, 0.25)",
+          "rgba(22, 50, 79, 0.35)",
+          "rgba(22, 50, 79, 0.5)",
+          "rgba(22, 50, 79, 0.7)",
+          "rgba(22, 50, 79, 0.9)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Ticket title in the result dialog; Barlow Condensed airline-grotesk caps, self-hosted via Fontsource."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The 'watch' brand tab of the coupon head."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Input, field values, notices and status; IBM Plex Mono self-hosted via Fontsource, with tabular figures."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "FROM / CARRIER / TO and field caps; Barlow Condensed uppercase."
+      }
+    },
+    "shadows": [
+      {
+        "name": "coupon-lift",
+        "value": "0 28px 60px rgba(0, 0, 0, 0.35)",
+        "purpose": "The single ambient shadow under the coupon; nothing else in the system lifts."
+      },
+      {
+        "name": "modal-scrim",
+        "value": "rgba(22, 50, 79, 0.12)",
+        "purpose": "A light navy wash behind the result dialog; it tints the desk rather than dimming it."
+      }
+    ],
+    "motion": [
+      {
+        "name": "spinner-fade",
+        "value": "opacity 0.15s ease",
+        "purpose": "Reveals the primary button's loading spinner."
+      },
+      {
+        "name": "spinner-spin",
+        "value": "0.7s linear infinite",
+        "purpose": "Continuous rotation of the 14px loading spinner."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Animation and transition duration under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The red Watch now action that issues the ticket; solid jet red with a loading spinner state.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\"><span class=\"ds-btn-spinner\"></span><span>WATCH NOW</span></button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 48px; padding: 0 26px; border: 0; border-radius: 0; background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-btn-primary:hover { background: #A63225; } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; } .ds-btn-primary:disabled { background: var(--muted, #7C838C); cursor: wait; } .ds-btn-spinner { width: 14px; height: 14px; border: 2px solid var(--coupon, #F7F4EA); border-top-color: transparent; border-radius: 50%; opacity: 0; transition: opacity 0.15s ease; } .ds-btn-primary.is-loading .ds-btn-spinner { opacity: 1; animation: ds-spin 0.7s linear infinite; } @keyframes ds-spin { to { transform: rotate(360deg); } }"
+    },
+    {
+      "name": "Small Primary Button",
+      "kind": "button",
+      "refersTo": "button-watch",
+      "description": "The red Watch action in the result dialog; the jet-red proof of success.",
+      "html": "<button class=\"ds-btn-watch\" type=\"button\">WATCH</button>",
+      "css": ".ds-btn-watch { height: 38px; padding: 0 20px; border: 0; border-radius: 0; background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-btn-watch:hover { background: #A63225; } .ds-btn-watch:active { transform: scale(0.98); } .ds-btn-watch:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Cancel and icon actions in the result dialog; hairline outline, no fill.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">CANCEL</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 20px; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-radius: 0; background: transparent; color: var(--navy, #16324F); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-btn-secondary:hover { background: rgba(22, 50, 79, 0.06); } .ds-btn-secondary.copied { border-color: #1E7A46; color: #1E7A46; } .ds-btn-secondary:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "The single ID field; paper well, hairline border, purple focus, red error, and themed caret and selection.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"IMDb or TMDB ID or link\" aria-label=\"IMDb or TMDB ID or link\">",
+      "css": ".ds-input { width: 100%; height: 48px; padding: 0 14px; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-radius: 0; background: var(--paper, #FFFDF6); color: var(--navy, #16324F); caret-color: var(--red, #C0392B); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; font-variant-numeric: tabular-nums; } .ds-input::placeholder { color: var(--muted, #7C838C); font-style: italic; } .ds-input::selection { background: var(--red, #C0392B); color: var(--coupon, #F7F4EA); } .ds-input:focus { border-color: var(--purple, #5B3E74); } .ds-input.error { border-color: var(--red, #C0392B); } .ds-input.loading { border-color: var(--purple, #5B3E74); } .ds-input:focus-visible { outline: 3px solid var(--red, #C0392B); outline-offset: 3px; }"
+    },
+    {
+      "name": "Coupon Head",
+      "kind": "custom",
+      "refersTo": "coupon-head",
+      "description": "The carbon-purple tab at the top of the coupon carrying the brand and pass meta.",
+      "html": "<div class=\"ds-coupon-head\"><span class=\"ds-brand\">watch</span><span class=\"ds-head-meta\">STREAM PASS · ONE-WAY · NO. 0001</span></div>",
+      "css": ".ds-coupon-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 28px 12px; background: var(--purple, #5B3E74); color: var(--coupon, #F7F4EA); } .ds-brand { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: 0.08em; line-height: 1; text-transform: uppercase; } .ds-head-meta { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.85; }"
+    },
+    {
+      "name": "Ticket Card",
+      "kind": "card",
+      "refersTo": "ticket",
+      "description": "The coupon body that prints the route fields FROM / CARRIER / TO from ID to stream.",
+      "html": "<div class=\"ds-ticket\"><div class=\"ds-main\"><div class=\"ds-ticket-title\">STREAM FOUND</div><div class=\"ds-ticket-meta\">PROVIDER · MOVIE</div><div class=\"ds-fields\"><div><div class=\"ds-f-label\">From</div><div class=\"ds-f-val\">tt1300854</div></div><div><div class=\"ds-f-label\">Carrier</div><div class=\"ds-f-val\">Provider</div></div><div><div class=\"ds-f-label\">To / Stream</div><div class=\"ds-f-val\">https://provider.example/embed</div></div></div></div></div>",
+      "css": ".ds-ticket { display: flex; border: 1px solid var(--line, rgba(22, 50, 79, 0.25)); border-top: 3px double var(--navy, #16324F); background: var(--coupon, #F7F4EA); color: var(--navy, #16324F); } .ds-main { flex: 1; min-width: 0; padding: 20px 24px 18px; } .ds-ticket-title { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: 0.01em; } .ds-ticket-meta { margin-top: 8px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--purple, #5B3E74); } .ds-fields { display: grid; grid-template-columns: 1fr 2.2fr; gap: 18px; margin-top: 20px; } .ds-f-label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted, #7C838C); border-bottom: 1px solid var(--line, rgba(22, 50, 79, 0.25)); padding-bottom: 5px; } .ds-f-val { margin-top: 8px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 1.4; word-break: break-all; }"
+    },
+    {
+      "name": "Stub with Notches",
+      "kind": "custom",
+      "refersTo": "stub",
+      "description": "The fixed tear-off edge of the ticket with two punched navy-deep notches and a barcode strip.",
+      "html": "<div class=\"ds-stub\"><div class=\"ds-s-label\">Class</div><div class=\"ds-s-val\">STANDARD</div><div class=\"ds-s-label\">Gate</div><div class=\"ds-s-val\">01</div><div class=\"ds-barcode\" aria-hidden=\"true\"></div></div>",
+      "css": ".ds-stub { position: relative; flex: none; width: 190px; padding: 20px 16px; border-left: 1px dashed var(--line, rgba(22, 50, 79, 0.25)); } .ds-stub::before, .ds-stub::after { content: \"\"; position: absolute; left: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--navy-deep, #0F2537); } .ds-stub::before { top: -10px; } .ds-stub::after { bottom: -10px; } .ds-s-label { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted, #7C838C); } .ds-s-val { margin: 5px 0 14px; font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; font-variant-numeric: tabular-nums; } .ds-barcode { height: 26px; margin-top: 10px; background: repeating-linear-gradient(90deg, var(--navy, #16324F) 0 2px, transparent 2px 4px, var(--navy, #16324F) 4px 5px, transparent 5px 8px); }"
+    },
+    {
+      "name": "VALID Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "The rotated double-rule mark that certifies a working stream link.",
+      "html": "<div class=\"ds-stamp\">VALID</div>",
+      "css": ".ds-stamp { position: absolute; right: 12px; bottom: 16px; padding: 5px 10px; border: 3px double var(--red, #C0392B); color: var(--red, #C0392B); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 0.2em; transform: rotate(-12deg); }"
+    },
+    {
+      "name": "Type Tag",
+      "kind": "chip",
+      "refersTo": "type-tag",
+      "description": "The small jet-red outlined chip that labels the stream type.",
+      "html": "<span class=\"ds-tag\">MOVIE</span>",
+      "css": ".ds-tag { display: inline-block; margin-top: 12px; padding: 3px 8px; border: 1px solid var(--red, #C0392B); border-radius: 0; background: transparent; color: var(--red, #C0392B); font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Dialog Carrier Head",
+      "kind": "custom",
+      "refersTo": "ticket-head",
+      "description": "The purple head that opens the result ticket inside the dialog.",
+      "html": "<div class=\"ds-ticket-head\"><b>watch</b><span>Stream pass · Issued</span></div>",
+      "css": ".ds-ticket-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 24px; background: var(--purple, #5B3E74); color: var(--coupon, #F7F4EA); font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; } .ds-ticket-head b { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; } .ds-ticket-head span { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Ticket Wallet",
+    "overview": "A stream lookup is a ticket, not a search page. The working link is a stamped coupon with a carrier and a destination; the category's centered hero-and-card shell is refused. Ticket Wallet treats the pasted ID as the start of a short route: FROM, CARRIER, TO, and a stamp that says it worked.\n\nThe desk is a radial navy field, lit at the center and deep at the edges. A single pale coupon sits on it with generous margins, its tab in carbon purple and its figures set as monospaced tabular data. Hairline rules do the structuring; surfaces stay square and unrounded, and depth is one coupon shadow over a light scrim. The stamp and the coupon's fixed fields are recognizable with all content removed, so the shape carries the idea before the words do.\n\nThe visitor sees a ticket being issued: their ID in the FROM field, the provider as CARRIER, the stream URL as TO. The stamp tells them it worked; the warning tells them it is third-party. The themed caret and selection carry the red signal into the text. Provenance: ticket wallet world, seed 7a0f6ff53762f44b, from the surface direction contract.",
+    "keyCharacteristics": [
+      "One input, one action, one result dialog.",
+      "Coupon on a dark radial field; square corners and hairline rules.",
+      "Airline-grotesk caps for heads, monospaced tabular figures for IDs and URLs.",
+      "Jet red drives the primary action, the VALID stamp, and the themed caret/selection.",
+      "Third-party warning stays readable beneath the result."
+    ],
+    "rules": [
+      {
+        "name": "The Jet Red Rule",
+        "body": "Jet red marks the primary action, the VALID stamp, and the themed caret/selection; when it appears, the ticket acted or succeeded.",
+        "section": "colors"
+      },
+      {
+        "name": "The Airline-Caps Rule",
+        "body": "Airline-grotesk caps carry tabbed heads; monospaced tabular figures carry IDs and URLs.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Screen Rule",
+        "body": "One page, one input, one primary action; the result appears in a dialog over the same coupon, with the exact destination shown before the user leaves.",
+        "section": "layout"
+      },
+      {
+        "name": "The Single-Lift Rule",
+        "body": "The coupon is the only surface that floats; the desk and dialog stay flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Content-Removed Rule",
+        "body": "The stamp and the coupon's fixed fields are recognizable with all content removed.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do show the exact provider, canonical IMDb ID, and full stream URL before the user leaves the site.",
+      "Do keep the third-party warning and safety notice readable beneath the result.",
+      "Do keep hairline rules, square corners, the stub notch, and the barcode strip on every ticket.",
+      "Do keep the 3px jet-red focus outline, themed caret and selection, keyboard-accessible dialog, focus return, and reduced-motion override.",
+      "Do use tabular figures for IDs, gate, class, and URLs."
+    ],
+    "donts": [
+      "Don't add rounded cards or extra shadows; the radial field is the desk's only gradient.",
+      "Don't use jet red for decoration; it drives the primary action and certifies the stamp.",
+      "Don't turn this into a search page with navigation, hero, or discovery cards.",
+      "Don't hide or reword the third-party warning; the product states it hosts nothing."
+    ],
+    "provenance": {
+      "world": "ticket-wallet",
+      "worldName": "Ticket Wallet",
+      "seed": "7a0f6ff53762f44b",
+      "directionContract": ".impeccable/surfaces/src-pages-index-astro.md"
+    }
+  }
+}

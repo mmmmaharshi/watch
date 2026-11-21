@@ -156,7 +156,7 @@ function showModal(data: WatchData) {
   modalProvider.textContent = data.provider;
   modalWarningProvider.textContent = data.provider;
   modalImdb.href = `https://www.imdb.com/title/${data.id}/`;
-  modalImdb.textContent = `https://www.imdb.com/title/${data.id}/`;
+  modalImdb.textContent = data.id;
   modalUrlText.href = data.url;
   modalUrlText.textContent = data.url;
   modalCopy.classList.remove("copied");

@@ -1,48 +1,50 @@
 ---
 import { SITE_URL } from "../consts";
-import "@fontsource/geist-pixel";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/barlow/400.css";
+import "@fontsource/barlow/500.css";
+import "@fontsource/barlow/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
 
 export const prerender = true;
 ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0A0A0A">
-<meta name="color-scheme" content="dark">
-<title>Watch movies and TV shows online. Paste an IMDb or TMDB ID.</title>
+<title>watch — get a stream ticket</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
 <link rel="canonical" href={SITE_URL + "/"}>
-<meta name="description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show. No sign-up, no app, just a click to play.">
+<meta name="description" content="Paste an IMDb or TMDB ID and get a working stream link. No sign-up, no app, just a click to play.">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Watch">
-<meta property="og:title" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID.">
-<meta property="og:description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show.">
+<meta property="og:site_name" content="watch">
+<meta property="og:title" content="watch — get a stream ticket">
+<meta property="og:description" content="Paste an IMDb or TMDB ID and get a working stream link.">
 <meta property="og:url" content={SITE_URL + "/"}>
 <meta property="og:image" content={SITE_URL + "/og.png"}>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID or link.">
+<meta property="og:image:alt" content="watch — paste an IMDb or TMDB ID to get a stream link.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID.">
-<meta name="twitter:description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show.">
+<meta name="twitter:title" content="watch — get a stream ticket">
+<meta name="twitter:description" content="Paste an IMDb or TMDB ID and get a working stream link.">
 <style>
   :root {
-    --canvas: #0A0A0A;
-    --ink: #FFFFFF;
-    --ink-secondary: rgb(255 255 255 / 72%);
-    --ink-tertiary: rgb(255 255 255 / 60%);
-    --border: rgb(255 255 255 / 10%);
-    --border-strong: rgb(255 255 255 / 18%);
-    --fill-hover: rgb(255 255 255 / 9%);
-    --fill-pressed: rgb(255 255 255 / 14%);
-    --success: #22c55e;
-    --overlay: rgb(0 0 0 / 64%);
+    --navy: #16324F;
+    --navy-deep: #0F2537;
+    --red: #C0392B;
+    --coupon: #F7F4EA;
+    --paper: #FFFDF6;
+    --purple: #5B3E74;
+    --muted: #7C838C;
+    --line: rgba(22, 50, 79, 0.25);
   }
 
-  /* Global reset: Astro would scope `*` to [data-cid], outranking the
-     unscoped body rule below. :global keeps the original zero weight. */
   :global(*) { margin: 0; padding: 0; box-sizing: border-box; }
 
   .visually-hidden:where(:not(:focus-within, :active)) {
@@ -57,430 +59,330 @@ export const prerender = true;
     white-space: nowrap !important;
   }
 
-  :focus-visible {
-    outline: 3px solid var(--ink);
-    outline-offset: 2px;
-  }
-
-  html, body { height: 100%; }
-
-  html {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-text-size-adjust: 100%;
-    overscroll-behavior: none;
-  }
-
-  button, a {
-    touch-action: manipulation;
-  }
-
-  button {
-    user-select: none;
-    -webkit-user-select: none;
-  }
+  :focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+  html, body { min-height: 100%; }
+  html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+  body { caret-color: var(--red); }
+  ::selection { background: var(--red); color: var(--coupon); }
+  input { color: var(--navy); }
+  button, a { touch-action: manipulation; }
+  button { user-select: none; -webkit-user-select: none; }
 
   body {
-    font-family: 'Geist Pixel', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    font-size: 16px;
-    line-height: 1.5;
-    background: var(--canvas);
-    color: var(--ink);
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 38%, #1E4062 0%, #16324F 48%, #0F2537 100%);
+    color: var(--navy);
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    padding-top: max(24px, env(safe-area-inset-top, 0px));
-    padding-right: max(24px, env(safe-area-inset-right, 0px));
-    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
-    padding-left: max(24px, env(safe-area-inset-left, 0px));
+    padding: 32px 16px;
+    padding-top: max(32px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
   }
 
-  .container {
+  .desk {
     width: 100%;
-    max-width: 480px;
+    max-width: 980px;
+    position: relative;
   }
 
-  .header {
-    margin-bottom: 48px;
+  .watermark {
+    position: absolute;
+    top: -32px;
+    left: 2px;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(247, 244, 234, 0.45);
+  }
+  .watermark b { color: var(--coupon); }
+
+  .coupon {
+    background: var(--coupon);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.35);
   }
 
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
+  .head {
+    background: var(--purple);
+    color: var(--coupon);
+    padding: 14px 28px 12px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .brand {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .head-meta {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    opacity: 0.85;
   }
 
-  .form-group {
+  .form {
     display: flex;
     align-items: stretch;
+    gap: 12px;
+    padding: 22px 28px 4px;
   }
-
   input {
     flex: 1;
-    padding: 16px 20px;
-    font-size: 1rem;
-    font-family: inherit;
-    font-weight: 400;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px 0 0 8px;
-    background: var(--canvas);
-    color: var(--ink);
-    outline: none;
     min-width: 0;
-    transition: border-color 0.15s ease;
+    height: 48px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    padding: 0 14px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--navy);
+    outline: none;
   }
+  input::placeholder { color: var(--muted); font-style: italic; }
+  input:focus { border-color: var(--purple); }
+  input.error { border-color: var(--red); }
+  input.loading { border-color: var(--purple); }
 
-  input::placeholder {
-    color: var(--ink-tertiary);
-  }
-
-  input:focus {
-    border-color: var(--ink);
-  }
-
-  input.error {
-    border-color: var(--ink);
-  }
-
-  button {
-    padding: 16px 24px;
-    font-size: 1rem;
-    font-family: inherit;
-    font-weight: 500;
-    border: 1px solid var(--ink);
-    border-radius: 0 8px 8px 0;
-    background: var(--ink);
-    color: var(--canvas);
+  .btn-primary {
+    height: 48px;
+    padding: 0 26px;
+    border: 0;
+    background: var(--red);
+    color: var(--coupon);
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.1s ease;
-    white-space: nowrap;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-width: 120px;
+    white-space: nowrap;
   }
-
-  button:active {
-    transform: scale(0.98);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    button:hover {
-      background: var(--ink-secondary);
-      border-color: var(--ink-secondary);
-    }
-  }
-
-  button:disabled {
-    background: var(--ink-tertiary);
-    border-color: var(--ink-tertiary);
-    cursor: wait;
-  }
+  .btn-primary:hover { background: #A63225; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--muted); cursor: wait; }
 
   .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--canvas);
+    width: 14px; height: 14px;
+    border: 2px solid var(--coupon);
     border-top-color: transparent;
     border-radius: 50%;
     opacity: 0;
     transition: opacity 0.15s ease;
   }
+  .btn-primary.loading .spinner { opacity: 1; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  button.loading .spinner {
-    opacity: 1;
-    animation: spin 0.7s linear infinite;
+  .hint, .status, .recent {
+    padding: 8px 28px 0;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
   }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .status {
-    margin-top: 16px;
-    font-size: 0.875rem;
-    min-height: 1.5rem;
-    transition: opacity 0.2s ease;
-  }
-
-  .status.loading {
-    color: var(--ink-tertiary);
-  }
-
-  .status.error {
-    color: var(--ink-secondary);
-  }
-
-  .help {
-    margin-top: 8px;
-    color: var(--ink-tertiary);
-    font-size: 0.875rem;
-  }
-
-  /* Recent links are built by script, so they carry no scope attribute. */
-  :global(.help a) {
-    color: var(--ink-secondary);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    :global(.help a:hover) {
-      color: var(--ink);
-    }
-  }
-
-  .disclaimer {
-    margin-top: 16px;
-    color: var(--ink-tertiary);
-    font-size: 0.75rem;
-    line-height: 1.5;
-  }
-
-  @media (max-width: 480px) {
-    .container {
-      max-width: 100%;
-    }
-
-    .header {
-      margin-bottom: 32px;
-    }
-
-    .disclaimer {
-      margin-top: 24px;
-      font-size: 0.75rem;
-    }
-
-    .form-group {
-      flex-direction: column;
-      gap: 0;
-    }
-
-    input {
-      border-radius: 8px 8px 0 0;
-      border-right: 1px solid var(--border-strong);
-      border-bottom: none;
-    }
-
-    .form-group button {
-      border-radius: 0 0 8px 8px;
-      border-top: none;
-    }
-
-    .modal {
-      padding: 20px;
-    }
-
-    .modal .detail {
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 10px 0;
-    }
-
-    .modal .detail-label {
-      flex: 0 0 auto;
-      white-space: nowrap;
-    }
-
-    .modal .detail-value {
-      flex: 1 1 auto;
-      min-width: 0;
-      max-width: none;
-      text-align: right;
-      justify-content: flex-end;
-      overflow-wrap: anywhere;
-      font-size: 0.8rem;
-    }
-
-    .modal .actions {
-      flex-direction: row;
-      flex-wrap: nowrap;
-      gap: 8px;
-    }
-
-    .modal .btn-secondary,
-    .modal .btn-primary {
-      width: auto;
-      min-width: 0;
-      min-height: 44px;
-      flex: 1 1 auto;
-      padding: 12px 8px;
-      font-size: 0.8rem;
-    }
-
-    .modal .btn-secondary.icon {
-      width: 44px;
-      height: 44px;
-      flex: 0 0 auto;
-      padding: 0;
-    }
-  }
+  .status { min-height: 1.5rem; }
+  .status.loading { color: var(--purple); }
+  .status.error { color: var(--red); }
+  .hint b { color: var(--navy); font-weight: 600; }
+  :global(.hint a) { color: var(--navy); text-decoration: underline; text-underline-offset: 2px; }
+  :global(.recent a) { color: var(--purple); text-decoration: underline; text-underline-offset: 2px; }
 
   dialog.modal {
-    inset: 0;
-    margin: auto;
-    overscroll-behavior: contain;
-  }
-
-  dialog.modal::backdrop {
-    background: var(--overlay);
-    overflow: hidden;
-    overscroll-behavior: contain;
-  }
-
-  .modal {
-    background: var(--canvas);
-    color: var(--ink);
-    border: 1px solid var(--border-strong);
-    border-radius: 12px;
-    padding: 32px;
-    width: 100%;
-    max-width: min(400px, calc(100% - 32px));
-  }
-
-  .modal h2 {
-    font-size: 1.25rem;
-    font-weight: 500;
-    margin-bottom: 8px;
-  }
-
-  .modal .meta {
-    color: var(--ink-secondary);
-    font-size: 0.875rem;
-    margin-bottom: 24px;
-  }
-
-  .modal-description {
-    color: var(--ink-secondary);
-    font-size: 0.875rem;
-    line-height: 1.5;
-    margin: 16px 0 8px;
-  }
-
-  .modal .detail {
-    display: flex;
-    justify-content: space-between;
-    padding: 12px 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .modal .detail:first-of-type {
-    border-top: none;
-  }
-
-  .modal .detail-label {
-    color: var(--ink-tertiary);
-    font-size: 0.875rem;
-  }
-
-  .modal .detail-value {
-    font-size: 0.875rem;
-    text-align: right;
-    word-break: break-all;
-    max-width: 60%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: flex-end;
-  }
-
-  .modal .warning {
-    margin-top: 16px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    color: var(--ink-secondary);
-  }
-
-  .modal .warning strong {
-    color: var(--ink);
-  }
-
-  .modal .detail-value a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .modal .detail-value a:hover {
-      text-decoration: underline;
-      text-underline-offset: 2px;
-    }
-  }
-
-  .modal .btn-secondary.icon.copied {
-    color: var(--success);
-    border-color: var(--success);
-  }
-
-
-  .modal .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 24px;
-    flex-wrap: nowrap;
-  }
-
-  .modal .btn-secondary {
-    flex: 1 1 auto;
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    font-family: inherit;
-    font-weight: 500;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
+    border: 0;
+    padding: 0;
     background: transparent;
-    color: var(--ink);
+    color: var(--navy);
+    max-width: min(720px, calc(100% - 32px));
+    width: 100%;
+    margin: auto;
+    overflow: visible;
+  }
+  dialog.modal::backdrop { background: rgba(22, 50, 79, 0.12); }
+  dialog.modal[open] { display: block; }
+
+  .ticket-head {
+    background: var(--purple);
+    color: var(--coupon);
+    padding: 10px 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  }
+  .ticket-head b { font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .ticket-head span { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+
+  .ticket {
+    display: flex;
+    border: 1px solid var(--line);
+    border-top: 3px double var(--navy);
+    background: var(--coupon);
+  }
+  .main { flex: 1; min-width: 0; padding: 20px 24px 18px; }
+  .title {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: 0.01em;
+  }
+  .meta {
+    margin-top: 8px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--purple);
+  }
+  .tag {
+    display: inline-block;
+    margin-top: 12px;
+    border: 1px solid var(--red);
+    color: var(--red);
+    padding: 3px 8px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 2.2fr;
+    gap: 18px;
+    margin-top: 20px;
+  }
+  .f-label {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 5px;
+  }
+  .f-val {
+    margin-top: 8px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+    word-break: break-all;
+  }
+  .f-val a { color: var(--navy); text-decoration: none; }
+  .f-val a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  .stub {
+    width: 190px;
+    flex: none;
+    border-left: 1px dashed var(--line);
+    padding: 20px 16px;
+    position: relative;
+  }
+  .stub::before, .stub::after {
+    content: "";
+    position: absolute;
+    left: -9px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--navy-deep);
+  }
+  .stub::before { top: -10px; }
+  .stub::after { bottom: -10px; }
+  .s-label {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .s-val { margin: 5px 0 14px; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .stamp {
+    position: absolute;
+    right: 12px; bottom: 16px;
+    border: 3px double var(--red);
+    color: var(--red);
+    padding: 5px 10px;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.2em;
+    transform: rotate(-12deg);
+  }
+
+  .barcode {
+    height: 26px;
+    margin-top: 10px;
+    background: repeating-linear-gradient(90deg, var(--navy) 0 2px, transparent 2px 4px, var(--navy) 4px 5px, transparent 5px 8px);
+  }
+
+  .warning {
+    margin: 10px 0 0;
+    border: 1px solid var(--line);
+    background: var(--coupon);
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #33465A;
+  }
+  .warning strong { color: var(--navy); }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--coupon);
+  }
+  .btn-secondary, .btn-primary-small {
+    height: 38px;
+    padding: 0 20px;
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: background 0.15s ease;
+  }
+  .btn-secondary {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--navy);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: fit-content;
+    gap: 8px;
   }
+  .btn-secondary:hover { background: rgba(22, 50, 79, 0.06); }
+  .btn-secondary.copied { border-color: #1E7A46; color: #1E7A46; }
+  .btn-secondary.icon { width: 38px; padding: 0; }
+  .btn-secondary.icon.loading svg { animation: spin 0.7s linear infinite; }
+  .btn-primary-small { border: 0; background: var(--red); color: var(--coupon); }
+  .btn-primary-small:hover { background: #A63225; }
 
-  .modal .btn-secondary.icon svg {
-    transition: transform 0.2s ease;
+  .notice {
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+    color: rgba(247, 244, 234, 0.72);
   }
-
-  .modal .btn-secondary.icon.loading svg {
-    animation: spin 0.7s linear infinite;
+  .notice span {
+    font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--coupon);
   }
-
-  .modal .btn-primary {
-    flex: 1 1 auto;
-    padding: 12px 16px;
-    font-size: 0.875rem;
-    font-family: inherit;
-    font-weight: 500;
-    border: 1px solid var(--ink);
-    border-radius: 8px;
-    background: var(--ink);
-    color: var(--canvas);
-    cursor: pointer;
-    transition: background 0.15s ease;
-    min-width: fit-content;
-  }
-
-  .modal .btn-secondary:active,
-  .modal .btn-primary:active {
-    transform: scale(0.98);
-  }
-
-  @media (hover: hover) and (pointer: fine) {
-    .modal .btn-secondary:hover {
-      background: var(--fill-hover);
-    }
-
-    .modal .btn-primary:hover {
-      background: var(--ink-secondary);
-    }
-  }
+  .notice p { margin-top: 4px; font-size: 11px; line-height: 1.5; color: #E8E4D8; }
 
   @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after {
@@ -488,65 +390,93 @@ export const prerender = true;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
 
-    /* Keep load state readable without motion: static ring + text. */
-    .spinner {
-      opacity: 1 !important;
+  @media (max-width: 640px) {
+    body { align-items: flex-start; padding-top: 56px; }
+    .watermark { top: -28px; }
+    .head { padding: 12px 18px; }
+    .head-meta { display: none; }
+    .form, .hint, .status, .recent { padding-left: 18px; padding-right: 18px; }
+    .form { flex-direction: column; gap: 8px; }
+    .btn-primary { width: 100%; }
+    .ticket { flex-direction: column; }
+    .main { padding: 18px; }
+    .title { font-size: 34px; }
+    .fields { grid-template-columns: 1fr; gap: 12px; }
+    .stub {
+      width: 100%;
+      border-left: 0;
+      border-top: 1px dashed var(--line);
+      padding: 14px 18px;
     }
-
-    button.loading .spinner,
-    .modal .btn-secondary.icon.loading svg {
-      animation: none !important;
-    }
+    .stub::before, .stub::after { display: none; }
+    .stamp { right: 10px; bottom: 44px; }
+    .actions { margin-top: 8px; }
+    .actions { flex-wrap: wrap; }
+    .btn-primary-small, .btn-secondary { flex: 1 1 auto; }
   }
 </style>
 </head>
 <body>
-  <main class="container">
-    <header class="header">
-      <h1>Watch movies and TV shows online</h1>
-    </header>
+  <main class="desk">
+    <div class="watermark"><b>watch</b> / stream desk</div>
 
-    <form class="form-group" id="form">
-      <label class="visually-hidden" for="imdb">IMDb or TMDB ID or link</label>
-      <input type="text" id="imdb" name="id" placeholder="IMDb or TMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false">
-      <button type="submit" id="go">
-        <span class="spinner"></span>
-        <span class="btn-text">Watch now</span>
-      </button>
-    </form>
+    <section class="coupon" aria-label="Get a stream link">
+      <header class="head">
+        <div class="brand">watch</div>
+        <div class="head-meta">Stream pass &nbsp;·&nbsp; One-way &nbsp;·&nbsp; No. 0001</div>
+      </header>
 
-    <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="help">Example: <a href="#id=tt1300854">tt1300854</a>. For TMDB, paste the full link.</p>
-    <p class="help" id="recent"></p>
-    <p class="disclaimer">We don't host anything. We only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
-  </main>
+      <form class="form" id="form">
+        <label class="visually-hidden" for="imdb">IMDb or TMDB ID or link</label>
+        <input type="text" id="imdb" name="id" placeholder="IMDb or TMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false">
+        <button type="submit" id="go" class="btn-primary">
+          <span class="spinner"></span>
+          <span class="btn-text">Watch now</span>
+        </button>
+      </form>
 
-  <dialog class="modal" id="modal" aria-labelledby="modal-title">
-      <h2 id="modal-title">Stream Found</h2>
-      <p class="meta" id="modal-meta"></p>
-      <p class="modal-description" id="modal-description" style="display: none;"></p>
-      <div class="detail">
-        <span class="detail-label">Type</span>
-        <span class="detail-value" id="modal-type"></span>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <p class="hint">Example: <a href="#id=tt1300854">tt1300854</a>. For TMDB, paste the full link.</p>
+      <p class="recent" id="recent"></p>
+    </section>
+
+    <dialog class="modal" id="modal" aria-labelledby="modal-title">
+      <div class="ticket-head"><b>watch</b><span>Stream pass · Issued</span></div>
+      <div class="ticket">
+        <div class="main">
+          <h2 class="title" id="modal-title">Stream Found</h2>
+          <p class="meta" id="modal-meta"></p>
+          <p class="modal-description" id="modal-description" style="display: none;"></p>
+          <span class="tag" id="modal-type"></span>
+          <div class="fields">
+            <div>
+              <div class="f-label">From</div>
+              <div class="f-val"><a id="modal-imdb" href="#" target="_blank" rel="noopener"></a></div>
+            </div>
+            <div>
+              <div class="f-label">Carrier</div>
+              <div class="f-val" id="modal-provider"></div>
+            </div>
+            <div>
+              <div class="f-label">To / Stream</div>
+              <div class="f-val"><a id="modal-url-text" href="#" target="_blank" rel="noopener"></a></div>
+            </div>
+          </div>
+        </div>
+        <div class="stub">
+          <div class="s-label">Class</div>
+          <div class="s-val">STANDARD</div>
+          <div class="s-label">Gate</div>
+          <div class="s-val">01</div>
+          <div class="barcode" aria-hidden="true"></div>
+          <div class="stamp">VALID</div>
+        </div>
       </div>
-      <div class="detail">
-        <span class="detail-label">Provider</span>
-        <span class="detail-value" id="modal-provider"></span>
-      </div>
-      <div class="detail">
-        <span class="detail-label">IMDB</span>
-        <span class="detail-value"><a id="modal-imdb" href="#" target="_blank" rel="noopener"></a></span>
-      </div>
-      <div class="detail">
-        <span class="detail-label">Stream URL</span>
-        <span class="detail-value"><a id="modal-url-text" href="#" target="_blank" rel="noopener"></a></span>
-      </div>
-      <div class="warning">
-        <span>You'll leave this site and play on </span>
-        <strong id="modal-warning-provider"></strong>
-        <span>. We don't control external sites.</span>
-      </div>
+
+      <p class="warning">You'll leave this site and play on <strong id="modal-warning-provider"></strong>. We don't control external sites.</p>
+
       <div class="actions">
         <button class="btn-secondary" id="modal-cancel">Cancel</button>
         <button class="btn-secondary icon" id="modal-try-another" title="Get another stream link" aria-label="Get another stream link">
@@ -561,9 +491,15 @@ export const prerender = true;
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
         </button>
-        <button class="btn-primary" id="modal-watch">Watch</button>
+        <button class="btn-primary-small" id="modal-watch">Watch</button>
       </div>
-  </dialog>
+    </dialog>
+
+    <div class="notice">
+      <span>Safety notice</span>
+      <p>We don't host anything. We only link to third-party providers. Check the URL before playing. Prefer an ad blocker for safety.</p>
+    </div>
+  </main>
 
 <script src="../scripts/watch.ts"></script>
 </body>
