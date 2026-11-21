@@ -6,6 +6,9 @@ const TVMAZE = "https://api.tvmaze.com/search/shows?q=";
 const USER_AGENT = "watch-app/1.0 (+https://github.com/mmmmaharshi/watch)";
 const TIMEOUT_MS = 5000;
 const MAX_CANDIDATES = 6;
+// Each catalog returns 20 rows. Keep the relevant head so a dozen obscure
+// remakes cannot push the best-known title out of the year-sorted list.
+const SOURCE_LIMIT = 6;
 // TVMaze scores the best match around 1.2. Below 0.5 the results stop sharing
 // a title with the query.
 const TVMAZE_SCORE_FLOOR = 0.5;
@@ -94,8 +97,13 @@ function normalize(name: string): string {
     .trim();
 }
 
-// Alternate the two sources, then lift exact title matches to the top. A movie
-// and a show can share a name ("The Office", "Dune"), so both stay visible.
+function releaseYear(candidate: TitleCandidate): number {
+  return candidate.year ? Number(candidate.year) : -Infinity;
+}
+
+// Alternate the two sources, then lift exact title matches and show the newest
+// release first. A movie and a show can share a name ("The Office", "Dune"), so
+// both stay visible.
 export function mergeCandidates(
   query: string,
   movies: Array<TitleCandidate>,
@@ -107,10 +115,17 @@ export function mergeCandidates(
 
   for (let i = 0; i < Math.max(movies.length, shows.length); i++) {
     for (const candidate of [movies[i], shows[i]]) {
-      if (candidate && !seen.has(candidate.imdbId)) {
-        seen.add(candidate.imdbId);
-        merged.push(candidate);
+      if (!candidate) {
+        continue;
       }
+      // A remake can share a name and year across regions; one row is enough.
+      const label = `${normalize(candidate.name)}|${candidate.year ?? ""}|${candidate.kind}`;
+      if (seen.has(candidate.imdbId) || seen.has(label)) {
+        continue;
+      }
+      seen.add(candidate.imdbId);
+      seen.add(label);
+      merged.push(candidate);
     }
   }
 
@@ -120,7 +135,16 @@ export function mergeCandidates(
       index,
       exact: normalize(candidate.name) === wanted ? 1 : 0,
     }))
-    .sort((a, b) => b.exact - a.exact || a.index - b.index)
+    .sort((a, b) => {
+      if (a.exact !== b.exact) {
+        return b.exact - a.exact;
+      }
+      // A year sort only makes sense within the same title. Loose matches keep
+      // the catalog's relevance order so "Dünen" cannot outrank "Dune".
+      return a.exact === 1
+        ? releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index
+        : a.index - b.index;
+    })
     .slice(0, MAX_CANDIDATES)
     .map((entry) => entry.candidate);
 }
@@ -173,7 +197,9 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     fetchWith(deps.http, cinemetaUrl("series", cleaned), (value) => parseCinemeta(value, "tv")),
   ]);
   const cinemetaComplete = movies !== null && shows !== null;
-  const baseMerged = mergeCandidates(cleaned, movies ?? [], shows ?? []);
+  const moviePool = movies?.slice(0, SOURCE_LIMIT) ?? [];
+  const showPool = shows?.slice(0, SOURCE_LIMIT) ?? [];
+  const baseMerged = mergeCandidates(cleaned, moviePool, showPool);
 
   // Cinemeta is undocumented, so shows get a second source. Ask it when the
   // series half failed or when no title came back at all.
@@ -184,7 +210,7 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
 
   const candidates =
     tvmaze !== null && tvmaze.length > 0
-      ? mergeCandidates(cleaned, movies ?? [], [...(shows ?? []), ...tvmaze])
+      ? mergeCandidates(cleaned, moviePool, [...showPool, ...tvmaze.slice(0, SOURCE_LIMIT)])
       : baseMerged;
 
   if (candidates.length > 0) {

@@ -74,6 +74,27 @@ test("merges an exact title first and alternates the sources", () => {
   expect(mergeCandidates("The Office", movies, shows)).toEqual([shows[0], movies[0]]);
 });
 
+test("orders equal title matches by newest release year", () => {
+  const shows: Array<TitleCandidate> = [
+    { imdbId: "tt0386676", name: "The Office", year: "2005", kind: "tv" },
+    { imdbId: "tt10193026", name: "The Office", year: "2024", kind: "tv" },
+  ];
+
+  expect(mergeCandidates("The Office", [], shows).map((candidate) => candidate.year)).toEqual([
+    "2024",
+    "2005",
+  ]);
+});
+
+test("keeps one row per name, year, and kind", () => {
+  const shows: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "The Office", year: "2026", kind: "tv" },
+    { imdbId: "tt2222222", name: "The Office", year: "2026", kind: "tv" },
+  ];
+
+  expect(mergeCandidates("The Office", [], shows)).toHaveLength(1);
+});
+
 test("lifts a title match that uses diacritics", () => {
   const movies: Array<TitleCandidate> = [
     { imdbId: "tt0081505", name: "Shogun Assassin", year: "1980", kind: "movie" },
