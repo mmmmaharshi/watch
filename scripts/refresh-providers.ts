@@ -1,13 +1,19 @@
-import { isAllowedProviderHost, parseActiveDomains } from "../src/lib/watch";
+import {
+  buildEmbedUrl,
+  DIRECTORY_URL,
+  originIfAllowed,
+  parseActiveDomains,
+  VIDFAST,
+  VIDLINK,
+  VIDZEE,
+} from "../src/lib/watch";
 
 // Twice-weekly probe. Reads the live directory, keeps only hosts that pass
 // a real check, and writes public/providers.json. A plain HTTP 200 proves
 // nothing: valid and bogus titles return the same shell, so each host must
 // show its own alive signal (see research/probe-26.md).
-const DIRECTORY_URL = "https://vidsrc.domains/";
 const PROBE_ID = "tt0133093";
-const VIDLINK_URL = `https://vidlink.pro/movie/${PROBE_ID}`;
-const VIDFAST_URL = "https://vidfast.vc";
+const BOGUS_ID = "tt0000000";
 const TIMEOUT_MS = 8000;
 
 export interface ProviderEntry {
@@ -37,6 +43,22 @@ export function isVidLinkAlive(status: number, body: string): boolean {
   return status === 200 && /tmdb|vidlink/i.test(body);
 }
 
+// Both halves must hold: a parked domain answers 200 with a marker to every
+// title, so the bogus title has to stay dead.
+export function isVidLinkPairAlive(
+  valid: { status: number; body: string },
+  bogus: { status: number; body: string },
+): boolean {
+  return isVidLinkAlive(valid.status, valid.body) && !isVidLinkAlive(bogus.status, bogus.body);
+}
+
+// VidZee has no per-title signal (valid and bogus return the same shell),
+// so this only proves the player shell is up. Left shallow on purpose;
+// a deeper API check is out of scope (see research/probe-26.md).
+export function isVidZeeAlive(status: number, body: string): boolean {
+  return status === 200 && /tmdb|vidzee/i.test(body);
+}
+
 // One entry per origin. VidFast is always last: it is the hardcoded
 // fallback the app uses when every VidSrc domain fails.
 export function buildProvidersJson(
@@ -45,13 +67,19 @@ export function buildProvidersJson(
 ): ProvidersFile {
   const seen = new Set<string>();
   const providers: Array<ProviderEntry> = [];
-  for (const baseUrl of [...baseUrls, VIDFAST_URL]) {
-    const base = new URL(baseUrl).origin;
-    if (seen.has(base)) {
+  for (const baseUrl of [...baseUrls, VIDFAST.baseUrl]) {
+    let url: URL;
+    try {
+      url = new URL(baseUrl);
+    } catch {
+      // Skip the bad entry; the rest of the file still applies.
       continue;
     }
-    seen.add(base);
-    providers.push({ name: new URL(base).host, baseUrl: base });
+    if (seen.has(url.origin)) {
+      continue;
+    }
+    seen.add(url.origin);
+    providers.push({ name: url.host, baseUrl: url.origin });
   }
   return { updatedAt, providers };
 }
@@ -79,37 +107,44 @@ async function refresh(): Promise<void> {
     process.stdout.write("Directory fetch failed; keeping the current providers.json.\n");
     return;
   }
-  const candidates = parseActiveDomains(directory).filter((url) => {
-    try {
-      return isAllowedProviderHost(new URL(url).host);
-    } catch {
-      return false;
-    }
-  });
+  const candidates = parseActiveDomains(directory).filter((url) => originIfAllowed(url) !== null);
 
   const alive: Array<string> = [];
-  for (const url of candidates) {
+  for (const origin of candidates) {
     try {
-      const origin = new URL(url).origin;
       if (await isVidSrcAlive(origin)) {
         alive.push(origin);
       } else {
         process.stdout.write(`Skip ${origin}: no signed vs_src answer.\n`);
       }
     } catch {
-      process.stdout.write(`Skip ${url}: probe failed.\n`);
+      process.stdout.write(`Skip ${origin}: probe failed.\n`);
     }
   }
 
   try {
-    const checked = await getText(VIDLINK_URL);
-    process.stdout.write(
-      isVidLinkAlive(checked.status, checked.body)
-        ? "VidLink answers 200 for the probe title.\n"
-        : "VidLink is not usable; left out.\n",
-    );
+    const valid = await getText(buildEmbedUrl(VIDLINK, "movie", PROBE_ID));
+    const bogus = await getText(buildEmbedUrl(VIDLINK, "movie", BOGUS_ID));
+    if (isVidLinkPairAlive(valid, bogus)) {
+      alive.push(VIDLINK.baseUrl);
+      process.stdout.write("VidLink answers 200 for the probe title, 500 for the bogus one.\n");
+    } else {
+      process.stdout.write("VidLink is not usable; left out.\n");
+    }
   } catch {
     process.stdout.write("VidLink probe failed; left out.\n");
+  }
+
+  try {
+    const checked = await getText(buildEmbedUrl(VIDZEE, "movie", PROBE_ID));
+    if (isVidZeeAlive(checked.status, checked.body)) {
+      alive.push(VIDZEE.baseUrl);
+      process.stdout.write("VidZee answers for the probe title.\n");
+    } else {
+      process.stdout.write("VidZee is not usable; left out.\n");
+    }
+  } catch {
+    process.stdout.write("VidZee probe failed; left out.\n");
   }
 
   const out = buildProvidersJson(alive);

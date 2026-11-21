@@ -4,6 +4,8 @@ import {
   hasPlayerApi,
   hasSignedSrc,
   isVidLinkAlive,
+  isVidLinkPairAlive,
+  isVidZeeAlive,
 } from "./refresh-providers";
 
 // Each test pins one probe signal from research/probe-26.md. A plain HTTP
@@ -28,14 +30,33 @@ test("VidLink counts as alive on 200 with a marker, dead on 500", () => {
   expect(isVidLinkAlive(200, "<html>generic shell</html>")).toBe(false);
 });
 
-test("output keeps one entry per origin and always ends with vidfast", () => {
-  expect(
-    buildProvidersJson(["https://vidsrc.sh", "https://vidsrc.sh/"], "2026-11-21T00:00:00Z"),
-  ).toEqual({
-    updatedAt: "2026-11-21T00:00:00Z",
-    providers: [
-      { name: "vidsrc.sh", baseUrl: "https://vidsrc.sh" },
-      { name: "vidfast.vc", baseUrl: "https://vidfast.vc" },
-    ],
+test("VidLink counts as alive only when valid answers and bogus stays dead", () => {
+  const valid = { status: 200, body: "<html>tmdb vidlink player</html>" };
+  const bogus = { status: 500, body: "Internal Server Error" };
+  expect(isVidLinkPairAlive(valid, bogus)).toBe(true);
+  // A parked domain answers 200 with a marker to every title.
+  expect(isVidLinkPairAlive(valid, { status: 200, body: "<html>tmdb vidlink player</html>" })).toBe(
+    false,
+  );
+  expect(isVidLinkPairAlive(bogus, bogus)).toBe(false);
+});
+
+test("VidZee counts as alive on 200 with a marker", () => {
+  expect(isVidZeeAlive(200, "<title>Vidzee Movie Player</title> tmdb")).toBe(true);
+  expect(isVidZeeAlive(200, "<html>generic shell</html>")).toBe(false);
+  expect(isVidZeeAlive(500, "Internal Server Error")).toBe(false);
+});
+
+test("output keeps one entry per origin, skips bad entries, ends with vidfast", () => {
+  const at = "2026-11-21T00:00:00Z";
+  const vidsrc = { name: "vidsrc.sh", baseUrl: "https://vidsrc.sh" };
+  const vidfast = { name: "vidfast.vc", baseUrl: "https://vidfast.vc" };
+  expect(buildProvidersJson(["https://vidsrc.sh", "https://vidsrc.sh/"], at)).toEqual({
+    updatedAt: at,
+    providers: [vidsrc, vidfast],
+  });
+  expect(buildProvidersJson(["https://vidsrc.sh", "not a url"], at)).toEqual({
+    updatedAt: at,
+    providers: [vidsrc, vidfast],
   });
 });
