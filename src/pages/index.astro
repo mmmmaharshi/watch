@@ -65,12 +65,15 @@ export const prerender = true;
     color: var(--ink);
     font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
+    overflow-wrap: break-word;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 48px 20px;
     padding-top: max(48px, env(safe-area-inset-top, 0px));
     padding-bottom: max(48px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(20px, env(safe-area-inset-right, 0px));
   }
 
   .page { width: 100%; max-width: 720px; display: flex; flex-direction: column; align-items: center; }
@@ -90,7 +93,7 @@ export const prerender = true;
     background: var(--surface);
     color: var(--ink);
     font: inherit;
-    font-size: 15px;
+    font-size: 16px;
     outline: none;
   }
   .search input::placeholder { color: var(--gray); }
@@ -146,8 +149,13 @@ export const prerender = true;
     width: 100%;
     margin: auto;
     overflow: visible;
+    overscroll-behavior: contain;
   }
-  dialog.modal::backdrop { background: rgba(10, 10, 10, 0.18); }
+  dialog.modal::backdrop {
+    background: rgba(10, 10, 10, 0.18);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
   dialog.modal[open] { display: block; }
 
   .record {
@@ -159,7 +167,7 @@ export const prerender = true;
   }
   .title { font-size: 34px; font-weight: 600; line-height: 1.12; letter-spacing: -0.035em; text-wrap: balance; }
   .meta { margin-top: 8px; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; color: var(--gray); }
-  .description { margin-top: 12px; font-size: 13px; line-height: 1.65; color: var(--gray); }
+  .description { margin-top: 12px; font-size: 13px; line-height: 1.65; color: var(--gray); text-wrap: pretty; }
   .type { margin-top: 14px; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray); }
 
   .rows { margin-top: 26px; border-top: 1px solid var(--line); }
@@ -171,10 +179,10 @@ export const prerender = true;
     font-size: 13px;
   }
   .row .k { width: 110px; flex: none; padding-top: 2px; font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gray); }
-  .row .v { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; word-break: break-all; }
+  .row .v { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .row .v a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 
-  .warning { margin-top: 18px; font-size: 11.5px; line-height: 1.65; color: var(--gray); }
+  .warning { margin-top: 18px; font-size: 11.5px; line-height: 1.65; color: var(--gray); text-wrap: pretty; }
   .warning strong { color: var(--ink); font-weight: 600; }
 
   .actions { margin-top: 26px; display: flex; justify-content: flex-end; gap: 8px; }
@@ -227,19 +235,21 @@ export const prerender = true;
 <body>
   <main class="page">
     <div class="col">
-      <div class="brand">watch<span>Look up. Play.</span></div>
+      <h1 class="brand">watch<span aria-hidden="true">Look up. Play.</span></h1>
 
-      <form class="search" id="form">
-        <label class="visually-hidden" for="imdb">IMDb or TMDB ID or link</label>
-        <input type="text" id="imdb" name="id" placeholder="IMDb or TMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false">
-        <button type="submit" id="go" class="btn-primary">
-          <span class="spinner"></span>
-          <span class="btn-text">Watch now</span>
-        </button>
-      </form>
+      <search>
+        <form class="search" id="form">
+          <label class="visually-hidden" for="imdb">IMDb or TMDB ID or link</label>
+          <input type="text" id="imdb" name="id" placeholder="IMDb or TMDB ID or link" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" aria-invalid="false" aria-describedby="hint">
+          <button type="submit" id="go" class="btn-primary">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="btn-text">Watch now</span>
+          </button>
+        </form>
+      </search>
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
-      <p class="hint">IMDb or TMDB ID, or the full link. Either works. Example: <a href="#id=tt1300854">tt1300854</a>.</p>
+      <p class="hint" id="hint">IMDb or TMDB ID, or the full link. Either works. Example: <a href="#id=tt1300854">tt1300854</a>.</p>
     </div>
 
     <dialog class="modal" id="modal" aria-labelledby="modal-title">

@@ -41,7 +41,7 @@ typography:
     letterSpacing: "0em"
   field:
     fontFamily: "'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif"
-    fontSize: "15px"
+    fontSize: "16px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0em"

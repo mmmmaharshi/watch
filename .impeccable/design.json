@@ -236,7 +236,7 @@
       "refersTo": "input",
       "description": "The single ID field; white well, hairline border, ink focus ring, tabular figures.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"IMDb or TMDB ID or link\" aria-label=\"IMDb or TMDB ID or link\">",
-      "css": ".ds-input { width: 100%; height: 58px; padding: 0 18px; border: 1px solid var(--line, #E4E4E4); border-radius: 4px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); caret-color: var(--ink, #0A0A0A); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; font-variant-numeric: tabular-nums; outline: none; } .ds-input::placeholder { color: var(--gray, #6B6B6B); } .ds-input::selection { background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); } .ds-input:focus { border-color: var(--ink, #0A0A0A); box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08); } .ds-input.error { border-color: var(--ink, #0A0A0A); border-width: 2px; }"
+      "css": ".ds-input { width: 100%; height: 58px; padding: 0 18px; border: 1px solid var(--line, #E4E4E4); border-radius: 4px; background: var(--surface, #FFFFFF); color: var(--ink, #0A0A0A); caret-color: var(--ink, #0A0A0A); font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 16px; font-variant-numeric: tabular-nums; outline: none; } .ds-input::placeholder { color: var(--gray, #6B6B6B); } .ds-input::selection { background: var(--ink, #0A0A0A); color: var(--paper, #FAFAFA); } .ds-input:focus { border-color: var(--ink, #0A0A0A); box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08); } .ds-input.error { border-color: var(--ink, #0A0A0A); border-width: 2px; }"
     },
     {
       "name": "Ruled Record",
