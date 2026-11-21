@@ -113,16 +113,25 @@ export interface Provider {
 // Active domains sit in the #domains section, each row carrying its URL in a
 // data-val copy button.
 
-// Directory entries are untrusted: only hosts that look like VidSrc (plus the
-// hardcoded VidFast host) pass. Anything else falls through to the fallbacks.
-const ALLOWED_HOST = /^(?:[a-z0-9-]+\.)*vidsrc\d*\.[a-z.]{2,}$/i;
+// v1 hosts (spec #25, ticket #28): live VidSrc domains plus the static
+// fallbacks. Dead hosts (videasy, vixcloud) stay out.
+const ALLOWED_EXACT = new Set([
+  "vidsrc.sh",
+  "vidsrc2.ru",
+  "vidsrc.ir",
+  "vidlink.pro",
+  "player.vidzee.wtf",
+  "vidfast.vc",
+]);
+
+const ALLOWED_SUFFIX = [...ALLOWED_EXACT].map((host) => `.${host}`);
 
 export function isAllowedProviderHost(host: string): boolean {
   const lower = host.toLowerCase();
-  if (lower === "vidfast.vc") {
+  if (ALLOWED_EXACT.has(lower)) {
     return true;
   }
-  return ALLOWED_HOST.test(lower);
+  return ALLOWED_SUFFIX.some((suffix) => lower.endsWith(suffix));
 }
 export function parseActiveDomains(html: string): Array<string> {
   const start = html.indexOf('id="domains"');
@@ -177,7 +186,19 @@ async function loadProviders(
   return toProviders(domains);
 }
 
-// Tried only after every VidSrc domain fails. TV needs season/episode, default to 1/1.
+// Static fallbacks, tried after every directory domain fails. VidFast goes
+// last. TV needs season/episode, default to 1/1.
+const VIDLINK: Provider = {
+  name: "vidlink.pro",
+  baseUrl: "https://vidlink.pro",
+  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+};
+
+const VIDZEE: Provider = {
+  name: "player.vidzee.wtf",
+  baseUrl: "https://player.vidzee.wtf",
+};
+
 const VIDFAST: Provider = {
   name: "vidfast.vc",
   baseUrl: "https://vidfast.vc",
@@ -359,10 +380,10 @@ export async function selectStream(args: {
   const { http, type, id, exclude, providerCache, domainCache } = args;
   const cacheKey = `${type}:${id}`;
   const providers = await loadProviders(http, domainCache);
-  const tiers: Array<Array<Provider>> = [providers, [VIDFAST]];
+  const tiers: Array<Array<Provider>> = [providers, [VIDLINK, VIDZEE], [VIDFAST]];
   const cachedName = providerCache.get(cacheKey);
   const cached = cachedName
-    ? [...providers, VIDFAST].find((p) => p.name === cachedName)
+    ? [...providers, VIDLINK, VIDZEE, VIDFAST].find((p) => p.name === cachedName)
     : undefined;
   if (cached) {
     tiers.unshift([cached]);

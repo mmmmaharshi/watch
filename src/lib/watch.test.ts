@@ -230,14 +230,23 @@ test("reads active domains from the directory and ignores old ones", () => {
   expect(parseActiveDomains("")).toEqual([]);
 });
 
-test("allows only VidSrc-shaped hosts plus vidfast", () => {
+test("allows only the v1 hosts and their subdomains", () => {
   expect(isAllowedProviderHost("vidsrc.sh")).toBe(true);
   expect(isAllowedProviderHost("vidsrc2.ru")).toBe(true);
-  expect(isAllowedProviderHost("a.vidsrc.to")).toBe(true);
+  expect(isAllowedProviderHost("vidsrc.ir")).toBe(true);
+  expect(isAllowedProviderHost("vidlink.pro")).toBe(true);
+  expect(isAllowedProviderHost("player.vidzee.wtf")).toBe(true);
   expect(isAllowedProviderHost("VIDFAST.VC")).toBe(true);
+  expect(isAllowedProviderHost("sub.vidlink.pro")).toBe(true);
   expect(isAllowedProviderHost("evil.com")).toBe(false);
   expect(isAllowedProviderHost("vidsrc-evil.com")).toBe(false);
   expect(isAllowedProviderHost("evilvidsrc.com")).toBe(false);
+  expect(isAllowedProviderHost("vidsrc.evil.com")).toBe(false);
+  expect(isAllowedProviderHost("vidsrc.sh.evil.com")).toBe(false);
+  expect(isAllowedProviderHost("evil-vidlink.pro.com")).toBe(false);
+  expect(isAllowedProviderHost("vidlink.pro.evil.com")).toBe(false);
+  expect(isAllowedProviderHost("player.videasy.net")).toBe(false);
+  expect(isAllowedProviderHost("vixcloud.cc")).toBe(false);
   expect(isAllowedProviderHost("v\u0456dsrc.to")).toBe(false);
 });
 
@@ -254,7 +263,9 @@ test("drops unlisted directory hosts and uses VidFast", async () => {
       if (url.includes("vidfast.vc")) {
         return reply(true);
       }
-      sawEvil = true;
+      if (url.includes("evil")) {
+        sawEvil = true;
+      }
       return reply(false);
     },
   };
@@ -284,7 +295,9 @@ test("uses only VidFast when the directory is unreachable", async () => {
       if (url.includes("vidfast.vc")) {
         return reply(true);
       }
-      sawVidSrc = true;
+      if (url.includes("vidsrc")) {
+        sawVidSrc = true;
+      }
       return reply(false);
     },
   };
@@ -310,6 +323,33 @@ test("uses VidFast when every VidSrc domain fails", async () => {
   if (out.ok) {
     expect(out.result.provider).toBe("vidfast.vc");
     expect(out.result.url).toBe("https://vidfast.vc/movie/tt0133093");
+  }
+});
+
+test("picks VidLink before VidFast when the directory is down", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === DIRECTORY) {
+        return reply(false);
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidlink.pro"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidlink.pro");
+  if (out.ok) {
+    expect(out.result.url).toBe("https://vidlink.pro/movie/tt0133093");
   }
 });
 
@@ -520,7 +560,7 @@ test("selectStream skips the excluded provider across tiers", async () => {
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) {
-        return reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"]));
+        return reply(true, {}, directoryHtml(["https://a.vidsrc.sh", "https://b.vidsrc.sh"]));
       }
       return reply(true);
     },
@@ -529,11 +569,11 @@ test("selectStream skips the excluded provider across tiers", async () => {
     http,
     type: "movie",
     id: "tt0133093",
-    exclude: "a.vidsrc.test",
+    exclude: "a.vidsrc.sh",
     providerCache: new Cache<string>(60_000),
     domainCache: new Cache<Array<string>>(60_000),
   });
-  expect(winner?.provider).toBe("b.vidsrc.test");
+  expect(winner?.provider).toBe("b.vidsrc.sh");
 });
 
 test("caps the cache by evicting the oldest entry", () => {
@@ -551,7 +591,7 @@ test("aborts losing probes once a winner resolves", async () => {
     get: (url, options) => {
       if (url === DIRECTORY) {
         return Promise.resolve(
-          reply(true, {}, directoryHtml(["https://a.vidsrc.test", "https://b.vidsrc.test"])),
+          reply(true, {}, directoryHtml(["https://a.vidsrc.sh", "https://b.vidsrc.sh"])),
         );
       }
       return new Promise<HttpReply>((resolve) => {
@@ -572,10 +612,10 @@ test("aborts losing probes once a winner resolves", async () => {
     await Promise.resolve();
   }
   expect(pending.size).toBe(2);
-  pending.get("https://a.vidsrc.test/embed/movie/tt0133093")!.resolve(reply(true));
+  pending.get("https://a.vidsrc.sh/embed/movie/tt0133093")!.resolve(reply(true));
   const result = await winner;
-  expect(result?.provider).toBe("a.vidsrc.test");
-  expect(pending.get("https://b.vidsrc.test/embed/movie/tt0133093")!.signal?.aborted).toBe(true);
+  expect(result?.provider).toBe("a.vidsrc.sh");
+  expect(pending.get("https://b.vidsrc.sh/embed/movie/tt0133093")!.signal?.aborted).toBe(true);
 });
 
 // Astro owns the page now: the shell prerenders to static HTML, so these
