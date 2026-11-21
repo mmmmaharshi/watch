@@ -14,12 +14,21 @@ import {
   unwrapActionResult,
 } from "./watch";
 import type { HttpClient, TypeResult, WatchDeps } from "./watch";
+import { SITE_URL } from "../consts";
 
 const MATRIX = {
   meta: { name: "The Matrix", year: "1999", imdbRating: "8.7", description: "Neo." },
 };
 const DIRECTORY = "https://vidsrc.domains/";
+const FILE_URL = `${SITE_URL}/providers.json`;
 const DOMAINS = ["https://vidsrc.sh", "https://vidsrc2.ru", "https://vidsrc.ir"];
+
+// A refresh file as scripts/refresh-providers.ts writes it.
+const refreshFile = (domains: Array<string>, updatedAt = new Date().toISOString()) => ({
+  updatedAt,
+  providers: domains.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl })),
+});
+const STALE_AT = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
 
 const VALID_RESULT = {
   id: "tt38336631",
@@ -279,6 +288,149 @@ test("drops unlisted directory hosts and uses VidFast", async () => {
     { id: "tt0133093" },
   );
   expect(out.ok && out.result.provider).toBe("vidfast.vc");
+  expect(sawEvil).toBe(false);
+});
+
+test("prefers the refresh file and skips the directory fetch", async () => {
+  let directoryCalls = 0;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(true, refreshFile(["https://vidsrc2.ru"]));
+      }
+      if (url === DIRECTORY) {
+        directoryCalls++;
+        return reply(true, {}, directoryHtml(["https://vidsrc.sh"]));
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc2.ru"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc2.ru");
+  expect(directoryCalls).toBe(0);
+});
+
+test("falls back to the directory when the refresh file is missing", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(false);
+      }
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(DOMAINS));
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc.sh"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
+});
+
+test("re-fetches the directory when the refresh file is stale", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(true, refreshFile(["https://vidsrc2.ru"], STALE_AT));
+      }
+      if (url === DIRECTORY) {
+        return reply(true, {}, directoryHtml(["https://vidsrc.ir"]));
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc.ir"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc.ir");
+});
+
+test("still uses a stale refresh file when the directory is down", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(true, refreshFile(["https://vidsrc2.ru"], STALE_AT));
+      }
+      if (url === DIRECTORY) {
+        return reply(false);
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc2.ru"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc2.ru");
+});
+
+test("filters unlisted hosts out of the refresh file", async () => {
+  let sawEvil = false;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(true, refreshFile(["https://evil.example.com", "https://vidsrc.sh"]));
+      }
+      if (url === DIRECTORY) {
+        return reply(false);
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      if (url.includes("evil")) {
+        sawEvil = true;
+      }
+      return reply(url.includes("vidsrc.sh"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc.sh");
   expect(sawEvil).toBe(false);
 });
 
@@ -593,6 +745,9 @@ test("aborts losing probes once a winner resolves", async () => {
         return Promise.resolve(
           reply(true, {}, directoryHtml(["https://a.vidsrc.sh", "https://b.vidsrc.sh"])),
         );
+      }
+      if (url === FILE_URL) {
+        return Promise.resolve(reply(false));
       }
       return new Promise<HttpReply>((resolve) => {
         pending.set(url, { resolve, signal: options?.signal });
