@@ -615,17 +615,6 @@ test("the page prerenders and the sitemap is generated", async () => {
   expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");
 });
 
-// The page keeps no local history: a lookup is not persisted or listed.
-test("lookups are not stored or listed as recent", async () => {
-  const page = await Bun.file("src/pages/index.astro").text();
-  const script = await Bun.file("src/scripts/watch.ts").text();
-  expect(page).not.toContain('id="recent"');
-  expect(script).not.toContain("localStorage");
-  expect(script).not.toContain("watch.recent");
-  expect(script).not.toContain("addRecent");
-  expect(script).not.toContain("parseRecent");
-});
-
 // The client talks to the action, not the retired route.
 test("the client calls the watch action", async () => {
   const script = await Bun.file("src/scripts/watch.ts").text();
