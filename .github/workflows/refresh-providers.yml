@@ -1,0 +1,31 @@
+name: refresh-providers
+
+# Twice a week the probe rewrites the provider list. Runs can also start by hand.
+on:
+  schedule:
+    - cron: "0 5 * * 2,6"
+  workflow_dispatch:
+
+# The job only commits the probe file, so write access stays on contents.
+permissions:
+  contents: write
+
+# A new run replaces a run that is still going. Only the latest list matters.
+concurrency:
+  group: refresh-providers
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun scripts/refresh-providers.ts
+      - name: Commit providers.json when it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet -- public/providers.json || (git add public/providers.json && git commit -m "chore(providers): refresh provider list" && git push)
