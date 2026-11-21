@@ -57,58 +57,7 @@ let loadingId: string | null = null;
 
 const RECENT_KEY = "watch.recent";
 
-// Dev-only worst-case fixtures for the break-ui pass. Only reachable on a dev
-// build (import.meta.env.DEV is replaced at compile time), driven by
-// ?data=worst|sparse|error. Shaped exactly like the action result.
-const WORST: WatchData = {
-  id: "tt0281583",
-  url: "https://vidsrc.in/embed/movie/tt0281583?autoPlay=false&sub_url=https%3A%2F%2Fexample.com%2Fsubs%2Fborat-cultural-learnings-of-america-for-make-benefit-glorious-nation-of-kazakhstan.srt&ds_lang=en",
-  provider: "vidsrc.in",
-  type: "movie",
-  name: "Borat: Cultural Learnings of America for Make Benefit Glorious Nation of Kazakhstan",
-  year: "2006",
-  rating: "7.4",
-  description:
-    "A journalist from Kazakhstan travels across America to learn its customs, filming every misunderstanding along the way. His producer follows with a live bear, a bag of ice, and no plan whatsoever, which turns a simple documentary into a cross-country chase full of awkward encounters, broken hotel rooms, and lessons nobody asked for. Along the way he discovers rodeos, etiquette classes, and a swimsuit contest that changes the entire purpose of the trip. The footage that survives is chaotic, frequently unusable, and somehow exactly the story he set out to tell.",
-};
-
-const SPARSE: WatchData = {
-  id: "tt0133093",
-  url: "https://vidsrc.in/embed/movie/tt0133093",
-  provider: "vidsrc.in",
-  type: "movie",
-  name: "The Matrix",
-};
-
-function devFixture(): { data?: WatchData; error?: string } | null {
-  if (!import.meta.env.DEV) {
-    return null;
-  }
-  const kind = new URLSearchParams(location.search).get("data");
-  if (kind === "worst") {
-    return { data: { ...WORST } };
-  }
-  if (kind === "sparse") {
-    return { data: { ...SPARSE } };
-  }
-  if (kind === "error") {
-    return { error: "No working providers available" };
-  }
-  return null;
-}
-
 async function lookup(value: string, exclude?: string): Promise<WatchData> {
-  if (import.meta.env.DEV) {
-    const fixture = devFixture();
-    if (fixture) {
-      if (fixture.error) {
-        throw new Error(fixture.error);
-      }
-      if (fixture.data) {
-        return fixture.data;
-      }
-    }
-  }
   const result: unknown = await actions.watch({ id: value, exclude });
   return unwrapActionResult(result);
 }
@@ -312,52 +261,6 @@ form.addEventListener("submit", (e) => {
 
 renderRecent();
 
-// Dev-only dataset switch for the break-ui pass. Fixed chrome, not part of the
-// design. The choice rides in ?data=, so a reload keeps the selection.
-if (import.meta.env.DEV) {
-  const kinds = ["demo", "worst", "sparse", "error"] as const;
-  const active = new URLSearchParams(location.search).get("data") ?? "demo";
-  if (active === "worst") {
-    try {
-      localStorage.setItem(
-        RECENT_KEY,
-        JSON.stringify([
-          {
-            id: "tt0281583",
-            name: "Borat: Cultural Learnings of America for Make Benefit Glorious Nation of Kazakhstan",
-          },
-          { id: "tt0468569", name: "The Dark Knight" },
-          { id: "tt0111161", name: "The Shawshank Redemption" },
-          { id: "tt0903747", name: "Breaking Bad" },
-          { id: "tt0133093", name: "The Matrix" },
-        ]),
-      );
-    } catch {
-      // Seed data is a convenience, not a requirement.
-    }
-    renderRecent();
-  }
-  const bar = document.createElement("nav");
-  bar.setAttribute("aria-label", "Fixture data");
-  bar.style.cssText =
-    "position:fixed;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border-radius:999px;background:#333;color:#fff;font:12px system-ui;z-index:9999;";
-  for (const kind of kinds) {
-    const b = document.createElement("button");
-    b.textContent = kind;
-    b.style.cssText = `border:0;border-radius:999px;padding:4px 10px;cursor:pointer;background:${active === kind ? "#fff" : "transparent"};color:${active === kind ? "#000" : "#fff"};font:inherit;`;
-    b.addEventListener("click", () => {
-      const url = new URL(location.href);
-      if (kind === "demo") {
-        url.searchParams.delete("data");
-      } else {
-        url.searchParams.set("data", kind);
-      }
-      location.href = url.toString();
-    });
-    bar.append(b);
-  }
-  document.body.append(bar);
-}
 // A shared link such as /#id=tt0133093 (or a whole IMDb link) loads right away.
 if (params.get("id")) {
   void go();
