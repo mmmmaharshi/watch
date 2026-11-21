@@ -1,4 +1,4 @@
-import type { WatchResult } from "./watch";
+import type { WatchResult } from "./types";
 
 // The ID rides in the hash so a shared link never creates a second URL for
 // search engines to index. The query form is still read for older links.

@@ -1,8 +1,7 @@
-import { defineAction, ActionError } from "astro:actions";
+import { defineAction } from "astro:actions";
 import { z } from "astro/zod";
-import { SEARCH_FAILED } from "../lib/messages";
-import { handleWatchRequest, watchDeps } from "../lib/watch";
 import { searchDeps, searchTitles } from "../lib/search";
+import { handleWatchRequest, watchDeps } from "../lib/watch";
 
 export const server = {
   watch: defineAction({
@@ -10,28 +9,10 @@ export const server = {
       id: z.string(),
       exclude: z.string().optional(),
     }),
-    handler: async ({ id, exclude }) => {
-      const out = await handleWatchRequest(watchDeps, { id, exclude });
-      if (!out.ok) {
-        throw new ActionError({
-          code: out.status === 400 ? "BAD_REQUEST" : "INTERNAL_SERVER_ERROR",
-          message: out.error,
-        });
-      }
-      return out.result;
-    },
+    handler: async ({ id, exclude }) => handleWatchRequest(watchDeps, { id, exclude }),
   }),
   search: defineAction({
     input: z.object({ query: z.string().trim().min(1).max(200) }),
-    handler: async ({ query }) => {
-      const out = await searchTitles(searchDeps, query);
-      if (!out.ok) {
-        throw new ActionError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: SEARCH_FAILED,
-        });
-      }
-      return { candidates: out.candidates };
-    },
+    handler: async ({ query }) => searchTitles(searchDeps, query),
   }),
 };

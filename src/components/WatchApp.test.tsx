@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TMDB_NOT_FOUND } from "../lib/messages";
+import type { WatchOutcome, WatchResult } from "../lib/types";
 
 // Bun cannot resolve astro:actions, so stub the action before the island loads.
-const MATRIX = {
+const MATRIX: WatchResult = {
   id: "tt0133093",
   name: "The Matrix",
   url: "https://vidsrc.in/embed/movie/tt0133093",
@@ -11,7 +12,7 @@ const MATRIX = {
   type: "movie",
 };
 
-const OTHER = {
+const OTHER: WatchResult = {
   id: "tt0133093",
   name: "The Matrix",
   url: "https://vidfast.vc/movie/tt0133093",
@@ -19,17 +20,20 @@ const OTHER = {
   type: "movie",
 };
 
-const lookup = mock(async (_input: { id: string; exclude?: string }) => ({
-  data: MATRIX,
-}));
+const lookup = mock(
+  async (_input: { id: string; exclude?: string }): Promise<{ data: WatchOutcome }> => ({
+    data: { ok: true, result: MATRIX },
+  }),
+);
 
 const search = mock(async (_input: { query: string }) => ({
   data: {
+    ok: true as const,
     candidates: [] as Array<{
       imdbId: string;
       name: string;
       year?: string;
-      kind?: "movie" | "tv";
+      kind: "movie" | "tv";
     }>,
   },
 }));
@@ -41,9 +45,9 @@ const { default: WatchApp } = await import("./WatchApp");
 beforeEach(() => {
   window.history.replaceState(null, "", "/");
   lookup.mockReset();
-  lookup.mockImplementation(async () => ({ data: MATRIX }));
+  lookup.mockImplementation(async () => ({ data: { ok: true, result: MATRIX } }));
   search.mockReset();
-  search.mockImplementation(async () => ({ data: { candidates: [] } }));
+  search.mockImplementation(async () => ({ data: { ok: true, candidates: [] } }));
   Object.defineProperty(window, "open", { value: mock(() => null), configurable: true });
 });
 
@@ -73,6 +77,7 @@ test("empty submit shows an error, marks the field invalid and focuses it", () =
 test("a title shows candidates and picking one opens the result", async () => {
   search.mockResolvedValueOnce({
     data: {
+      ok: true,
       candidates: [
         { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" },
         { imdbId: "tt0234215", name: "The Matrix Reloaded", year: "2003", kind: "movie" },
@@ -96,6 +101,7 @@ test("a title shows candidates and picking one opens the result", async () => {
 test("keeps the candidates after opening and closing a result", async () => {
   search.mockResolvedValueOnce({
     data: {
+      ok: true,
       candidates: [{ imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" }],
     },
   });
@@ -118,6 +124,7 @@ test("keeps the candidates after opening and closing a result", async () => {
 test("keeps the match count after watching", async () => {
   search.mockResolvedValueOnce({
     data: {
+      ok: true,
       candidates: [{ imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" }],
     },
   });
@@ -158,9 +165,14 @@ test("an ID skips the title search and goes straight to the lookup", async () =>
 });
 
 test("a bare number falls back to a title search when no TMDB title matches", async () => {
-  lookup.mockRejectedValueOnce(new Error(TMDB_NOT_FOUND));
+  lookup.mockResolvedValueOnce({
+    data: { ok: false, status: 502, reason: "tmdb_not_found", error: TMDB_NOT_FOUND },
+  });
   search.mockResolvedValueOnce({
-    data: { candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019", kind: "movie" }] },
+    data: {
+      ok: true,
+      candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019", kind: "movie" }],
+    },
   });
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
@@ -250,8 +262,8 @@ test("copy writes the share link and shows the toast", async () => {
 });
 
 test("try another asks for a new stream without the current provider", async () => {
-  lookup.mockResolvedValueOnce({ data: MATRIX });
-  lookup.mockResolvedValueOnce({ data: OTHER });
+  lookup.mockResolvedValueOnce({ data: { ok: true, result: MATRIX } });
+  lookup.mockResolvedValueOnce({ data: { ok: true, result: OTHER } });
   window.history.replaceState(null, "", "/#id=tt0133093");
 
   render(<WatchApp />);
@@ -282,7 +294,7 @@ test("a backdrop click does not close the dialog", async () => {
 });
 
 test("Escape does not close the dialog while the next stream loads", async () => {
-  lookup.mockResolvedValueOnce({ data: MATRIX });
+  lookup.mockResolvedValueOnce({ data: { ok: true, result: MATRIX } });
   lookup.mockImplementationOnce(() => new Promise(() => {}));
   window.history.replaceState(null, "", "/#id=tt0133093");
 

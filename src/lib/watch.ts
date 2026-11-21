@@ -1,6 +1,10 @@
 import { TMDB_NOT_FOUND } from "./messages";
 import { parseTitleInput } from "./parse-input";
 import { resolveImdbId } from "./tmdb";
+import type { ContentType, WatchOutcome } from "./types";
+
+export type { ContentType, WatchResult } from "./types";
+export { unwrapActionResult } from "./action-result";
 
 // Backend for /api/watch. Pure logic, no static serving (Astro owns the page).
 interface MetaJson {
@@ -38,8 +42,6 @@ function isJsonValue(value: unknown): value is JsonValue {
 export function isLooseJson(value: unknown): value is LooseJson {
   return isJsonValue(value) && typeof value === "object" && value !== null && !Array.isArray(value);
 }
-
-export type ContentType = "movie" | "tv";
 
 export interface HttpClient {
   get(
@@ -432,48 +434,6 @@ export const JSON_HEADERS = {
   "Cache-Control": "no-store",
 } satisfies Record<string, string>;
 
-interface UnknownResult {
-  id?: unknown;
-  url?: unknown;
-  provider?: unknown;
-  name?: unknown;
-  type?: unknown;
-  error?: unknown;
-  data?: unknown;
-  message?: unknown;
-}
-
-export function isRecord(value: unknown): value is UnknownResult {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function unwrapActionResult(value: unknown): WatchResult {
-  const fallback = "Something went wrong. Try again.";
-  if (!isRecord(value)) {
-    throw new Error(fallback);
-  }
-  if (isRecord(value.error) && typeof value.error.message === "string") {
-    throw new Error(value.error.message);
-  }
-  if (isWatchResult(value.data)) {
-    return value.data;
-  }
-  throw new Error(fallback);
-}
-
-export function isWatchResult(value: unknown): value is WatchResult {
-  if (!isRecord(value)) {
-    return false;
-  }
-  return (
-    typeof value.id === "string" &&
-    typeof value.url === "string" &&
-    typeof value.provider === "string" &&
-    typeof value.name === "string" &&
-    (value.type === "movie" || value.type === "tv")
-  );
-}
-
 export interface WatchDeps {
   http: HttpClient;
   typeCache: Cache<TypeResult>;
@@ -481,29 +441,21 @@ export interface WatchDeps {
   domainCache: Cache<Array<string>>;
 }
 
-export interface WatchResult {
-  id: string;
-  url: string;
-  provider: string;
-  type: ContentType;
-  name: string;
-  year?: string;
-  rating?: string;
-  description?: string;
-}
-
 // One shape for every transport. Status mirrors the old API.
 export async function handleWatchRequest(
   deps: WatchDeps,
   input: { id: string; exclude?: string },
-): Promise<
-  { ok: true; result: WatchResult } | { ok: false; status: 400 | 502 | 503; error: string }
-> {
+): Promise<WatchOutcome> {
   const { http, typeCache, providerCache, domainCache } = deps;
 
   const parsed = parseTitleInput(input.id);
   if (!parsed) {
-    return { ok: false, status: 400, error: "Invalid IMDb or TMDB ID" };
+    return {
+      ok: false,
+      status: 400,
+      reason: "invalid_input",
+      error: "Invalid IMDb or TMDB ID",
+    };
   }
 
   let id: string;
@@ -516,6 +468,7 @@ export async function handleWatchRequest(
       return {
         ok: false,
         status: mapped.reason === "ambiguous" ? 400 : 502,
+        reason: mapped.reason === "ambiguous" ? "tmdb_ambiguous" : "tmdb_not_found",
         error:
           mapped.reason === "ambiguous"
             ? "TMDB ID is ambiguous. Use a movie or TV link."
@@ -528,7 +481,12 @@ export async function handleWatchRequest(
 
   const typeResult = await resolveTitle(id, http, typeCache, preferred);
   if (!typeResult.ok) {
-    return { ok: false, status: 502, error: "Failed to detect content type" };
+    return {
+      ok: false,
+      status: 502,
+      reason: "metadata_missing",
+      error: "Failed to detect content type",
+    };
   }
 
   const stream = await selectStream({
@@ -540,7 +498,12 @@ export async function handleWatchRequest(
     domainCache,
   });
   if (!stream) {
-    return { ok: false, status: 503, error: "No working providers available" };
+    return {
+      ok: false,
+      status: 503,
+      reason: "no_providers",
+      error: "No working providers available",
+    };
   }
 
   return {

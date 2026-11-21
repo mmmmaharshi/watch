@@ -596,7 +596,7 @@ test("the Astro page keeps title, canonical and share tags", async () => {
 // The title ID rides in the hash, never a query link, so crawlers see one
 // indexable URL.
 test("the title id rides in the hash, never a query link", async () => {
-  const island = await Bun.file("src/components/WatchApp.tsx").text();
+  const island = await Bun.file("src/components/watch/use-watch.ts").text();
   expect(island).toContain("#id=");
   expect(island).not.toContain("?id=");
 });
@@ -616,7 +616,7 @@ test("the page prerenders and the sitemap is generated", async () => {
 
 // The client talks to the action, not the retired route.
 test("the client calls the watch action", async () => {
-  const island = await Bun.file("src/components/WatchApp.tsx").text();
+  const island = await Bun.file("src/components/watch/use-watch.ts").text();
   expect(island).toContain("actions.watch(");
   expect(island).not.toContain("/api/watch");
 });
