@@ -179,12 +179,9 @@ export default function WatchApp() {
 
   function watch() {
     if (result) {
-      const popup = window.open(result.url, "_blank", "noopener");
-      if (popup) {
-        popup.opener = null;
-      }
+      window.open(result.url, "_blank", "noopener");
     }
-    setIsOpen(false);
+    handleOpenChange(false);
     setStatus({ text: "" });
   }
 
@@ -209,7 +206,7 @@ export default function WatchApp() {
     // Same-document clicks go through the router (popstate, no hashchange);
     // back/forward can fire both, so an id that is showing or loading is skipped.
     function handleHash() {
-      const id = new URLSearchParams(location.hash.slice(1)).get("id");
+      const id = parseSharedId(location.search, location.hash);
       if (!id || id === currentId.current || id === loadingId.current) {
         return;
       }
@@ -296,11 +293,11 @@ export default function WatchApp() {
       <Modal.Backdrop
         isOpen={isOpen}
         onOpenChange={handleOpenChange}
-        isDismissable={!fetching}
+        isDismissable={false}
         isKeyboardDismissDisabled={fetching}
       >
         <Modal.Container size="lg">
-          <Modal.Dialog className="sm:max-w-2xl" aria-label={title}>
+          <Modal.Dialog className="sm:max-w-[45rem]" aria-label={title}>
             {result && (
               <Card variant="transparent" className="gap-0 p-0">
                 <Card.Header>
@@ -323,10 +320,13 @@ export default function WatchApp() {
                   <div className="mt-5 border-t border-separator">
                     <Row label="IMDb">
                       <a
-                        className="underline underline-offset-2"
+                        className={
+                          "underline underline-offset-2" + (fetching ? " pointer-events-none" : "")
+                        }
                         href={`https://www.imdb.com/title/${result.id}/`}
                         target="_blank"
                         rel="noopener"
+                        tabIndex={fetching ? -1 : undefined}
                       >
                         {result.id}
                       </a>
@@ -336,10 +336,14 @@ export default function WatchApp() {
                     <Separator />
                     <Row label="Stream URL">
                       <a
-                        className="break-all underline underline-offset-2"
+                        className={
+                          "break-all underline underline-offset-2" +
+                          (fetching ? " pointer-events-none" : "")
+                        }
                         href={result.url}
                         target="_blank"
                         rel="noopener"
+                        tabIndex={fetching ? -1 : undefined}
                       >
                         {result.url}
                       </a>
@@ -347,7 +351,7 @@ export default function WatchApp() {
                   </div>
                 </Card.Content>
 
-                <Card.Footer className="mt-4 flex-col items-stretch gap-4 border-t border-separator pt-4">
+                <Card.Footer className="mt-4 flex-col gap-4 border-t border-separator pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs leading-relaxed text-muted text-pretty">
                     You&apos;ll leave this site and play on{" "}
                     <strong className="font-semibold text-foreground">{result.provider}</strong>. We

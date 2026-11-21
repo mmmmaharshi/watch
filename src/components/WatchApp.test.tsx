@@ -89,6 +89,22 @@ test("try another asks for a new stream without the current provider", async () 
   expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: "vidsrc.in" });
 });
 
+test("a backdrop click does not close the dialog", async () => {
+  window.history.replaceState(null, "", "/#id=tt0133093");
+
+  render(<WatchApp />);
+  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
+
+  const backdrop = document.querySelector('[data-slot="modal-backdrop"]')!;
+  fireEvent.pointerDown(backdrop);
+  fireEvent.click(backdrop);
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  expect(screen.queryByRole("dialog")).toBe(dialog);
+});
+
 test("Escape does not close the dialog while the next stream loads", async () => {
   lookup.mockResolvedValueOnce({ data: MATRIX });
   lookup.mockImplementationOnce(() => new Promise(() => {}));
