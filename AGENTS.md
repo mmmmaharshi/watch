@@ -1,4 +1,5 @@
 - Always follow $coding-standards.
+- Never push, open a pull request, or merge without explicit user consent. Ask first and wait.
 - For syntax-aware code search, default to `ast-grep --lang <language> -p '<pattern>'` (adjust `--lang` per language); use text-only search only when explicitly requested.
 - Use `git twig new` in place of `git worktree add` when creating a worktree (see the `git-twig` skill).
 - Use Astro as much as possible. Use the Astro MCP server for the latest docs.
