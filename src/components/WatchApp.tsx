@@ -82,6 +82,7 @@ function CopyIcon() {
 
 export default function WatchApp() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const statusRef = useRef<HTMLParagraphElement>(null);
   const currentId = useRef<string | null>(null);
   const loadingId = useRef<string | null>(null);
 
@@ -112,17 +113,22 @@ export default function WatchApp() {
     try {
       const response = await actions.search({ query });
       if (response.error) {
-        throw new Error(response.error.message);
+        throw new Error(response.error.message || "Title search failed. Try an ID.");
       }
       const list = response.data?.candidates ?? [];
       if (list.length === 0) {
-        showError("No title found. Try an ID or the full link.");
+        // A valid query with no hits is not an invalid field.
+        setStatus({ text: "No title found. Try an ID or the full link.", kind: "error" });
         return;
       }
       setStatus({ text: `${list.length} ${list.length === 1 ? "match" : "matches"}. Choose one.` });
       setCandidates(list);
     } catch (error) {
-      showError(errMessage(error, "Title search failed. Try an ID."));
+      setStatus({
+        text:
+          errMessage(error, "Title search failed. Try an ID.") || "Title search failed. Try an ID.",
+        kind: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -131,10 +137,12 @@ export default function WatchApp() {
   function chooseCandidate(candidate: TitleCandidate) {
     setCandidates([]);
     setValue(candidate.imdbId);
+    // The clicked button is about to unmount, so keep focus on the status.
+    statusRef.current?.focus();
     void runLookup(candidate.imdbId);
   }
 
-  async function runLookup(raw: string) {
+  async function handleSubmit(raw: string) {
     const input = raw.trim();
     if (!input) {
       showError("Enter an IMDb or TMDB ID, link, or title.");
@@ -143,10 +151,22 @@ export default function WatchApp() {
     }
 
     if (!parseTitleInput(input)) {
+      if (/^https?:\/\//i.test(input) || /^www\./i.test(input)) {
+        setStatus({
+          text: "Use an IMDb title link or a TMDB movie or TV link.",
+          kind: "error",
+        });
+        return;
+      }
       await runSearch(input);
       return;
     }
 
+    await runLookup(input);
+  }
+
+  async function runLookup(raw: string) {
+    const input = raw.trim();
     setCandidates([]);
     setLoading(true);
     loadingId.current = input;
@@ -163,7 +183,14 @@ export default function WatchApp() {
       setStatus({ text: "" });
       showResults(data);
     } catch (error) {
-      showError(errMessage(error, "Something went wrong. Try again."));
+      const message =
+        errMessage(error, "Something went wrong. Try again.") || "Something went wrong. Try again.";
+      // A bare number may be a title ("1917") rather than a TMDB ID.
+      if (/^[1-9]\d{0,7}$/.test(input) && message === "TMDB ID not found") {
+        await runSearch(input);
+        return;
+      }
+      showError(message);
     } finally {
       loadingId.current = null;
       setLoading(false);
@@ -264,7 +291,7 @@ export default function WatchApp() {
           className="mt-8 flex flex-col gap-3 sm:flex-row"
           onSubmit={(event) => {
             event.preventDefault();
-            void runLookup(value);
+            void handleSubmit(value);
           }}
         >
           <TextField
@@ -311,12 +338,14 @@ export default function WatchApp() {
 
       <p
         id="status"
+        ref={statusRef}
+        tabIndex={-1}
         role="status"
         aria-live="polite"
         className={
           // The line keeps its height when empty, so an error does not shift
           // the centered page.
-          "mt-3 min-h-[1.625em] text-sm leading-relaxed " +
+          "mt-3 min-h-[1.625em] text-sm leading-relaxed focus:outline-none " +
           (status.kind === "error" ? "font-medium text-black" : "text-black/64")
         }
       >

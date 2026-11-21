@@ -271,7 +271,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Title Search
 
-- **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action.
+- **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action. A bare number is tried as a TMDB ID first; if TMDB has no such title, the number is searched as a title. A link that is not an IMDb title link or a TMDB movie/TV link is rejected with a message.
 - **Server:** `src/lib/search.ts` asks Wikidata `wbsearchentities`, batches the hits through `wbgetentities`, and keeps only `P31` films and shows with a `tt` IMDb ID. It drops people, games, seasons, and episodes. Results are capped at 6 per query and cached for 10 minutes per instance.
 - **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left`; the name is `text-sm font-medium`, the second line is the Wikidata description or the year in `text-sm text-black/64`. Hover and focus use `bg-black/5`; the focus ring is 2px ink.
 - **Picking:** sets the input to the IMDb ID, clears the list, and runs the normal lookup. A failed or empty search reports through the status line.
@@ -303,7 +303,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID to get a working stream link.".
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID, a link, or a title to get a working stream link.".
 - **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 

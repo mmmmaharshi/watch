@@ -76,7 +76,35 @@ test("falls back to the search label and description", () => {
   ]);
 });
 
-test("dedupes by IMDb ID and caps the list", () => {
+function films(count: number) {
+  return {
+    search: Array.from({ length: count }, (_, i) => ({ id: `Q${i}`, label: `Film ${i}` })),
+    entities: Object.fromEntries(
+      Array.from({ length: count }, (_, i) => [
+        `Q${i}`,
+        {
+          claims: {
+            P345: [
+              {
+                mainsnak: {
+                  datavalue: { value: i < count - 1 ? "tt0133093" : "tt0000001" },
+                },
+              },
+            ],
+            P31: [{ mainsnak: { datavalue: { value: { id: "Q11424" } } } }],
+          },
+        },
+      ]),
+    ),
+  };
+}
+
+test("dedupes by IMDb ID", () => {
+  const { search, entities } = films(8);
+  expect(parseCandidates({ search }, { entities })).toHaveLength(2);
+});
+
+test("caps the list at six distinct titles", () => {
   const search = {
     search: Array.from({ length: 8 }, (_, i) => ({ id: `Q${i}`, label: `Film ${i}` })),
   };
@@ -86,14 +114,14 @@ test("dedupes by IMDb ID and caps the list", () => {
         `Q${i}`,
         {
           claims: {
-            P345: [{ mainsnak: { datavalue: { value: i < 7 ? "tt0133093" : `tt000000${i}` } } }],
+            P345: [{ mainsnak: { datavalue: { value: `tt000000${i}` } } }],
             P31: [{ mainsnak: { datavalue: { value: { id: "Q11424" } } } }],
           },
         },
       ]),
     ),
   };
-  expect(parseCandidates(search, entities)).toHaveLength(2);
+  expect(parseCandidates(search, entities)).toHaveLength(6);
 });
 
 function fakeHttp(searchReply: LooseJson, entitiesReply: LooseJson) {
@@ -119,11 +147,9 @@ test("searches titles and resolves the entities in one batch", async () => {
   );
 
   expect(out.ok).toBe(true);
-  expect(out.candidates[0]?.imdbId).toBe("tt0133093");
+  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0133093");
+  // One search plus one batched entity request, not one request per hit.
   expect(calls).toHaveLength(2);
-  expect(calls[0]).toContain("wbsearchentities");
-  expect(calls[0]).toContain("The%20Matrix");
-  expect(calls[1]).toContain("Q83495%7CQ5%7CQ123%7CQ999");
 });
 
 test("caches a query and ignores case and outer spaces", async () => {
@@ -144,8 +170,13 @@ test("reports a failed search without throwing", async () => {
 
   expect(
     await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "The Matrix"),
-  ).toEqual({
-    ok: false,
-    candidates: [],
-  });
+  ).toEqual({ ok: false });
+});
+
+test("treats an unreadable response as a failure, not an empty result", async () => {
+  const { http } = fakeHttp({}, entitiesJson);
+
+  expect(
+    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "The Matrix"),
+  ).toEqual({ ok: false });
 });

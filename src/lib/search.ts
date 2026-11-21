@@ -120,12 +120,15 @@ function description(
   return isObject(entry) ? (asString(entry.value) ?? hit.description) : hit.description;
 }
 
-export function parseCandidates(searchJson: unknown, entitiesJson: unknown): Array<TitleCandidate> {
+function parseFromHits(
+  hits: ReturnType<typeof searchHits>,
+  entitiesJson: unknown,
+): Array<TitleCandidate> {
   const entities = entityMap(entitiesJson);
   const seen = new Set<string>();
   const candidates: Array<TitleCandidate> = [];
 
-  for (const hit of searchHits(searchJson)) {
+  for (const hit of hits) {
     if (candidates.length >= MAX_CANDIDATES) {
       break;
     }
@@ -153,6 +156,18 @@ export function parseCandidates(searchJson: unknown, entitiesJson: unknown): Arr
   return candidates;
 }
 
+export function parseCandidates(searchJson: unknown, entitiesJson: unknown): Array<TitleCandidate> {
+  return parseFromHits(searchHits(searchJson), entitiesJson);
+}
+
+function isSearchBody(value: unknown): boolean {
+  return isObject(value) && Array.isArray(value.search);
+}
+
+function isEntitiesBody(value: unknown): boolean {
+  return isObject(value) && isObject(value.entities);
+}
+
 function searchUrl(query: string): string {
   return (
     `${API}?action=wbsearchentities&format=json&language=en&uselang=en` +
@@ -168,10 +183,9 @@ function entitiesUrl(ids: Array<string>): string {
   );
 }
 
-export async function searchTitles(
-  deps: SearchDeps,
-  query: string,
-): Promise<{ ok: boolean; candidates: Array<TitleCandidate> }> {
+export type SearchOutcome = { ok: true; candidates: Array<TitleCandidate> } | { ok: false };
+
+export async function searchTitles(deps: SearchDeps, query: string): Promise<SearchOutcome> {
   const cleaned = query.trim();
   const key = cleaned.toLowerCase();
   if (!key) {
@@ -190,9 +204,12 @@ export async function searchTitles(
       headers,
     });
     if (!searchRes.ok) {
-      return { ok: false, candidates: [] };
+      return { ok: false };
     }
     const searchJson = await searchRes.json();
+    if (!isSearchBody(searchJson)) {
+      return { ok: false };
+    }
     const hits = searchHits(searchJson);
     if (hits.length === 0) {
       deps.cache.set(key, []);
@@ -204,14 +221,18 @@ export async function searchTitles(
       headers,
     });
     if (!entitiesRes.ok) {
-      return { ok: false, candidates: [] };
+      return { ok: false };
+    }
+    const entitiesJson = await entitiesRes.json();
+    if (!isEntitiesBody(entitiesJson)) {
+      return { ok: false };
     }
 
-    const candidates = parseCandidates(searchJson, await entitiesRes.json());
+    const candidates = parseFromHits(hits, entitiesJson);
     deps.cache.set(key, candidates);
     return { ok: true, candidates };
   } catch {
-    return { ok: false, candidates: [] };
+    return { ok: false };
   }
 }
 

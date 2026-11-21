@@ -92,6 +92,57 @@ test("a title with no matches shows an error", async () => {
   expect(await screen.findByText(/no title found/i)).toBeTruthy();
 });
 
+test("an ID skips the title search and goes straight to the lookup", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "tt0133093" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(search).not.toHaveBeenCalled();
+});
+
+test("a bare number falls back to a title search when no TMDB title matches", async () => {
+  lookup.mockRejectedValueOnce(new Error("TMDB ID not found"));
+  search.mockResolvedValueOnce({
+    data: { candidates: [{ imdbId: "tt8267604", name: "1917", year: "2019" }] },
+  });
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "1917" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("button", { name: /1917/ })).toBeTruthy();
+  expect(search).toHaveBeenCalledWith({ query: "1917" });
+});
+
+test("a search failure shows the error without marking the field invalid", async () => {
+  search.mockRejectedValueOnce(new Error("Wikidata is down"));
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "The Matrix" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByText("Wikidata is down")).toBeTruthy();
+  expect(input.getAttribute("aria-invalid")).toBe("false");
+});
+
+test("an unsupported link is rejected without a title search", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, {
+    target: { value: "https://www.themoviedb.org/person/6384" },
+  });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByText(/use an imdb title link/i)).toBeTruthy();
+  expect(search).not.toHaveBeenCalled();
+});
+
 test("the error clears when the user types", () => {
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
