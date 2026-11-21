@@ -8,6 +8,7 @@ import {
   isAllowedProviderHost,
   isActionRequest,
   limitResponse,
+  originIfAllowed,
   parseActiveDomains,
   resolveTitle,
   selectStream,
@@ -234,6 +235,16 @@ test("skips the excluded provider and picks the next one", async () => {
   expect(second.ok && second.result.provider).toBe("vidsrc.ir");
 });
 
+test("originIfAllowed keeps listed origins and drops evil or bad urls", () => {
+  expect(originIfAllowed("https://vidsrc.sh/embed/movie/tt0133093")).toBe("https://vidsrc.sh");
+  expect(originIfAllowed("https://sub.vidlink.pro/movie/tt0133093")).toBe(
+    "https://sub.vidlink.pro",
+  );
+  expect(originIfAllowed("https://evil.example.com/embed/movie/tt0133093")).toBeNull();
+  expect(originIfAllowed("https://vidsrc.sh.evil.com/")).toBeNull();
+  expect(originIfAllowed("not a url")).toBeNull();
+});
+
 test("reads active domains from the directory and ignores old ones", () => {
   expect(parseActiveDomains(directoryHtml(DOMAINS))).toEqual(DOMAINS);
   expect(parseActiveDomains("")).toEqual([]);
@@ -373,6 +384,61 @@ test("re-fetches the directory when the refresh file is stale", async () => {
     { id: "tt0133093" },
   );
   expect(out.ok && out.result.provider).toBe("vidsrc.ir");
+});
+
+test("fetches the directory once and serves later requests from cache", async () => {
+  let directoryCalls = 0;
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(false);
+      }
+      if (url === DIRECTORY) {
+        directoryCalls++;
+        return reply(true, {}, directoryHtml(["https://vidsrc.sh"]));
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc.sh"));
+    },
+  };
+  const deps: WatchDeps = {
+    http,
+    typeCache: new Cache<TypeResult>(60_000),
+    providerCache: new Cache(60_000),
+    domainCache: new Cache<Array<string>>(60_000),
+  };
+  await handleWatchRequest(deps, { id: "tt0133093" });
+  await handleWatchRequest(deps, { id: "tt0133093" });
+  expect(directoryCalls).toBe(1);
+});
+
+test("still uses a refresh file with an unparseable date when the directory is down", async () => {
+  const http: HttpClient = {
+    get: async (url) => {
+      if (url === FILE_URL) {
+        return reply(true, refreshFile(["https://vidsrc2.ru"], "not-a-date"));
+      }
+      if (url === DIRECTORY) {
+        return reply(false);
+      }
+      if (url.includes("cinemeta")) {
+        return reply(url.includes("/meta/movie/"), MATRIX);
+      }
+      return reply(url.includes("vidsrc2.ru"));
+    },
+  };
+  const out = await handleWatchRequest(
+    {
+      http,
+      typeCache: new Cache<TypeResult>(60_000),
+      providerCache: new Cache(60_000),
+      domainCache: new Cache<Array<string>>(60_000),
+    },
+    { id: "tt0133093" },
+  );
+  expect(out.ok && out.result.provider).toBe("vidsrc2.ru");
 });
 
 test("still uses a stale refresh file when the directory is down", async () => {
