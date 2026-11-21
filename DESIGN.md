@@ -4,13 +4,13 @@ description: Paste an IMDb or TMDB ID; get a working stream link in one quiet, c
 colors:
   canvas: "oklch(0.9702 0 0)"
   ink: "oklch(0.2103 0.0059 285.89)"
-  accent: "oklch(0.55 0.195 253.83)"
-  accent-hover: "color-mix(in oklab, oklch(0.55 0.195 253.83) 90%, oklch(0.9911 0 0) 10%)"
+  accent: "oklch(0.6204 0.195 253.83)"
+  accent-hover: "color-mix(in oklab, oklch(0.6204 0.195 253.83) 90%, oklch(0.9911 0 0) 10%)"
   on-accent: "oklch(0.9911 0 0)"
   surface: "oklch(100% 0 0)"
   control: "oklch(94% 0.001 286.375)"
   control-hover: "color-mix(in oklab, oklch(94% 0.001 286.375) 96%, oklch(0.2103 0.0059 285.89) 4%)"
-  muted: "oklch(0.52 0.0138 285.94)"
+  muted: "oklch(0.5517 0.0138 285.94)"
   separator: "oklch(92% 0.004 286.32)"
   danger: "oklch(0.6532 0.2328 25.74)"
   backdrop: "rgba(0, 0, 0, 0.5)"
@@ -140,7 +140,7 @@ The visitor pastes an IMDb or TMDB ID and presses Watch now. The result opens in
 
 **Key Characteristics:**
 - One input, one primary action, one result dialog.
-- HeroUI v3 default light theme: soft grey canvas, white surfaces, one blue accent. Two tokens are darkened for contrast: accent and muted.
+- HeroUI v3 default light theme: soft grey canvas, white surfaces, one blue accent. No token overrides.
 - One centered column capped by `max-w-[45rem]`.
 - Scoutie Sans Variable at every role.
 - Pill buttons, 12px fields, and 24px cards and dialog.
@@ -152,7 +152,7 @@ The palette is the HeroUI v3 default light theme. The values live in `@heroui/st
 
 ### Primary
 
-- **Accent Blue** (`colors.accent`, `--accent`) — the fill of the primary button and the color of every focus ring. Hover uses `colors.accent-hover`. HeroUI's default accent is 3.59:1 with snow text. The theme darkens it to 4.75:1 for WCAG AA.
+- **Accent Blue** (`colors.accent`, `--accent`) — the fill of the primary button and the color of every focus ring. Hover uses `colors.accent-hover`. The value is HeroUI's default.
 - **Snow** (`colors.on-accent`, `--accent-foreground`) — text on the accent fill.
 
 ### Neutral
@@ -161,7 +161,7 @@ The palette is the HeroUI v3 default light theme. The values live in `@heroui/st
 - **Ink** (`colors.ink`, `--foreground`) — body text, the card title, row values, and open links.
 - **Surface** (`colors.surface`, `--surface` and `--overlay`) — the input well, the result dialog, and the toast.
 - **Control** (`colors.control`, `--default`) — the fill of the secondary and tertiary buttons. Hover uses `colors.control-hover`.
-- **Muted** (`colors.muted`, `--muted`) — the wordmark subline, the meta line, the type line, row keys, hints, status text, both safety notes, and the input placeholder. HeroUI's default muted is 4.43:1 on the canvas, below WCAG AA. The theme overrides it to 5.07:1.
+- **Muted** (`colors.muted`, `--muted`) — the wordmark subline, the meta line, the type line, row keys, hints, status text, both safety notes, and the input placeholder. The value is HeroUI's default.
 - **Separator** (`colors.separator`, `--separator`) — the 1px rules above the footer and between result rows.
 - **Danger** (`colors.danger`, `--danger`) — the outline and ring of an invalid input.
 
