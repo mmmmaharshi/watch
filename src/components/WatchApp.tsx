@@ -35,6 +35,12 @@ function matchLabel(count: number): string {
   return `${count} ${count === 1 ? "match" : "matches"}. Choose one.`;
 }
 
+// A touch device focus would open the on-screen keyboard before the user asked
+// for it. Pointer media is unreliable in some emulators, so use touch points.
+function canAutoFocus(): boolean {
+  return navigator.maxTouchPoints === 0;
+}
+
 async function lookup(value: string, exclude?: string): Promise<WatchResult> {
   const result: unknown = await actions.watch({ id: value, exclude });
   return unwrapActionResult(result);
@@ -287,7 +293,7 @@ export default function WatchApp() {
       // eslint-disable-next-line react/set-state-in-effect
       setValue(shared);
       void resolveShared(shared);
-    } else {
+    } else if (canAutoFocus()) {
       inputRef.current?.focus();
     }
     // Help links change only the hash, which does not reload the page.
@@ -312,9 +318,9 @@ export default function WatchApp() {
   }, []);
 
   // The input is disabled while the lookup runs, so React Aria saves `body`
-  // as the element to focus on close. Send focus back to the field instead.
+  // as the element to focus on close. On desktop, send focus back to the field.
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && canAutoFocus()) {
       inputRef.current?.focus();
     }
   }, [isOpen]);

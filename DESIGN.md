@@ -266,7 +266,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
-- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` is `hint`, and adds `status` only while the field is invalid, so the error text is not read before it appears. The input takes focus on mount when no ID is shared, and again when the dialog closes.
+- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` is `hint`, and adds `status` only while the field is invalid, so the error text is not read before it appears. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
 - **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
 
 ### Title Search

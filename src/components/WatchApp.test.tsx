@@ -66,6 +66,15 @@ async function openSharedResult() {
   return screen.findByRole("dialog", { name: "The Matrix" });
 }
 
+test("does not autofocus the input on a touch device", () => {
+  Object.defineProperty(navigator, "maxTouchPoints", { value: 5, configurable: true });
+  render(<WatchApp />);
+
+  expect(document.activeElement).not.toBe(screen.getByRole("textbox", { name: /imdb or tmdb/i }));
+
+  Object.defineProperty(navigator, "maxTouchPoints", { value: 0, configurable: true });
+});
+
 test("empty submit shows an error, marks the field invalid and focuses it", () => {
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
