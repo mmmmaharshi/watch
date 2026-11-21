@@ -1,6 +1,8 @@
 import { defineConfig } from "astro/config";
 import vercel from "@astrojs/vercel";
 import sitemap from "@astrojs/sitemap";
+import react from "@astrojs/react";
+import tailwindcss from "@tailwindcss/vite";
 import { SITE_URL } from "./src/consts";
 
 // SSR on Vercel. The page shell is static, /api/watch runs on demand.
@@ -9,7 +11,8 @@ export default defineConfig({
   site: SITE_URL,
   output: "server",
   adapter: vercel(),
-  integrations: [sitemap()],
+  integrations: [react(), sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
+  vite: { plugins: [tailwindcss()] },
 });

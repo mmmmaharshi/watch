@@ -6,7 +6,9 @@
     "types": ["bun-types", "astro/client"],
     "strict": true,
     "noEmit": true,
-    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "skipLibCheck": true
   },
-  "include": ["src", "astro.config.ts"],
+  "include": ["src", "astro.config.ts"]
 }

@@ -1,9 +1,7 @@
 ---
 import { SITE_URL } from "../consts";
-import "@fontsource/archivo/400.css";
-import "@fontsource/archivo/500.css";
-import "@fontsource/archivo/600.css";
-import "@fontsource/archivo/700.css";
+import SmokeButton from "../components/SmokeButton";
+import "../styles/global.css";
 
 export const prerender = true;
 ---
@@ -63,7 +61,7 @@ export const prerender = true;
     min-height: 100vh;
     background: var(--paper);
     color: var(--ink);
-    font-family: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overflow-wrap: break-word;
     display: flex;
@@ -250,6 +248,9 @@ export const prerender = true;
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
       <p class="hint" id="hint">IMDb or TMDB ID, or the full link. Either works. Example: <a href="#id=tt1300854">tt1300854</a>.</p>
+
+      {/* Smoke test for the HeroUI stack. Ticket #17 removes this. */}
+      <SmokeButton client:load />
     </div>
 
     <dialog class="modal" id="modal" aria-labelledby="modal-title">
