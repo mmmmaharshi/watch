@@ -406,7 +406,7 @@ export default function WatchApp() {
       >
         <Modal.Container size="lg">
           <Modal.Dialog
-            className="max-h-full overflow-y-auto overscroll-contain rounded-2xl border border-black/10 sm:max-w-[42rem]"
+            className="watch-dialog max-h-full overflow-y-auto overscroll-contain rounded-2xl border border-black/10 sm:max-w-[42rem]"
             aria-labelledby="result-title"
           >
             {result && (

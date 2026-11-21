@@ -281,6 +281,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - **`Modal.Backdrop`** uses the theme scrim. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.
 - **`Modal.Container size="lg"`** and **`Modal.Dialog`** form the shell. The dialog is white, `rounded-2xl`, with `border border-black/10`, the overlay shadow, and `p-6`. It scrolls with `max-h-full overflow-y-auto overscroll-contain`, so the actions stay reachable at large text sizes. It is named by `aria-labelledby="result-title"`, which points at the card title.
+- **Scrollbar:** the `watch-dialog` class sets a 6px rounded thumb at 18% ink on a transparent track, darkening to 30% on hover. Firefox gets `scrollbar-width: thin` with the same colour. `scrollbar-gutter: stable` keeps the content from shifting when the thumb appears.
 - **`Card variant="transparent" className="gap-0 p-0"`** removes the card fill, border, padding, and shadow.
 - **`Card.Header`** holds the title (`text-2xl font-semibold tracking-tight text-balance`) and the meta line.
 - **`Card.Content`** holds the optional description, the type line, and three rows.
