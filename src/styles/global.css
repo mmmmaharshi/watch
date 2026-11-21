@@ -6,6 +6,12 @@
   --font-sans: "Scoutie Sans Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Two HeroUI defaults sit below WCAG AA. The values below pass 4.5:1. */
+:root {
+  --muted: oklch(0.52 0.0138 285.94); /* 5.07:1 on the canvas */
+  --accent: oklch(0.55 0.195 253.83); /* 4.75:1 with the snow foreground */
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

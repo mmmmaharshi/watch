@@ -15,4 +15,22 @@ export default defineConfig({
   server: { host: true },
   devToolbar: { enabled: false },
   vite: { plugins: [tailwindcss()] },
+  // CSP hashes let the inline Astro and island scripts run without
+  // 'unsafe-inline'. The island also writes style attributes, so those
+  // alone keep 'unsafe-inline'.
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+      ],
+      styleDirective: {
+        resources: ["'self'", { resource: "'unsafe-inline'", kind: "attribute" }],
+      },
+    },
+  },
 });
