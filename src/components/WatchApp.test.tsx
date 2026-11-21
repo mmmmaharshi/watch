@@ -1,0 +1,110 @@
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+
+// Bun cannot resolve astro:actions, so stub the action before the island loads.
+const MATRIX = {
+  id: "tt0133093",
+  name: "The Matrix",
+  url: "https://vidsrc.in/embed/movie/tt0133093",
+  provider: "vidsrc.in",
+  type: "movie",
+};
+
+const OTHER = {
+  id: "tt0133093",
+  name: "The Matrix",
+  url: "https://vidfast.vc/movie/tt0133093",
+  provider: "vidfast.vc",
+  type: "movie",
+};
+
+const lookup = mock(async (_input: { id: string; exclude?: string }) => ({
+  data: MATRIX,
+}));
+
+await mock.module("astro:actions", () => ({ actions: { watch: lookup } }));
+
+const { default: WatchApp } = await import("./WatchApp");
+
+beforeEach(() => {
+  window.history.replaceState(null, "", "/");
+  lookup.mockReset();
+  lookup.mockImplementation(async () => ({ data: MATRIX }));
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+test("empty submit shows an error, marks the field invalid and focuses it", () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.submit(input.closest("form")!);
+
+  expect(screen.getByRole("status").textContent).toBe("Enter an IMDb or TMDB ID or link.");
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(document.activeElement).toBe(input);
+});
+
+test("a shared link runs the lookup and opens the result dialog", async () => {
+  window.history.replaceState(null, "", "/#id=tt0133093");
+
+  render(<WatchApp />);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined });
+});
+
+test("copy writes the share link and shows the toast", async () => {
+  window.history.replaceState(null, "", "/#id=tt0133093");
+  const writeText = mock(async () => {});
+  Object.defineProperty(navigator, "clipboard", {
+    value: { writeText },
+    configurable: true,
+  });
+
+  render(<WatchApp />);
+  await screen.findByRole("dialog", { name: "The Matrix" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+
+  expect(await screen.findByText("Link copied.")).toBeTruthy();
+  expect(writeText).toHaveBeenCalledWith("http://localhost/#id=tt0133093");
+});
+
+test("try another asks for a new stream without the current provider", async () => {
+  lookup.mockResolvedValueOnce({ data: MATRIX });
+  lookup.mockResolvedValueOnce({ data: OTHER });
+  window.history.replaceState(null, "", "/#id=tt0133093");
+
+  render(<WatchApp />);
+  await screen.findByRole("dialog", { name: "The Matrix" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
+
+  expect(
+    await screen.findByRole("link", { name: "https://vidfast.vc/movie/tt0133093" }),
+  ).toBeTruthy();
+  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: "vidsrc.in" });
+});
+
+test("Escape does not close the dialog while the next stream loads", async () => {
+  lookup.mockResolvedValueOnce({ data: MATRIX });
+  lookup.mockImplementationOnce(() => new Promise(() => {}));
+  window.history.replaceState(null, "", "/#id=tt0133093");
+
+  render(<WatchApp />);
+  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
+  await screen.findByText("Finding another stream...");
+
+  // Escape is handled on the overlay, so the event starts inside the dialog.
+  fireEvent.keyDown(dialog, { key: "Escape", code: "Escape", keyCode: 27 });
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+
+  expect(screen.queryByRole("dialog")).toBe(dialog);
+});
