@@ -1,6 +1,5 @@
 ---
 import { SITE_URL } from "../consts";
-import { ClientRouter } from "astro:transitions";
 import "@fontsource/geist-pixel";
 
 export const prerender = true;
@@ -28,7 +27,6 @@ export const prerender = true;
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Watch movies and TV shows online. Paste an IMDb or TMDB ID.">
 <meta name="twitter:description" content="Paste an IMDb or TMDB ID or link to find a working stream for any movie or TV show.">
-<ClientRouter />
 <style>
   :root {
     --canvas: #0A0A0A;
@@ -113,11 +111,6 @@ export const prerender = true;
     line-height: 1.2;
   }
 
-  .subtitle {
-    color: var(--ink-secondary);
-    margin-top: 8px;
-  }
-
   .form-group {
     display: flex;
     align-items: stretch;
@@ -148,15 +141,6 @@ export const prerender = true;
 
   input.error {
     border-color: var(--ink);
-  }
-
-  input.loading {
-    border-color: var(--ink);
-    animation: pulse 0.8s infinite alternate;
-  }
-
-  @keyframes pulse {
-    to { border-color: var(--border-strong); }
   }
 
   button {
@@ -208,10 +192,6 @@ export const prerender = true;
   button.loading .spinner {
     opacity: 1;
     animation: spin 0.7s linear infinite;
-  }
-
-  button.loading .btn-text {
-    opacity: 0.7;
   }
 
   @keyframes spin {
@@ -525,7 +505,6 @@ export const prerender = true;
   <main class="container">
     <header class="header">
       <h1>Watch movies and TV shows online</h1>
-      <p class="subtitle">Paste an IMDb or TMDB ID or link to start.</p>
     </header>
 
     <form class="form-group" id="form">
