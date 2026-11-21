@@ -1,6 +1,7 @@
 import { TMDB_NOT_FOUND } from "./messages";
 import { parseTitleInput } from "./parse-input";
 import { resolveImdbId } from "./tmdb";
+import { SITE_URL } from "../consts";
 import type { ContentType, WatchOutcome } from "./types";
 
 export type { ContentType, WatchResult } from "./types";
@@ -103,6 +104,15 @@ export class Cache<T> {
 // still answer 200 and get picked ahead of the live one.
 const DIRECTORY_URL = "https://vidsrc.domains/";
 
+// Refresh file written twice weekly by scripts/refresh-providers.ts (#27).
+// Absolute so the serverless fetch has a host; preview and dev read the
+// same prod file.
+export const PROVIDERS_FILE_URL = `${SITE_URL}/providers.json`;
+// A fresh file answers from cache. Older than this, the file still serves
+// when the directory is down, but a live directory wins.
+export const PROVIDERS_TTL_MS = 60 * 60 * 1000;
+export const PROVIDERS_STALE_MS = 48 * 60 * 60 * 1000;
+
 export interface Provider {
   name: string;
   baseUrl: string;
@@ -159,6 +169,57 @@ function buildEmbedUrl(provider: Provider, type: ContentType, id: string): strin
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
 
+// The refresh file is untrusted input: entries pass the same allowlist as
+// the directory, so a bad write cannot smuggle in an evil host.
+function parseRefreshFile(value: LooseJson): { domains: Array<string>; updatedAt: number } | null {
+  const providers = value.providers;
+  if (!Array.isArray(providers)) {
+    return null;
+  }
+  const domains: Array<string> = [];
+  for (const entry of providers) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      continue;
+    }
+    const baseUrl = (entry as { baseUrl?: unknown }).baseUrl;
+    if (typeof baseUrl !== "string") {
+      continue;
+    }
+    try {
+      const origin = new URL(baseUrl).origin;
+      if (isAllowedProviderHost(new URL(origin).host)) {
+        domains.push(origin);
+      }
+    } catch {
+      // Skip the bad entry; the rest of the file still applies.
+    }
+  }
+  if (!domains.length) {
+    return null;
+  }
+  const updatedAt = typeof value.updatedAt === "string" ? Date.parse(value.updatedAt) : Number.NaN;
+  return { domains: [...new Set(domains)], updatedAt };
+}
+
+async function fetchDirectoryDomains(http: HttpClient): Promise<Array<string>> {
+  try {
+    const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) {
+      return [];
+    }
+    return parseActiveDomains(await res.text()).filter((d) => {
+      try {
+        return isAllowedProviderHost(new URL(d).host);
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    // Directory unreachable — no VidSrc domains this round; VidFast still applies.
+    return [];
+  }
+}
+
 async function loadProviders(
   http: HttpClient,
   cache: Cache<Array<string>>,
@@ -168,22 +229,33 @@ async function loadProviders(
     return toProviders(cached);
   }
 
-  let domains: Array<string> = [];
+  let file: { domains: Array<string>; updatedAt: number } | null = null;
   try {
-    const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
+    const res = await http.get(PROVIDERS_FILE_URL, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
-      domains = parseActiveDomains(await res.text()).filter((d) => {
-        try {
-          return isAllowedProviderHost(new URL(d).host);
-        } catch {
-          return false;
-        }
-      });
+      file = parseRefreshFile(await res.json());
     }
   } catch {
-    // Directory unreachable — no VidSrc domains this round; VidFast still applies.
+    // Missing or unreadable file — fall through to the directory.
   }
-  return toProviders(domains);
+  const fresh =
+    file !== null &&
+    !Number.isNaN(file.updatedAt) &&
+    Date.now() - file.updatedAt <= PROVIDERS_STALE_MS;
+  if (file !== null && fresh) {
+    cache.set("domains", file.domains, PROVIDERS_TTL_MS);
+    return toProviders(file.domains);
+  }
+
+  const domains = await fetchDirectoryDomains(http);
+  if (domains.length) {
+    return toProviders(domains);
+  }
+  // Stale file still beats nothing.
+  if (file !== null) {
+    return toProviders(file.domains);
+  }
+  return toProviders([]);
 }
 
 // Static fallbacks, tried after every directory domain fails. VidFast goes
@@ -539,7 +611,7 @@ export const watchDeps: WatchDeps = {
   http: defaultHttpClient,
   typeCache: new Cache<TypeResult>(60 * 60 * 1000),
   providerCache: new Cache<string>(5 * 60 * 1000),
-  domainCache: new Cache<Array<string>>(24 * 60 * 60 * 1000),
+  domainCache: new Cache<Array<string>>(PROVIDERS_TTL_MS),
 };
 
 export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
