@@ -39,6 +39,11 @@ export const prerender = true;
 
     <div class="w-full">
       <WatchApp client:load />
+      <noscript>
+        <p class="mt-4 text-center text-xs leading-relaxed text-muted">
+          This page needs JavaScript to find a stream link.
+        </p>
+      </noscript>
     </div>
 
     <footer class="mt-14 w-full border-t border-separator pt-4 text-center">
