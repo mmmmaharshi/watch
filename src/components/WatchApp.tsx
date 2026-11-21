@@ -27,7 +27,7 @@ function errMessage(err: unknown, fallback: string): string {
 }
 
 function candidateMeta(candidate: TitleCandidate): string {
-  const kind = candidate.kind === "tv" ? "TV show" : candidate.kind === "movie" ? "Film" : null;
+  const kind = candidate.kind === "tv" ? "TV show" : "Film";
   return [kind, candidate.year].filter(Boolean).join(" · ");
 }
 

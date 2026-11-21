@@ -74,6 +74,17 @@ test("merges an exact title first and alternates the sources", () => {
   expect(mergeCandidates("The Office", movies, shows)).toEqual([shows[0], movies[0]]);
 });
 
+test("lifts a title match that uses diacritics", () => {
+  const movies: Array<TitleCandidate> = [
+    { imdbId: "tt0081505", name: "Shogun Assassin", year: "1980", kind: "movie" },
+  ];
+  const shows: Array<TitleCandidate> = [
+    { imdbId: "tt2788316", name: "Shōgun", year: "2024", kind: "tv" },
+  ];
+
+  expect(mergeCandidates("Shogun", movies, shows)[0]?.name).toBe("Shōgun");
+});
+
 test("dedupes and caps the merged list", () => {
   const movies = Array.from({ length: 8 }, (_, i) => ({
     imdbId: `tt000000${i}`,
@@ -113,8 +124,8 @@ function fakeHttp(routes: Record<string, { ok: boolean; body: unknown }>) {
   return { http, calls };
 }
 
-test("searches Cinemeta films and shows in parallel", async () => {
-  const { http, calls } = fakeHttp({
+test("uses both Cinemeta catalogs", async () => {
+  const { http } = fakeHttp({
     movie: { ok: true, body: cinemetaMovie },
     series: { ok: true, body: cinemetaSeries },
   });
@@ -126,11 +137,12 @@ test("searches Cinemeta films and shows in parallel", async () => {
 
   expect(out.ok).toBe(true);
   expect(out.ok && out.candidates[0]?.name).toBe("The Office");
-  expect(calls).toHaveLength(2);
+  expect(out.ok && out.candidates.some((candidate) => candidate.kind === "movie")).toBe(true);
+  expect(out.ok && out.candidates.some((candidate) => candidate.kind === "tv")).toBe(true);
 });
 
 test("falls back to TVMaze when Cinemeta has no hits", async () => {
-  const { http, calls } = fakeHttp({
+  const { http } = fakeHttp({
     movie: { ok: true, body: { metas: [] } },
     series: { ok: true, body: { metas: [] } },
     tvmaze: { ok: true, body: tvmaze },
@@ -141,23 +153,48 @@ test("falls back to TVMaze when Cinemeta has no hits", async () => {
     "The Office",
   );
 
-  expect(out.ok && out.candidates.length).toBe(1);
-  expect(calls.some((url) => url.includes("tvmaze"))).toBe(true);
+  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0386676");
 });
 
-test("keeps a partial Cinemeta result without asking TVMaze", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: false, body: {} },
-    series: { ok: true, body: cinemetaSeries },
+test("asks TVMaze when the series half fails", async () => {
+  const fallback = [
+    {
+      score: 1.18,
+      show: {
+        name: "Severance",
+        premiered: "2022-02-18",
+        externals: { imdb: "tt11280740" },
+      },
+    },
+  ];
+  const { http } = fakeHttp({
+    movie: { ok: true, body: cinemetaMovie },
+    series: { ok: false, body: {} },
+    tvmaze: { ok: true, body: fallback },
   });
 
   const out = await searchTitles(
     { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "The Office",
+    "Severance",
   );
 
-  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0386676");
-  expect(calls.some((url) => url.includes("tvmaze"))).toBe(false);
+  expect(out.ok && out.candidates.some((candidate) => candidate.imdbId === "tt11280740")).toBe(
+    true,
+  );
+});
+
+test("keeps the movie result when TVMaze also fails", async () => {
+  const { http } = fakeHttp({
+    movie: { ok: true, body: cinemetaMovie },
+    series: { ok: false, body: {} },
+  });
+
+  const out = await searchTitles(
+    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
+    "The Matrix",
+  );
+
+  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0133093");
 });
 
 test("reports a failure when every source fails", async () => {
@@ -168,6 +205,18 @@ test("reports a failure when every source fails", async () => {
   ).toEqual({
     ok: false,
   });
+});
+
+test("does not cache a partial outage", async () => {
+  const { http, calls } = fakeHttp({
+    movie: { ok: true, body: {} },
+    series: { ok: true, body: { metas: [] } },
+  });
+  const deps = { http, cache: new Cache<Array<TitleCandidate>>(60_000) };
+
+  expect(await searchTitles(deps, "The Office")).toEqual({ ok: false });
+  expect(await searchTitles(deps, "The Office")).toEqual({ ok: false });
+  expect(calls).toHaveLength(6);
 });
 
 test("caches a query and ignores case and outer spaces", async () => {

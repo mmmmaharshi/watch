@@ -14,7 +14,7 @@ export interface TitleCandidate {
   imdbId: string;
   name: string;
   year?: string;
-  kind?: "movie" | "tv";
+  kind: "movie" | "tv";
 }
 
 export interface SearchDeps {
@@ -58,7 +58,8 @@ export function parseCinemeta(
     if (!imdbId || !name) {
       return [];
     }
-    return [{ imdbId, name, year: yearOf(meta.releaseInfo), kind }];
+    const rowKind = meta.type === "series" ? "tv" : meta.type === "movie" ? "movie" : kind;
+    return [{ imdbId, name, year: yearOf(meta.releaseInfo), kind: rowKind }];
   });
 }
 
@@ -86,6 +87,8 @@ export function parseTVMaze(payload: unknown): Array<TitleCandidate> | null {
 
 function normalize(name: string): string {
   return name
+    .normalize("NFD")
+    .replaceAll(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/^the\s+/, "")
     .trim();
@@ -122,18 +125,22 @@ export function mergeCandidates(
     .map((entry) => entry.candidate);
 }
 
-function cinemetaUrl(kind: "movie" | "series", query: string): string {
-  return `${CINEMETA}/${kind}/top/search=${encodeURIComponent(query)}.json`;
+function cinemetaUrl(source: "movie" | "series", query: string): string {
+  return `${CINEMETA}/${source}/top/search=${encodeURIComponent(query)}.json`;
 }
 
+// Null means the request failed or the body was not the expected JSON. Each
+// caller decides whether to fall back; null is never cached as "no results".
 async function fetchWith<T>(
   http: HttpClient,
   url: string,
-  headers: Record<string, string>,
   parse: (value: unknown) => T | null,
 ): Promise<T | null> {
   try {
-    const res = await http.get(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers });
+    const res = await http.get(url, {
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { "User-Agent": USER_AGENT },
+    });
     if (!res.ok) {
       return null;
     }
@@ -142,6 +149,11 @@ async function fetchWith<T>(
   } catch {
     return null;
   }
+}
+
+function respond(deps: SearchDeps, key: string, candidates: Array<TitleCandidate>): SearchOutcome {
+  deps.cache.set(key, candidates);
+  return { ok: true, candidates };
 }
 
 export async function searchTitles(deps: SearchDeps, query: string): Promise<SearchOutcome> {
@@ -156,43 +168,36 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     return { ok: true, candidates: cached };
   }
 
-  const headers = { "User-Agent": USER_AGENT };
   const [movies, shows] = await Promise.all([
-    fetchWith(deps.http, cinemetaUrl("movie", cleaned), headers, (value) =>
-      parseCinemeta(value, "movie"),
-    ),
-    fetchWith(deps.http, cinemetaUrl("series", cleaned), headers, (value) =>
-      parseCinemeta(value, "tv"),
-    ),
+    fetchWith(deps.http, cinemetaUrl("movie", cleaned), (value) => parseCinemeta(value, "movie")),
+    fetchWith(deps.http, cinemetaUrl("series", cleaned), (value) => parseCinemeta(value, "tv")),
   ]);
-  const cinemetaAnswered = movies !== null || shows !== null;
-  const merged = mergeCandidates(cleaned, movies ?? [], shows ?? []);
+  const cinemetaComplete = movies !== null && shows !== null;
+  const baseMerged = mergeCandidates(cleaned, movies ?? [], shows ?? []);
 
-  if (merged.length > 0) {
-    deps.cache.set(key, merged);
-    return { ok: true, candidates: merged };
+  // Cinemeta is undocumented, so shows get a second source. Ask it when the
+  // series half failed or when no title came back at all.
+  const needsTvSource = shows === null || baseMerged.length === 0;
+  const tvmaze = needsTvSource
+    ? await fetchWith(deps.http, TVMAZE + encodeURIComponent(cleaned), parseTVMaze)
+    : null;
+
+  const candidates =
+    tvmaze !== null && tvmaze.length > 0
+      ? mergeCandidates(cleaned, movies ?? [], [...(shows ?? []), ...tvmaze])
+      : baseMerged;
+
+  if (candidates.length > 0) {
+    return respond(deps, key, candidates);
   }
 
-  // Cinemeta is undocumented, so shows get a second source.
-  const tvmaze = await fetchWith(
-    deps.http,
-    TVMAZE + encodeURIComponent(cleaned),
-    headers,
-    parseTVMaze,
-  );
-
-  if (tvmaze && tvmaze.length > 0) {
-    const candidates = mergeCandidates(cleaned, [], tvmaze);
-    deps.cache.set(key, candidates);
-    return { ok: true, candidates };
-  }
-
-  if (!cinemetaAnswered && !tvmaze) {
+  // A partial Cinemeta answer plus a failed or empty TVMaze is an outage, not
+  // an empty result. Leave it uncached so the next attempt can recover.
+  if (!cinemetaComplete && (tvmaze === null || tvmaze.length === 0)) {
     return { ok: false };
   }
 
-  deps.cache.set(key, []);
-  return { ok: true, candidates: [] };
+  return respond(deps, key, []);
 }
 
 // Per-instance, like the watch caches. The Cinemeta and TVMaze endpoints are

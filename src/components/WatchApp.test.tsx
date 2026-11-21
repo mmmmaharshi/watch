@@ -119,14 +119,14 @@ test("a bare number falls back to a title search when no TMDB title matches", as
 });
 
 test("a search failure shows the error without marking the field invalid", async () => {
-  search.mockRejectedValueOnce(new Error("Wikidata is down"));
+  search.mockRejectedValueOnce(new Error("Search is down"));
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
 
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
 
-  expect(await screen.findByText("Wikidata is down")).toBeTruthy();
+  expect(await screen.findByText("Search is down")).toBeTruthy();
   expect(input.getAttribute("aria-invalid")).toBe("false");
 });
 
