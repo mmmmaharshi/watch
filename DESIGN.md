@@ -88,7 +88,7 @@ components:
     typography: "{typography.action}"
     rounded: "{rounded.control}"
     padding: "0 16px"
-    height: "40px (36px from md)"
+    height: "40px"
   button-primary-hover:
     backgroundColor: "{colors.accent-hover}"
     textColor: "{colors.on-accent}"
@@ -98,15 +98,15 @@ components:
     typography: "{typography.action}"
     rounded: "{rounded.control}"
     padding: "0 16px"
-    height: "40px (36px from md)"
+    height: "40px"
   button-secondary-hover:
     backgroundColor: "{colors.control-hover}"
   button-icon:
     backgroundColor: "{colors.control}"
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
-    width: "40px (36px from md)"
-    height: "40px (36px from md)"
+    width: "40px"
+    height: "40px"
   input:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink}"
@@ -141,7 +141,7 @@ The visitor pastes an IMDb or TMDB ID and presses Watch now. The result opens in
 **Key Characteristics:**
 - One input, one primary action, one result dialog.
 - HeroUI v3 default light theme: soft grey canvas, white surfaces, one blue accent.
-- One centered column capped by `max-w-3xl`.
+- One centered column capped by `max-w-[45rem]`.
 - Scoutie Sans Variable at every role.
 - Pill buttons, 12px fields, and 24px cards and dialog.
 - The exact provider, IMDb ID, and stream URL show before the user leaves; the safety note stays quiet.
@@ -194,13 +194,13 @@ The palette is the HeroUI v3 default light theme. The values live in `@heroui/st
 
 ## Layout
 
-`src/pages/index.astro` centers the page. The `body` classes are `flex min-h-dvh items-center justify-center bg-background p-5 py-12 text-foreground antialiased max-sm:items-start max-sm:pt-16`. The `main` column is `w-full max-w-3xl`, which is 48rem. It holds the wordmark, the island, and the footer.
+`src/pages/index.astro` centers the page. The `body` classes are `flex min-h-dvh items-center justify-center bg-background p-5 py-12 text-foreground antialiased max-sm:items-start max-sm:pt-16`. The `main` column is `w-full max-w-[45rem]`, which is 45rem or 720px. It holds the wordmark, the island, and the footer.
 
 The wordmark opens the column. `WatchApp` adds `mt-12` above the form. The form is `flex gap-2` and stacks below `sm` with `max-sm:flex-col`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width. The status line and the hint follow with `mt-2`.
 
 The footer closes the column with `mt-14 border-t border-separator pt-4 text-center`, and its paragraph caps at `max-w-xl`, which is 36rem.
 
-The result opens in a modal over `bg-backdrop`. `Modal.Container` uses `size="lg"`, and the dialog adds `sm:max-w-2xl`, which is 42rem. The dialog has `p-6` and a 24px radius. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
+The result opens in a modal over `bg-backdrop`. `Modal.Container` uses `size="lg"`, and the dialog adds `sm:max-w-[45rem]`, which is 45rem or 720px. The dialog has `p-6` and a 24px radius. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
 
 At `sm`, which is 40rem, the dialog widens and the row keys move beside their values in a `sm:w-28` key column. Below `sm`, the body aligns to the top (`max-sm:items-start max-sm:pt-16`), the form stacks, the dialog takes the width minus `p-4`, and each row key sits above its value.
 
@@ -248,8 +248,8 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Result Dialog
 
-- **`Modal.Backdrop`** is the default opaque backdrop. It closes on an outside click and on Escape, except while `fetching`; then both are off.
-- **`Modal.Container size="lg"`** and **`Modal.Dialog sm:max-w-2xl`** form the shell. The dialog is white `bg-overlay`, `shadow-overlay`, with a 24px radius and `p-6`. It has an `aria-label` equal to the title.
+- **`Modal.Backdrop`** is the default opaque backdrop. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.
+- **`Modal.Container size="lg"`** and **`Modal.Dialog sm:max-w-[45rem]`** form the shell. The dialog is white `bg-overlay`, `shadow-overlay`, with a 24px radius and `p-6`. It has an `aria-label` equal to the title.
 - **`Card variant="transparent" className="gap-0 p-0"`** removes the card fill, border, padding, and shadow.
 - **`Card.Header`** holds the title (`text-2xl font-semibold tracking-tight text-balance`) and the meta line.
 - **`Card.Content`** holds the optional description, the type line, and three rows.
@@ -258,7 +258,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Actions
 
-- **Watch** is the default primary `Button`: accent fill, snow text. It opens `result.url` in a new tab, clears `window.opener`, and closes the dialog.
+- **Watch** is the default primary `Button`: accent fill, snow text. It opens `result.url` in a new tab with `noopener`, and closes the dialog.
 - **Cancel** is `variant="tertiary"`: the neutral `--default` fill.
 - **Refresh** and **Copy** are `variant="secondary"` with `isIconOnly`: the same neutral fill, 40px wide, and 36px from `md`. Refresh shows the spinner while `fetching`. Copy writes a share link to the lookup and calls `toast.success("Link copied.")`.
 - **Focus:** every button shows the accent `ring-2`. The input uses `status-focused-field`, a 2px accent ring with no offset. An invalid field shows a 1px danger outline, and a 2px danger ring when focused.
