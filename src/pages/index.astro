@@ -11,6 +11,7 @@ export const prerender = true;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="text-scale" content="scale">
 <title>watch — find a stream link</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
 <link rel="canonical" href={SITE_URL + "/"}>
@@ -28,26 +29,26 @@ export const prerender = true;
 <meta name="twitter:title" content="watch — find a stream link">
 <meta name="twitter:description" content="Paste an IMDb or TMDB ID and get a working stream link.">
 </head>
-<body class="flex min-h-dvh items-center justify-center bg-background p-5 py-12 text-foreground antialiased max-sm:items-start max-sm:pt-16">
-  <main class="flex w-full max-w-[45rem] flex-col items-center">
-    <h1 class="text-center text-xs font-bold tracking-[0.36em] uppercase">
-      watch
-      <span aria-hidden="true" class="mt-2 block text-[10px] font-medium tracking-[0.22em] text-muted">
-        Look up. Play.
-      </span>
-    </h1>
+<body class="min-h-dvh bg-white px-6 text-black antialiased">
+  <main class="mx-auto flex min-h-dvh w-full max-w-[42rem] flex-col py-14 sm:py-20">
+    <div class="w-full sm:my-auto">
+      <header class="w-full border-b border-black/10 pb-6">
+        <h1 class="text-2xl font-semibold tracking-tight">watch</h1>
+        <p class="mt-1 text-sm text-black/64">Paste an IMDb or TMDB ID to get a working stream link.</p>
+      </header>
 
-    <div class="w-full">
-      <WatchApp client:load />
-      <noscript>
-        <p class="mt-4 text-center text-xs leading-relaxed text-muted">
-          This page needs JavaScript to find a stream link.
-        </p>
-      </noscript>
+      <div class="w-full">
+        <WatchApp client:load />
+        <noscript>
+          <p class="mt-4 text-sm leading-relaxed text-black/64">
+            This page needs JavaScript to find a stream link.
+          </p>
+        </noscript>
+      </div>
     </div>
 
-    <footer class="mt-14 w-full border-t border-separator pt-4 text-center">
-      <p class="mx-auto max-w-xl text-xs leading-relaxed text-muted">
+    <footer class="mt-14 w-full border-t border-black/10 pt-5">
+      <p class="text-xs leading-relaxed text-black/64">
         We don't host anything. We only link to third-party providers. Check the URL before playing.
         Prefer an ad blocker for safety.
       </p>

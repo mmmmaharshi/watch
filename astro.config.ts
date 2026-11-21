@@ -3,6 +3,7 @@ import vercel from "@astrojs/vercel";
 import sitemap from "@astrojs/sitemap";
 import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
+import { qrcode } from "vite-plugin-qrcode";
 import { SITE_URL } from "./src/consts";
 
 // SSR on Vercel. The page shell is static, /api/watch runs on demand.
@@ -14,7 +15,13 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [
+      tailwindcss(),
+      // Prints a QR for the LAN URL on dev start. Host is on, so a phone can scan it.
+      qrcode({ filter: (url) => !url.includes("localhost") }),
+    ],
+  },
   // CSP hashes let the inline Astro and island scripts run without
   // 'unsafe-inline'. The island also writes style attributes, so those
   // alone keep 'unsafe-inline'.

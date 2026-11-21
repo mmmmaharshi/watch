@@ -1,76 +1,83 @@
 ---
 name: watch
-description: Paste an IMDb or TMDB ID; get a working stream link in one quiet, centered result.
+description: Paste an IMDb or TMDB ID; get a working stream link in one quiet, left-aligned record.
 colors:
-  canvas: "oklch(0.9702 0 0)"
-  ink: "oklch(0.2103 0.0059 285.89)"
-  accent: "oklch(0.6204 0.195 253.83)"
-  accent-hover: "color-mix(in oklab, oklch(0.6204 0.195 253.83) 90%, oklch(0.9911 0 0) 10%)"
-  on-accent: "oklch(0.9911 0 0)"
-  surface: "oklch(100% 0 0)"
-  control: "oklch(94% 0.001 286.375)"
-  control-hover: "color-mix(in oklab, oklch(94% 0.001 286.375) 96%, oklch(0.2103 0.0059 285.89) 4%)"
-  muted: "oklch(0.5517 0.0138 285.94)"
-  separator: "oklch(92% 0.004 286.32)"
+  canvas: "#FFFFFF"
+  ink: "#000000"
+  secondary-ink: "rgb(0 0 0 / 64%)"
+  tertiary-ink: "rgb(0 0 0 / 44%)"
+  border: "rgb(0 0 0 / 10%)"
+  strong-border: "rgb(0 0 0 / 15%)"
+  hover-fill: "rgb(0 0 0 / 5%)"
+  pressed-fill: "rgb(0 0 0 / 9%)"
+  scrim: "rgb(0 0 0 / 50%)"
   danger: "oklch(0.6532 0.2328 25.74)"
-  backdrop: "rgba(0, 0, 0, 0.5)"
 typography:
   wordmark:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "12px"
-    fontWeight: 700
-    lineHeight: 1.3333
-    letterSpacing: "0.36em"
-  wordmark-subline:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "10px"
-    fontWeight: 500
-    letterSpacing: "0.22em"
-  title:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "24px"
     fontWeight: 600
-    lineHeight: 1.3333
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  intro:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
+  title:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "24px"
+    fontWeight: 600
+    lineHeight: 1.2
     letterSpacing: "-0.025em"
   meta:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
-    lineHeight: 1.4286
+    lineHeight: 1.5
   body:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14px"
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.625
-  label:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "12px"
-    fontWeight: 600
-    lineHeight: 1.3333
-    letterSpacing: "0.1em"
-  value:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 400
-    lineHeight: 1.4286
-  action:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
+  row-key:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 500
-    lineHeight: 1.4286
+    lineHeight: 1.5
+  value:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
+  identifier:
+    fontFamily: "'Goeist Mono', ui-monospace, monospace"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
+  action:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: 1.5
   field:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.5
-  caption:
-    fontFamily: "'Scoutie Sans Variable', ui-sans-serif, system-ui, sans-serif"
+  hint:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.5
+  footer:
+    fontFamily: "'Goeist', ui-sans-serif, system-ui, sans-serif"
     fontSize: "12px"
     fontWeight: 400
     lineHeight: 1.625
 rounded:
-  field: "12px"
-  control: "24px"
+  control: "8px"
+  record: "16px"
   separator: "4px"
   spinner: "50%"
 spacing:
@@ -80,47 +87,50 @@ spacing:
   lg: "16px"
   xl: "20px"
   xxl: "24px"
-  xxxl: "48px"
+  xxxl: "56px"
 components:
   button-primary:
-    backgroundColor: "{colors.accent}"
-    textColor: "{colors.on-accent}"
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.canvas}"
     typography: "{typography.action}"
     rounded: "{rounded.control}"
-    padding: "0 16px"
-    height: "40px"
+    padding: "0 24px"
+    height: "48px"
   button-primary-hover:
-    backgroundColor: "{colors.accent-hover}"
-    textColor: "{colors.on-accent}"
+    backgroundColor: "rgb(0 0 0 / 80%)"
+    textColor: "{colors.canvas}"
   button-secondary:
-    backgroundColor: "{colors.control}"
+    backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
     typography: "{typography.action}"
     rounded: "{rounded.control}"
-    padding: "0 16px"
-    height: "40px"
-  button-secondary-hover:
-    backgroundColor: "{colors.control-hover}"
-  button-icon:
-    backgroundColor: "{colors.control}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
+    border: "1px solid {colors.border}"
     width: "40px"
     height: "40px"
+  button-tertiary:
+    backgroundColor: "{colors.hover-fill}"
+    textColor: "{colors.ink}"
+    typography: "{typography.action}"
+    rounded: "{rounded.control}"
+    padding: "0 16px"
+    height: "40px"
   input:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
     typography: "{typography.field}"
-    rounded: "{rounded.field}"
-    padding: "8px 12px"
+    rounded: "{rounded.control}"
+    border: "1px solid {colors.strong-border}"
+    height: "48px"
+    padding: "0 12px"
+  dialog:
+    backgroundColor: "{colors.canvas}"
+    rounded: "{rounded.record}"
+    border: "1px solid {colors.border}"
+    padding: "24px"
   card:
     backgroundColor: "transparent"
     rounded: "{rounded.control}"
     padding: "0"
-  dialog:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.control}"
-    padding: "24px"
   spinner:
     textColor: "currentColor"
     rounded: "{rounded.spinner}"
@@ -132,90 +142,102 @@ components:
 
 ## Overview
 
-**Creative North Star: "Quiet Utility"**
+**Creative North Direction: "Quiet Utility"**
 
-watch is one screen with three parts: a wordmark, one input with one primary button, and a dialog that shows the found stream link. HeroUI v3's default light theme supplies the look. The page is a soft grey field, the surfaces are white, and one blue accent marks the primary action.
+watch is one plain screen with three parts: a short wordmark and intro, one input with one primary action, and a dialog that shows the found stream link. The page is white, the ink is black, and the only colour is a functional focus state. There is no accent filling the primary action; the action is ink on paper.
 
 The visitor pastes an IMDb or TMDB ID and presses Watch now. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
 - One input, one primary action, one result dialog.
-- HeroUI v3 default light theme: soft grey canvas, white surfaces, one blue accent. No token overrides.
-- One centered column capped by `max-w-[45rem]`.
-- Scoutie Sans Variable at every role.
-- Pill buttons, 12px fields, and 24px cards and dialog.
-- The exact provider, IMDb ID, and stream URL show before the user leaves; the safety note stays quiet.
+- White canvas, black ink, and alpha-black neutrals. No blue accent.
+- Left-aligned text in one column capped by `max-w-[42rem]`.
+- Goeist Sans for the interface; Goeist Mono for identifiers.
+- Restrained radii: 8px controls and a 16px dialog.
+- The exact provider, IMDb ID, and stream URL show before the user leaves; both safety notes stay quiet.
 
 ## Colors
 
-The palette is the HeroUI v3 default light theme. The values live in `@heroui/styles` (`dist/themes/default/variables.css`) and nothing overrides them. `src/styles/global.css` adds only the font. The page sets no `dark` class and offers no theme switch.
+The palette is neutral. The page is white and the ink is black. Intermediate tones come from alpha black over white, not from tinted grey tokens. The HeroUI theme's muted and accent tokens are not used for text or surfaces. `src/styles/global.css` sets `--focus` and `--link` to the foreground ink, so focus and link states stay on the same ladder. The page sets no `dark` class and offers no theme switch.
 
 ### Primary
 
-- **Accent Blue** (`colors.accent`, `--accent`) — the fill of the primary button and the color of every focus ring. Hover uses `colors.accent-hover`. The value is HeroUI's default.
-- **Snow** (`colors.on-accent`, `--accent-foreground`) — text on the accent fill.
+- **Ink** (`colors.ink`) — body text, the primary action fill, row values, and links. It is the only emphasis.
+- **Canvas** (`colors.canvas`) — the page field and the dialog surface.
 
 ### Neutral
 
-- **Canvas** (`colors.canvas`, `--background`) — the page field behind the column.
-- **Ink** (`colors.ink`, `--foreground`) — body text, the card title, row values, and open links.
-- **Surface** (`colors.surface`, `--surface` and `--overlay`) — the input well, the result dialog, and the toast.
-- **Control** (`colors.control`, `--default`) — the fill of the secondary and tertiary buttons. Hover uses `colors.control-hover`.
-- **Muted** (`colors.muted`, `--muted`) — the wordmark subline, the meta line, the type line, row keys, hints, status text, both safety notes, and the input placeholder. The value is HeroUI's default.
-- **Separator** (`colors.separator`, `--separator`) — the 1px rules above the footer and between result rows.
-- **Danger** (`colors.danger`, `--danger`) — the outline and ring of an invalid input.
+- **Secondary Ink** (`colors.secondary-ink`) — the intro line, the meta line, the type line, row keys, the hint, the status, and both safety notes.
+- **Tertiary Ink** (`colors.tertiary-ink`) — nonessential glyphs only. It does not reach 4.5:1 on white.
+- **Border** (`colors.border`) — the header and footer rules, the dialog outline, and row dividers.
+- **Strong Border** (`colors.strong-border`) — the input outline.
+- **Hover Fill** (`colors.hover-fill`) — the Cancel button at rest and hovered rows.
+- **Pressed Fill** (`colors.pressed-fill`) — pressed neutral controls.
+- **Scrim** (`colors.scrim`) — the wash behind the result dialog.
+
+### Semantic
+
+- **Danger** (`colors.danger`) — the invalid input state. The theme keeps it for the field outline only.
 
 ### Named Rules
 
-**The One Accent Rule.** Blue is the only accent. It fills the primary action and draws focus indicators. The secondary and tertiary buttons use the neutral `--default` grey.
+**The Ink-Only Rule.** Black is the only emphasis. The primary action is ink, not an accent colour. Focus and link states use the same ink.
 
 ## Typography
 
-**Face:** Scoutie Sans Variable, loaded from `@fontsource-variable/scoutie-sans` and set as `--font-sans` in `src/styles/global.css`. Fallback: `ui-sans-serif, system-ui, sans-serif`. It is the only face. There is no second display face and no mono face.
+**Faces:** Two faces from one family, each with one job.
 
-**Character:** One sans carries the wordmark, the card title, the rows, and the buttons. IDs and URLs use `tabular-nums`, not a mono face. The small keys are uppercase with wide tracking. The card title is tight-tracked and balanced.
+- **Goeist Sans** (`--font-sans`, family name `Goeist`) carries the interface: the wordmark, intro, card title, description, row keys, provider, buttons, status, and notes. It is loaded from `goeist/sans.css`.
+- **Goeist Mono** (`--font-mono`) carries identifiers: the IMDb ID, the stream URL, and the example ID in the hint. It is loaded from `goeist/mono.css`.
+
+Both are variable fonts from 100 to 900. There is no serif. There is no styled casing: the wordmark is "watch", the buttons read "Watch now" and "Watch", and the row keys read "IMDb", "Provider", and "Stream URL" as written.
 
 ### Hierarchy
 
-- **Wordmark** (`typography.wordmark`): `text-xs font-bold uppercase tracking-[0.36em]` on the page `h1`.
-- **Wordmark Subline** (`typography.wordmark-subline`): `text-[10px] font-medium tracking-[0.22em] text-muted`. The line reads "Look up. Play.".
+- **Wordmark** (`typography.wordmark`): `text-2xl font-semibold tracking-tight` on the page `h1`. Sentence case, left aligned.
+- **Intro** (`typography.intro`): `text-sm text-black/64` under the wordmark. It states the one task.
 - **Card Title** (`typography.title`): `text-2xl font-semibold tracking-tight text-balance`. It holds the movie name, or the IMDb ID in caps when there is no name.
-- **Card Meta** (`typography.meta`): the card description, `text-sm leading-5 text-muted tabular-nums`. It holds the year and the IMDb rating, joined by a middle dot.
-- **Body** (`typography.body`): `text-sm leading-relaxed text-muted text-pretty` for the plot description.
-- **Row Key** (`typography.label`): `text-xs font-semibold uppercase tracking-widest text-muted` for IMDb, Provider, Stream URL, and the type line.
-- **Row Value** (`typography.value`): `text-sm tabular-nums`. Links add `underline underline-offset-2`.
-- **Action** (`typography.action`): the button base, `text-sm font-medium`. The submit button adds `uppercase tracking-wider`. The dialog buttons keep sentence case.
-- **Field** (`typography.field`): `text-base`, which steps down to `text-sm` from `sm` up.
-- **Caption** (`typography.caption`): `text-xs leading-relaxed` for the status line, the hint, and both safety notes.
+- **Card Meta** (`typography.meta`): `text-sm text-black/64 tabular-nums`. It holds the year and the IMDb rating, joined by a middle dot.
+- **Body** (`typography.body`): `text-base leading-relaxed text-black/64 text-pretty` for the plot description.
+- **Row Key** (`typography.row-key`): `text-sm font-medium text-black/64` for IMDb, Provider, and Stream URL.
+- **Value** (`typography.value`): `text-sm tabular-nums` for the provider. The IMDb ID and the stream URL add `font-mono` (`typography.identifier`). Links add `underline underline-offset-2`.
+- **Action** (`typography.action`): the button base, `text-sm font-medium`, sentence case.
+- **Field** (`typography.field`): `text-base`.
+- **Hint** (`typography.hint`): `text-sm leading-relaxed text-black/64` for the status line and the hint.
+- **Footer** (`typography.footer`): `text-xs leading-relaxed text-black/64` for the page safety note.
 
 ### Named Rules
 
-**The One-Face Rule.** Scoutie Sans Variable carries every role. IDs and URLs stay in that face with tabular figures.
+**The Two-Role Rule.** Goeist Sans carries the interface. Goeist Mono carries identifiers. Do not set prose, labels, or controls in the mono face.
+
+**The Sentence-Case Rule.** Chrome uses the casing of its text. No `uppercase`, no wide letter spacing on labels, buttons, or the wordmark.
 
 ## Layout
 
-`src/pages/index.astro` centers the page. The `body` classes are `flex min-h-dvh items-center justify-center bg-background p-5 py-12 text-foreground antialiased max-sm:items-start max-sm:pt-16`. The `main` column is `w-full max-w-[45rem]`, which is 45rem or 720px. It holds the wordmark, the island, and the footer.
+`src/pages/index.astro` sets a top-aligned page. The `body` classes are `min-h-dvh bg-white px-6 text-black antialiased`. The `main` column is `mx-auto flex min-h-dvh w-full max-w-[42rem] flex-col py-14 sm:py-20`, which is 42rem or 672px. The content group is `w-full sm:my-auto`, so it centres on tall screens and starts at the top on a phone. The page opts into OS text scaling with `<meta name="text-scale" content="scale">`.
 
-The wordmark opens the column. `WatchApp` adds `mt-12` above the form. The form is `flex gap-2` and stacks below `sm` with `max-sm:flex-col`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width. The status line and the hint follow with `mt-2`.
+The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
-The footer closes the column with `mt-14 border-t border-separator pt-4 text-center`, and its paragraph caps at `max-w-xl`, which is 36rem.
+`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. The status line follows with `mt-3` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types. The hint follows with `mt-2`. Both are left aligned.
 
-The result opens in a modal over `bg-backdrop`. `Modal.Container` uses `size="lg"`, and the dialog adds `sm:max-w-[45rem]`, which is 45rem or 720px. The dialog has `p-6` and a 24px radius. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
+The footer is pushed to the bottom by `justify-between` and keeps `mt-14`. It has `border-t border-black/10 pt-5`, and its paragraph is left aligned.
 
-At `sm`, which is 40rem, the dialog widens and the row keys move beside their values in a `sm:w-28` key column. Below `sm`, the body aligns to the top (`max-sm:items-start max-sm:pt-16`), the form stacks, the dialog takes the width minus `p-4`, and each row key sits above its value.
+The result opens in a modal over the theme scrim. `Modal.Container` uses `size="lg"`, and the dialog adds `rounded-2xl border border-black/10 sm:max-w-[42rem]`. The dialog has `p-6`. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
+
+At `sm`, which is 40rem, the form sits in one row, the dialog widens, the footer note and the actions share one row, and the row keys move beside their values in a `sm:w-28` key column. Below `sm`, the form stacks, each row key sits above its value, and the actions wrap.
 
 **The One-Screen Rule.** One page, one input, one primary action. The answer opens in one dialog. The exact destination shows before the user leaves.
 
 ## Elevation & Depth
 
-The default theme supplies three shadows. The input uses `shadow-field`. The dialog and the toast use `shadow-overlay`. A normal card uses `shadow-surface`, but the result card sets `variant="transparent"`, which removes its fill and shadow. The dialog is the only lifted layer.
+The page stays flat. The dialog and the toast are the only lifted layers, and they use the theme's overlay shadow. The input carries a faint field shadow. The card inside the dialog is transparent and casts nothing.
 
 ### Shadow Vocabulary
 
-- **Field Shadow** (`--field-shadow`): `0 2px 4px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.06)` under the input.
-- **Overlay Shadow** (`--overlay-shadow`): `0 2px 8px rgba(0, 0, 0, 0.06), 0 -6px 12px rgba(0, 0, 0, 0.03), 0 14px 28px rgba(0, 0, 0, 0.08)` under the dialog and the toast.
-- **Backdrop** (`--backdrop`): `rgba(0, 0, 0, 0.5)` behind the dialog.
-- **Focus Ring**: `ring-2 ring-focus` in accent blue. Buttons offset the ring by `--ring-offset-width`, which is 2px. The toast uses a 2px accent outline with a 2px offset. The input draws a 2px ring with no offset.
+- **Field Shadow** (`--field-shadow`): a faint neutral shadow under the input.
+- **Overlay Shadow** (`--overlay-shadow`): a soft neutral shadow under the dialog and the toast.
+- **Scrim** (`colors.scrim`): the wash behind the dialog.
+- **Focus Ring**: a 2px ink ring. Buttons offset the ring by 2px. The input draws a 2px ink ring with no offset.
 
 ### Named Rules
 
@@ -223,17 +245,17 @@ The default theme supplies three shadows. The input uses `shadow-field`. The dia
 
 ## Shapes
 
-The radii come from `--radius: 0.5rem`:
+The radii are restrained:
 
-- **Buttons:** `rounded-3xl`, 24px. A 36px to 40px button reads as a pill.
-- **Text field:** `rounded-field`, 12px.
-- **Card, dialog, toast:** `min(32px, var(--radius-3xl))`, 24px.
+- **Buttons:** `rounded-lg`, 8px.
+- **Text field:** `rounded-lg`, 8px.
+- **Dialog:** `rounded-2xl`, 16px.
 - **Separator:** `rounded-sm`, 4px, on a 1px bar.
 - **Spinner:** a circle.
 
-Rows are divided by 1px `Separator` bars. There are no clipped corners.
+Rows are divided by 1px hairline bars. There are no pills and no clipped corners.
 
-**The Soft-Corner Rule.** Round the controls and the dialog. Keep the field at 12px and the larger surfaces at 24px.
+**The Soft-Corner Rule.** Keep controls at 8px and the dialog at 16px. Do not use pill buttons.
 
 ## Components
 
@@ -243,38 +265,38 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID or link". The class is `sr-only`, so the placeholder carries the visible prompt.
-- **`Input`** is white (`bg-field`), 12px radius, `px-3 py-2`, `text-base sm:text-sm`, with a `shadow-field`. The placeholder uses the field token. `aria-describedby="hint"` points at the hint line. The input takes focus on mount when no ID is shared, and again when the dialog closes.
-- **Submit `Button`** is the primary variant: accent blue, snow text, `uppercase tracking-wider`. It holds a `Spinner size="sm" color="current"` while the lookup runs. It is disabled at the same time.
+- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` is `hint`, and adds `status` only while the field is invalid, so the error text is not read before it appears. The input takes focus on mount when no ID is shared, and again when the dialog closes.
+- **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup runs. It is disabled at the same time.
 
 ### Result Dialog
 
-- **`Modal.Backdrop`** is the default opaque backdrop. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.
-- **`Modal.Container size="lg"`** and **`Modal.Dialog sm:max-w-[45rem]`** form the shell. The dialog is white `bg-overlay`, `shadow-overlay`, with a 24px radius and `p-6`. It has an `aria-label` equal to the title.
+- **`Modal.Backdrop`** uses the theme scrim. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.
+- **`Modal.Container size="lg"`** and **`Modal.Dialog`** form the shell. The dialog is white, `rounded-2xl`, with `border border-black/10`, the overlay shadow, and `p-6`. It scrolls with `max-h-full overflow-y-auto overscroll-contain`, so the actions stay reachable at large text sizes. It is named by `aria-labelledby="result-title"`, which points at the card title.
 - **`Card variant="transparent" className="gap-0 p-0"`** removes the card fill, border, padding, and shadow.
 - **`Card.Header`** holds the title (`text-2xl font-semibold tracking-tight text-balance`) and the meta line.
 - **`Card.Content`** holds the optional description, the type line, and three rows.
-- **`Card.Footer`** holds the safety note and the action row (`flex flex-wrap justify-end gap-2`).
-- **`Separator`** divides the rows. Each row is `flex flex-col gap-1 py-3 sm:flex-row sm:gap-5`.
+- **`Card.Footer`** holds the safety note and the action row (`flex shrink-0 flex-wrap justify-end gap-2`).
+- **`Separator`** divides the rows. Each row is `flex flex-col gap-1 py-3.5 sm:flex-row sm:gap-6`.
 
 ### Actions
 
-- **Watch** is the default primary `Button`: accent fill, snow text. It opens `result.url` in a new tab with `noopener`, and closes the dialog.
-- **Cancel** is `variant="tertiary"`: the neutral `--default` fill.
-- **Refresh** and **Copy** are `variant="secondary"` with `isIconOnly`: the same neutral fill, 40px wide, and 36px from `md`. Refresh shows the spinner while `fetching`. Copy writes a share link to the lookup and calls `toast.success("Link copied.")`.
-- **Focus:** every button shows the accent `ring-2`. The input uses `status-focused-field`, a 2px accent ring with no offset. An invalid field shows a 1px danger outline, and a 2px danger ring when focused.
+- **Watch** is the ink primary `Button`: `h-10 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80`. It opens `result.url` in a new tab with `noopener`, and closes the dialog.
+- **Cancel** is `variant="tertiary"`, `h-10 rounded-lg px-4`: the quiet neutral fill.
+- **Refresh** and **Copy** are `variant="outline"` with `isIconOnly`, `size-12 rounded-lg sm:size-10`: a white square with a hairline border. Text buttons are `min-h-12` on touch and `sm:min-h-10` on pointer devices. Refresh shows the spinner while `fetching`. Copy writes a share link to the lookup and calls `toast.success("Link copied.")`.
+- **Focus:** every control shows the ink `ring-2`. The input uses a 2px ink ring with no offset. An invalid field keeps the theme danger outline.
 - **Disabled:** opacity `0.5` and a `not-allowed` cursor, from the theme's `status-disabled`.
 
 ### Status, Toast, and Spinner
 
-- **Status line:** `role="status" aria-live="polite"` with `text-xs leading-relaxed`. It is muted by default and `font-semibold text-foreground` on an error.
-- **`Toast.Provider placement="bottom"`** renders the copy confirmation. The toast is a white `bg-surface` panel with `shadow-overlay` and a 24px radius.
-- **`Spinner`** uses `size="sm"`, which is 16px, and `color="current"`. It runs the theme's `animate-spin-fast`: one turn in 0.75s, linear.
+- **Status line:** `id="status" role="status" aria-live="polite"` with `text-sm leading-relaxed` and a reserved `min-h-[1.625em]`. It is `text-black/64` by default and `font-medium text-black` on an error. The error stays until the user types or the next lookup starts.
+- **`Toast.Provider placement="bottom"`** renders the copy confirmation. The toast is a white panel with the overlay shadow and a rounded corner.
+- **`Spinner`** uses `size="sm"`, which is 16px, and `color="current"`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-xs font-bold uppercase tracking-[0.36em]`. "Look up. Play." sits below in `text-[10px] font-medium tracking-[0.22em] text-muted`.
-- **Page safety note:** a `text-xs leading-relaxed text-muted` paragraph in the footer, capped at `max-w-xl`. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
-- **Dialog safety note:** the same quiet size inside `Card.Footer`. It names the provider and states that the app does not control external sites.
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID to get a working stream link.".
+- **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
+- **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 
 ## Do's and Don'ts
 
@@ -282,15 +304,17 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - Do show the exact provider, canonical IMDb ID, and full stream URL before the user leaves.
 - Do keep both safety notes quiet and readable.
-- Do keep the accent blue for the primary action and focus indicators only.
-- Do keep Scoutie Sans Variable as the only face.
+- Do keep the primary action in ink.
+- Do keep Goeist Sans for the interface and Goeist Mono for identifiers.
 - Do keep the labelled input, the keyboard-accessible dialog, focus return, and reduced motion.
 - Do keep one primary action per surface: Watch now on the page, Watch in the dialog.
 
 ### Don't:
 
-- Don't add a second face or a mono face for IDs and URLs. Use tabular figures.
-- Don't add a second accent colour, a gradient, or a themed card fill.
+- Don't add an accent colour, a gradient, or a themed card fill.
+- Don't use pill buttons or uppercase labels.
+- Don't use Goeist Mono for prose, labels, or controls. It is for identifiers only.
+- Don't center the prose. Left-align the wordmark, hint, status, and footer.
 - Don't stack a second shadow on the dialog. The overlay shadow is the only lift.
 - Don't hide or reword the safety notes. The product states that it hosts nothing.
 - Don't replace the `sr-only` label with a placeholder alone.

@@ -1,7 +1,15 @@
 @import "tailwindcss";
 @import "@heroui/styles";
-@import "@fontsource-variable/scoutie-sans";
+@import "goeist/sans.css";
+@import "goeist/mono.css";
 
 @theme {
-  --font-sans: "Scoutie Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Goeist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Goeist Mono", ui-monospace, monospace;
+}
+
+/* Keep focus and link states on the ink ladder, not the blue accent. */
+:root {
+  --focus: var(--foreground);
+  --link: var(--foreground);
 }
