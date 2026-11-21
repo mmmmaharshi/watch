@@ -193,7 +193,7 @@ A strict monochrome palette: one near-black ink for action and text, a paper fie
 - **Label** (`typography.label`): uppercase keys (IMDb / Provider / Stream URL) and the type line.
 - **Action** (`typography.action`): the primary button caps.
 - **Action Small** (`typography.action-small`): ghost, icon, and small-primary caps.
-- **Caption / Fine Print** (`typography.caption`, `typography.fine-print`): status, hint, recent, warning, and safety note.
+- **Caption / Fine Print** (`typography.caption`, `typography.fine-print`): status, hint, warning, and safety note.
 
 ### Named Rules
 

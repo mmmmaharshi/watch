@@ -20,7 +20,7 @@ The app does not host video. It reads live provider domains from a directory, pr
 
 ## Operating Context
 
-A single web page with one input and one action. The result appears in a dialog that shows the title, provider, canonical IMDb ID, and exact stream URL before the user leaves the site. Recent lookups persist locally in the browser.
+A single web page with one input and one action. The result appears in a dialog that shows the title, provider, canonical IMDb ID, and exact stream URL before the user leaves the site.
 
 ## Capabilities and Constraints
 

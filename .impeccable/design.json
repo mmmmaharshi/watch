@@ -149,7 +149,7 @@
       },
       "caption": {
         "displayName": "Caption",
-        "purpose": "Status, hint, and recent-lookup text."
+        "purpose": "Status and hint text."
       },
       "fine-print": {
         "displayName": "Fine Print",

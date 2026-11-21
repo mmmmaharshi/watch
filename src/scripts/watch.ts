@@ -1,5 +1,4 @@
 import { actions } from "astro:actions";
-import { addRecent, parseRecent } from "../lib/recent";
 import { shareUrl } from "../lib/share";
 import { unwrapActionResult } from "../lib/watch";
 import type { WatchResult as WatchData } from "../lib/watch";
@@ -56,13 +55,10 @@ let currentId: string | null = null;
 let isFetching = false;
 let loadingId: string | null = null;
 
-const RECENT_KEY = "watch.recent";
-
 async function lookup(value: string, exclude?: string): Promise<WatchData> {
   const result: unknown = await actions.watch({ id: value, exclude });
   return unwrapActionResult(result);
 }
-const recent = reqEl("recent");
 
 function setStatus(text: string, type?: "loading" | "error") {
   status.textContent = text;
@@ -212,7 +208,6 @@ async function go() {
     }
     setStatus("");
     showModal(data);
-    saveRecent(data.id, data.name);
   } catch (error) {
     setStatus(errMessage(error, "Something went wrong. Try again."), "error");
     input.setAttribute("aria-invalid", "true");
@@ -224,44 +219,10 @@ async function go() {
   }
 }
 
-const storedRecent = () => parseRecent(localStorage.getItem(RECENT_KEY));
-
-function saveRecent(id: string, name?: string) {
-  const list = addRecent(storedRecent(), { id, name });
-  try {
-    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
-  } catch {
-    // Storage blocked or full — the list is a convenience, not a requirement.
-  }
-  renderRecent();
-}
-
-// Built with createElement/textContent: names come from a third-party API.
-function renderRecent() {
-  const items = storedRecent();
-  recent.hidden = items.length === 0;
-  recent.replaceChildren();
-  if (!items.length) {
-    return;
-  }
-  recent.append("Recent: ");
-  items.forEach((item, i) => {
-    if (i) {
-      recent.append(" · ");
-    }
-    const link = document.createElement("a");
-    link.href = `#id=${encodeURIComponent(item.id)}`;
-    link.textContent = item.name || item.id;
-    recent.append(link);
-  });
-}
-
 form.addEventListener("submit", (e) => {
   e.preventDefault();
   void go();
 });
-
-renderRecent();
 
 // A shared link such as /#id=tt0133093 (or a whole IMDb link) loads right away.
 if (params.get("id")) {
@@ -269,7 +230,7 @@ if (params.get("id")) {
 } else {
   input.focus();
 }
-// Help and recent links change only the hash, which does not reload the page.
+// Help links change only the hash, which does not reload the page.
 // Same-document clicks go through the router (popstate, no hashchange);
 // back/forward can fire both, so an id that is showing or loading is skipped.
 function handleHash() {

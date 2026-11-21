@@ -131,12 +131,11 @@ export const prerender = true;
   #go.loading .spinner { opacity: 1; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .status, .hint, .recent { margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--gray); text-align: center; }
+  .status, .hint { margin-top: 10px; font-size: 11px; line-height: 1.5; color: var(--gray); text-align: center; }
   .status:empty { margin-top: 0; }
   .status.loading { color: var(--gray); }
   .status.error { color: var(--ink); font-weight: 600; }
-  .hint a, .recent a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
-  .recent:empty { display: none; }
+  .hint a { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 
   dialog.modal {
     border: 0;
@@ -241,7 +240,6 @@ export const prerender = true;
 
       <p class="status" id="status" role="status" aria-live="polite"></p>
       <p class="hint">Example: <a href="#id=tt1300854">tt1300854</a>. For TMDB, paste the full link.</p>
-      <p class="recent" id="recent"></p>
     </div>
 
     <dialog class="modal" id="modal" aria-labelledby="modal-title">
