@@ -1,6 +1,7 @@
 import { defineAction, ActionError } from "astro:actions";
 import { z } from "astro/zod";
 import { handleWatchRequest, watchDeps } from "../lib/watch";
+import { searchDeps, searchTitles } from "../lib/search";
 
 export const server = {
   watch: defineAction({
@@ -17,6 +18,19 @@ export const server = {
         });
       }
       return out.result;
+    },
+  }),
+  search: defineAction({
+    input: z.object({ query: z.string().trim().min(1).max(200) }),
+    handler: async ({ query }) => {
+      const out = await searchTitles(searchDeps, query);
+      if (!out.ok) {
+        throw new ActionError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Title search failed. Try an ID.",
+        });
+      }
+      return { candidates: out.candidates };
     },
   }),
 };

@@ -1,6 +1,6 @@
 ---
 name: watch
-description: Paste an IMDb or TMDB ID; get a working stream link in one quiet, left-aligned record.
+description: Paste an IMDb or TMDB ID, a link, or a title; get a working stream link in one quiet, left-aligned record.
 colors:
   canvas: "#FFFFFF"
   ink: "#000000"
@@ -146,10 +146,11 @@ components:
 
 watch is one plain screen with three parts: a short wordmark and intro, one input with one primary action, and a dialog that shows the found stream link. The page is white, the ink is black, and the only colour is a functional focus state. There is no accent filling the primary action; the action is ink on paper.
 
-The visitor pastes an IMDb or TMDB ID and presses Watch now. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
+The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now. A title is searched on Wikidata and shown as a short list of films and shows; picking one runs the normal lookup. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
 - One input, one primary action, one result dialog.
+- A title search shows a short candidate list before the lookup.
 - White canvas, black ink, and alpha-black neutrals. No blue accent.
 - Left-aligned text in one column capped by `max-w-[42rem]`.
 - Goeist Sans for the interface; Goeist Mono for identifiers.
@@ -264,9 +265,17 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 ### Form
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
-- **`Label`** is the accessible name, "IMDb or TMDB ID or link". The class is `sr-only`, so the placeholder carries the visible prompt.
+- **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
 - **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` is `hint`, and adds `status` only while the field is invalid, so the error text is not read before it appears. The input takes focus on mount when no ID is shared, and again when the dialog closes.
-- **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup runs. It is disabled at the same time.
+- **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
+
+### Title Search
+
+- **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action.
+- **Server:** `src/lib/search.ts` asks Wikidata `wbsearchentities`, batches the hits through `wbgetentities`, and keeps only `P31` films and shows with a `tt` IMDb ID. It drops people, games, seasons, and episodes. Results are capped at 6 per query and cached for 10 minutes per instance.
+- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left`; the name is `text-sm font-medium`, the second line is the Wikidata description or the year in `text-sm text-black/64`. Hover and focus use `bg-black/5`; the focus ring is 2px ink.
+- **Picking:** sets the input to the IMDb ID, clears the list, and runs the normal lookup. A failed or empty search reports through the status line.
+- **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
 
 ### Result Dialog
 

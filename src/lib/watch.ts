@@ -14,7 +14,7 @@ interface MetaJson {
 
 // Third-party JSON; call sites check the shape before use.
 type JsonValue = string | number | boolean | null | Array<JsonValue> | { [key: string]: JsonValue };
-type LooseJson = MetaJson & { [key: string]: JsonValue };
+export type LooseJson = MetaJson & { [key: string]: JsonValue };
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (

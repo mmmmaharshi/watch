@@ -13,9 +13,11 @@ import {
 } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { parseTitleInput } from "../lib/parse-input";
 import { shareUrl } from "../lib/share";
 import { unwrapActionResult } from "../lib/watch";
 import type { WatchResult } from "../lib/watch";
+import type { TitleCandidate } from "../lib/search";
 import { parseSharedId, resultMeta, resultTitle, resultType } from "../lib/watch-view";
 
 type Status = { text: string; kind?: "loading" | "error" };
@@ -90,6 +92,7 @@ export default function WatchApp() {
   const [fetching, setFetching] = useState(false);
   const [result, setResult] = useState<WatchResult | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [candidates, setCandidates] = useState<Array<TitleCandidate>>([]);
 
   function showError(text: string) {
     setStatus({ text, kind: "error" });
@@ -102,14 +105,49 @@ export default function WatchApp() {
     setIsOpen(true);
   }
 
+  async function runSearch(query: string) {
+    setLoading(true);
+    setCandidates([]);
+    setStatus({ text: "Searching titles...", kind: "loading" });
+    try {
+      const response = await actions.search({ query });
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      const list = response.data?.candidates ?? [];
+      if (list.length === 0) {
+        showError("No title found. Try an ID or the full link.");
+        return;
+      }
+      setStatus({ text: `${list.length} ${list.length === 1 ? "match" : "matches"}. Choose one.` });
+      setCandidates(list);
+    } catch (error) {
+      showError(errMessage(error, "Title search failed. Try an ID."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function chooseCandidate(candidate: TitleCandidate) {
+    setCandidates([]);
+    setValue(candidate.imdbId);
+    void runLookup(candidate.imdbId);
+  }
+
   async function runLookup(raw: string) {
     const input = raw.trim();
     if (!input) {
-      showError("Enter an IMDb or TMDB ID or link.");
+      showError("Enter an IMDb or TMDB ID, link, or title.");
       inputRef.current?.focus();
       return;
     }
 
+    if (!parseTitleInput(input)) {
+      await runSearch(input);
+      return;
+    }
+
+    setCandidates([]);
     setLoading(true);
     loadingId.current = input;
     setStatus({ text: "Finding a working stream...", kind: "loading" });
@@ -235,6 +273,7 @@ export default function WatchApp() {
             value={value}
             onChange={(next) => {
               setValue(next);
+              setCandidates([]);
               if (invalid) {
                 setInvalid(false);
                 setStatus({ text: "" });
@@ -243,11 +282,11 @@ export default function WatchApp() {
             isDisabled={loading}
             isInvalid={invalid}
           >
-            <Label className="sr-only">IMDb or TMDB ID or link</Label>
+            <Label className="sr-only">IMDb or TMDB ID, link, or title</Label>
             <Input
               ref={inputRef}
               className="min-h-12 rounded-lg border border-black/15"
-              placeholder="IMDb or TMDB ID or link"
+              placeholder="IMDb or TMDB ID, link, or title"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
@@ -283,8 +322,28 @@ export default function WatchApp() {
       >
         {status.text}
       </p>
+
+      {candidates.length > 0 && (
+        <ul className="mt-3 divide-y divide-black/10 border-y border-black/10">
+          {candidates.map((candidate) => (
+            <li key={candidate.imdbId}>
+              <button
+                type="button"
+                className="flex w-full flex-col gap-0.5 py-3 text-left hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                onClick={() => chooseCandidate(candidate)}
+              >
+                <span className="text-sm font-medium">{candidate.name}</span>
+                <span className="text-sm text-black/64">
+                  {candidate.description ?? candidate.year}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <p id="hint" className="mt-2 text-sm leading-relaxed text-black/64">
-        IMDb or TMDB ID, or the full link. Either works. Example:{" "}
+        IMDb or TMDB ID, the full link, or a title. Example:{" "}
         <a className="font-mono text-black underline underline-offset-2" href="#id=tt1300854">
           tt1300854
         </a>

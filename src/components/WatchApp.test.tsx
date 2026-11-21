@@ -22,7 +22,18 @@ const lookup = mock(async (_input: { id: string; exclude?: string }) => ({
   data: MATRIX,
 }));
 
-await mock.module("astro:actions", () => ({ actions: { watch: lookup } }));
+const search = mock(async (_input: { query: string }) => ({
+  data: {
+    candidates: [] as Array<{
+      imdbId: string;
+      name: string;
+      year?: string;
+      description?: string;
+    }>,
+  },
+}));
+
+await mock.module("astro:actions", () => ({ actions: { watch: lookup, search } }));
 
 const { default: WatchApp } = await import("./WatchApp");
 
@@ -30,6 +41,8 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
   lookup.mockReset();
   lookup.mockImplementation(async () => ({ data: MATRIX }));
+  search.mockReset();
+  search.mockImplementation(async () => ({ data: { candidates: [] } }));
 });
 
 afterEach(() => {
@@ -42,9 +55,41 @@ test("empty submit shows an error, marks the field invalid and focuses it", () =
 
   fireEvent.submit(input.closest("form")!);
 
-  expect(screen.getByRole("status").textContent).toBe("Enter an IMDb or TMDB ID or link.");
+  expect(screen.getByRole("status").textContent).toBe("Enter an IMDb or TMDB ID, link, or title.");
   expect(input.getAttribute("aria-invalid")).toBe("true");
   expect(document.activeElement).toBe(input);
+});
+
+test("a title shows candidates and picking one opens the result", async () => {
+  search.mockResolvedValueOnce({
+    data: {
+      candidates: [
+        { imdbId: "tt0133093", name: "The Matrix", year: "1999", description: "1999 film" },
+        { imdbId: "tt0234215", name: "The Matrix Reloaded", year: "2003" },
+      ],
+    },
+  });
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "The Matrix" } });
+  fireEvent.submit(input.closest("form")!);
+
+  const first = await screen.findByRole("button", { name: /The Matrix 1999/ });
+  fireEvent.click(first);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: undefined });
+});
+
+test("a title with no matches shows an error", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "not a real title" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByText(/no title found/i)).toBeTruthy();
 });
 
 test("the error clears when the user types", () => {
