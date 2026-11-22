@@ -8,11 +8,15 @@ export const server = {
     input: z.object({
       id: z.string(),
       exclude: z.string().optional(),
+      kind: z.enum(["movie", "tv"]).optional(),
     }),
-    handler: async ({ id, exclude }) => handleWatchRequest(watchDeps, { id, exclude }),
+    handler: async ({ id, exclude, kind }) => handleWatchRequest(watchDeps, { id, exclude, kind }),
   }),
   search: defineAction({
-    input: z.object({ query: z.string().trim().min(1).max(200) }),
-    handler: async ({ query }) => searchTitles(searchDeps, query),
+    input: z.object({
+      query: z.string().trim().min(1).max(200),
+      kind: z.enum(["movie", "tv"]).default("movie"),
+    }),
+    handler: async ({ query, kind }) => searchTitles(searchDeps, query, kind),
   }),
 };

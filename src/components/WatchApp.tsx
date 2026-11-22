@@ -10,12 +10,14 @@ export default function WatchApp() {
     <>
       <SearchPanel
         value={watch.value}
+        kind={watch.kind}
         inputRef={watch.inputRef}
         status={watch.status}
         invalid={watch.invalid}
         busy={watch.formBusy}
         candidates={watch.candidates}
         onChange={watch.change}
+        onKindChange={watch.changeKind}
         onSubmit={(value) => void watch.submit(value)}
         onPick={(candidate) => void watch.pick(candidate)}
       />

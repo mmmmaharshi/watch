@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { Cache } from "./watch";
 import type { HttpClient } from "./watch";
-import { mergeCandidates, parseCinemeta, parseTVMaze, searchTitles } from "./search";
+import { parseCinemeta, parseTVMaze, searchTitles, sortResults } from "./search";
 import type { TitleCandidate } from "./search";
 
 const cinemetaMovie = {
@@ -97,15 +97,13 @@ test("parses Cinemeta poster art when present", () => {
   ]);
 });
 
-test("merges an exact title first and alternates the sources", () => {
-  const movies: Array<TitleCandidate> = [
+test("sorts newest first, whatever the title", () => {
+  const candidates: Array<TitleCandidate> = [
     { imdbId: "tt0273148", name: "The Officer's Ward", year: "2001", kind: "movie" },
-  ];
-  const shows: Array<TitleCandidate> = [
     { imdbId: "tt0386676", name: "The Office", year: "2005", kind: "tv" },
   ];
 
-  expect(mergeCandidates("The Office", movies, shows)).toEqual([shows[0], movies[0]]);
+  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt0386676", "tt0273148"]);
 });
 
 test("orders equal title matches by newest release year", () => {
@@ -114,10 +112,7 @@ test("orders equal title matches by newest release year", () => {
     { imdbId: "tt10193026", name: "The Office", year: "2024", kind: "tv" },
   ];
 
-  expect(mergeCandidates("The Office", [], shows).map((candidate) => candidate.year)).toEqual([
-    "2024",
-    "2005",
-  ]);
+  expect(sortResults(shows).map((candidate) => candidate.year)).toEqual(["2024", "2005"]);
 });
 
 test("keeps one row per name, year, and kind", () => {
@@ -126,36 +121,32 @@ test("keeps one row per name, year, and kind", () => {
     { imdbId: "tt2222222", name: "The Office", year: "2026", kind: "tv" },
   ];
 
-  expect(mergeCandidates("The Office", [], shows)).toHaveLength(1);
+  expect(sortResults(shows)).toHaveLength(1);
 });
 
-test("lifts a title match that uses diacritics", () => {
-  const movies: Array<TitleCandidate> = [
-    { imdbId: "tt0081505", name: "Shogun Assassin", year: "1980", kind: "movie" },
-  ];
-  const shows: Array<TitleCandidate> = [
-    { imdbId: "tt2788316", name: "Shōgun", year: "2024", kind: "tv" },
+test("puts titles without a year last", () => {
+  const candidates: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "The Office", kind: "movie" },
+    { imdbId: "tt2222222", name: "The Office", year: "2005", kind: "tv" },
   ];
 
-  expect(mergeCandidates("Shogun", movies, shows)[0]?.name).toBe("Shōgun");
+  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt2222222", "tt1111111"]);
 });
 
-test("dedupes and caps the merged list", () => {
-  const movies = Array.from({ length: 8 }, (_, i) => ({
+test("dedupes and caps the sorted list", () => {
+  const candidates = Array.from({ length: 8 }, (_, i) => ({
     imdbId: `tt000000${i}`,
     name: `Film ${i}`,
+    year: `${2000 + i}`,
     kind: "movie" as const,
   }));
-  const shows = Array.from({ length: 8 }, (_, i) => ({
-    imdbId: `tt000000${i}`,
-    name: `Show ${i}`,
-    kind: "tv" as const,
-  }));
 
-  const merged = mergeCandidates("query", movies, shows);
+  const sorted = sortResults(candidates);
 
-  expect(merged).toHaveLength(6);
-  expect(new Set(merged.map((candidate) => candidate.imdbId)).size).toBe(6);
+  expect(sorted).toHaveLength(6);
+  const ids = sorted.map((candidate) => candidate.imdbId);
+  expect(new Set(ids).size).toBe(6);
+  expect(sorted.map((c) => c.year)).toEqual(["2007", "2006", "2005", "2004", "2003", "2002"]);
 });
 
 function fakeHttp(routes: Record<string, { ok: boolean; body: unknown }>) {
@@ -179,8 +170,8 @@ function fakeHttp(routes: Record<string, { ok: boolean; body: unknown }>) {
   return { http, calls };
 }
 
-test("uses both Cinemeta catalogs", async () => {
-  const { http } = fakeHttp({
+test("movie search hits only the movie catalog, newest first", async () => {
+  const { http, calls } = fakeHttp({
     movie: { ok: true, body: cinemetaMovie },
     series: { ok: true, body: cinemetaSeries },
   });
@@ -188,17 +179,49 @@ test("uses both Cinemeta catalogs", async () => {
   const out = await searchTitles(
     { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
     "The Office",
+    "movie",
   );
 
   expect(out.ok).toBe(true);
-  expect(out.ok && out.candidates[0]?.name).toBe("The Office");
-  expect(out.ok && out.candidates.some((candidate) => candidate.kind === "movie")).toBe(true);
-  expect(out.ok && out.candidates.some((candidate) => candidate.kind === "tv")).toBe(true);
+  expect(calls.some((url) => url.includes("catalog/series"))).toBe(false);
+  expect(calls.some((url) => url.includes("tvmaze") || url.includes("tvmaze"))).toBe(false);
+  expect(out.ok && out.candidates.every((candidate) => candidate.kind === "movie")).toBe(true);
 });
 
-test("falls back to TVMaze when Cinemeta has no hits", async () => {
+test("tv search hits the series catalog and sorts newest first", async () => {
+  const { http, calls } = fakeHttp({
+    movie: { ok: true, body: cinemetaMovie },
+    series: { ok: true, body: cinemetaSeries },
+  });
+
+  const out = await searchTitles(
+    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
+    "The Office",
+    "tv",
+  );
+
+  expect(out.ok).toBe(true);
+  expect(calls.some((url) => url.includes("catalog/movie"))).toBe(false);
+  expect(out.ok && out.candidates.every((candidate) => candidate.kind === "tv")).toBe(true);
+});
+
+test("caches movie and tv separately for the same query", async () => {
+  const { http, calls } = fakeHttp({
+    movie: { ok: true, body: cinemetaMovie },
+    series: { ok: true, body: cinemetaSeries },
+  });
+  const deps = { http, cache: new Cache<Array<TitleCandidate>>(60_000) };
+
+  await searchTitles(deps, "The Office", "movie");
+  await searchTitles(deps, "The Office", "tv");
+  await searchTitles(deps, "The Office", "movie");
+
+  expect(calls.filter((url) => url.includes("catalog/movie"))).toHaveLength(1);
+  expect(calls.filter((url) => url.includes("catalog/series"))).toHaveLength(1);
+});
+
+test("falls back to TVMaze when Cinemeta has no series hits", async () => {
   const { http } = fakeHttp({
-    movie: { ok: true, body: { metas: [] } },
     series: { ok: true, body: { metas: [] } },
     tvmaze: { ok: true, body: tvmaze },
   });
@@ -206,12 +229,13 @@ test("falls back to TVMaze when Cinemeta has no hits", async () => {
   const out = await searchTitles(
     { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
     "The Office",
+    "tv",
   );
 
   expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0386676");
 });
 
-test("asks TVMaze when the series half fails", async () => {
+test("asks TVMaze when the series catalog fails", async () => {
   const fallback = [
     {
       score: 1.18,
@@ -223,7 +247,6 @@ test("asks TVMaze when the series half fails", async () => {
     },
   ];
   const { http } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
     series: { ok: false, body: {} },
     tvmaze: { ok: true, body: fallback },
   });
@@ -231,6 +254,7 @@ test("asks TVMaze when the series half fails", async () => {
   const out = await searchTitles(
     { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
     "Severance",
+    "tv",
   );
 
   expect(out.ok && out.candidates.some((candidate) => candidate.imdbId === "tt11280740")).toBe(
@@ -238,7 +262,7 @@ test("asks TVMaze when the series half fails", async () => {
   );
 });
 
-test("keeps the movie result when TVMaze also fails", async () => {
+test("movie search ignores a dead series catalog", async () => {
   const { http } = fakeHttp({
     movie: { ok: true, body: cinemetaMovie },
     series: { ok: false, body: {} },
@@ -247,6 +271,7 @@ test("keeps the movie result when TVMaze also fails", async () => {
   const out = await searchTitles(
     { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
     "The Matrix",
+    "movie",
   );
 
   expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0133093");
@@ -256,21 +281,24 @@ test("reports a failure when every source fails", async () => {
   const { http } = fakeHttp({});
 
   expect(
-    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "The Office"),
+    await searchTitles(
+      { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
+      "The Office",
+      "tv",
+    ),
   ).toEqual({
     ok: false,
   });
 });
 
-test("accepts an empty TVMaze answer when only the series half failed", async () => {
+test("accepts an empty TVMaze answer when the series catalog failed", async () => {
   const { http } = fakeHttp({
-    movie: { ok: true, body: { metas: [] } },
     series: { ok: false, body: {} },
     tvmaze: { ok: true, body: [] },
   });
 
   expect(
-    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "Nothing"),
+    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "Nothing", "tv"),
   ).toEqual({ ok: true, candidates: [] });
 });
 
@@ -280,31 +308,25 @@ test("orders loose prefix matches by newest year", () => {
     { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
   ];
 
-  expect(mergeCandidates("Dune", candidates, []).map((c) => c.year)).toEqual(["2024", "2020"]);
+  expect(sortResults(candidates).map((c) => c.year)).toEqual(["2024", "2020"]);
 });
 
-test("keeps a title-word match above a loose match even when older", () => {
+test("newest wins even over a closer title-word match", () => {
   const candidates: Array<TitleCandidate> = [
     { imdbId: "tt1111111", name: "Dunen", year: "2026", kind: "movie" },
     { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
   ];
 
-  expect(mergeCandidates("Dune", candidates, []).map((c) => c.imdbId)).toEqual([
-    "tt2222222",
-    "tt1111111",
-  ]);
+  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
 });
 
-test("keeps the merged order when exact matches have no year", () => {
-  const movies: Array<TitleCandidate> = [
+test("keeps input order when years are missing", () => {
+  const candidates: Array<TitleCandidate> = [
     { imdbId: "tt1111111", name: "The Office", kind: "movie" },
+    { imdbId: "tt2222222", name: "The Office", kind: "tv" },
   ];
-  const shows: Array<TitleCandidate> = [{ imdbId: "tt2222222", name: "The Office", kind: "tv" }];
 
-  expect(mergeCandidates("The Office", movies, shows).map((c) => c.imdbId)).toEqual([
-    "tt1111111",
-    "tt2222222",
-  ]);
+  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
 });
 
 function switchableHttp(down: () => boolean) {
@@ -331,10 +353,10 @@ test("does not cache a partial outage", async () => {
     cache: new Cache<Array<TitleCandidate>>(60_000),
   };
 
-  expect(await searchTitles(deps, "The Office")).toEqual({ ok: false });
+  expect(await searchTitles(deps, "The Office", "tv")).toEqual({ ok: false });
 
   down = false;
-  const out = await searchTitles(deps, "The Office");
+  const out = await searchTitles(deps, "The Office", "tv");
   expect(out.ok && out.candidates.length > 0).toBe(true);
 });
 
@@ -345,9 +367,9 @@ test("caches a query and ignores case and outer spaces", async () => {
     cache: new Cache<Array<TitleCandidate>>(60_000),
   };
 
-  const first = await searchTitles(deps, "The Matrix");
+  const first = await searchTitles(deps, "The Matrix", "movie");
   down = true;
-  const second = await searchTitles(deps, "  the matrix ");
+  const second = await searchTitles(deps, "  the matrix ", "movie");
 
   expect(second).toEqual(first);
 });

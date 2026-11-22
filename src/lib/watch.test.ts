@@ -151,6 +151,18 @@ test("a bare TMDB TV id is found by trying both properties", async () => {
   }
 });
 
+test("a bare TMDB id with a selected type skips the ambiguous check", async () => {
+  const out = await handleWatchRequest(
+    mappedDeps((url) => (url.includes("P4947") ? "tt0133093" : "tt0903747")),
+    { id: "27205", kind: "movie" },
+  );
+  expect(out.ok).toBe(true);
+  if (out.ok) {
+    expect(out.result.id).toBe("tt0133093");
+    expect(out.result.url).toBe("https://vidsrc.sh/embed/movie/tt0133093");
+  }
+});
+
 test("a bare TMDB id that matches both kinds is rejected as ambiguous", async () => {
   const out = await handleWatchRequest(
     mappedDeps((url) => (url.includes("P4983") ? "tt0903747" : "tt0072443")),

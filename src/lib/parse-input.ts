@@ -11,10 +11,10 @@ export function isImdbId(value: string): boolean {
   return value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
 }
 
-// One input box: IMDb IDs and links pass through; TMDB IDs and links carry
-// enough information to look up the matching IMDb ID before the normal flow.
-// A bare number is ambiguous, so both TMDB properties are tried later.
-export function parseTitleInput(input: string): TitleInput | null {
+// One input box plus a Movie/TV selector: IMDb IDs and links pass through;
+// TMDB URLs carry their own type; a bare TMDB number takes the selected
+// type, so it is never ambiguous.
+export function parseTitleInput(input: string, hint?: "movie" | "tv"): TitleInput | null {
   const value = input.trim().toLowerCase();
 
   const movieUrl = value.match(TMDB_MOVIE);
@@ -33,7 +33,7 @@ export function parseTitleInput(input: string): TitleInput | null {
   }
 
   if (BARE_TMDB.test(value)) {
-    return { kind: "tmdb", id: value };
+    return hint ? { kind: "tmdb", type: hint, id: value } : { kind: "tmdb", id: value };
   }
 
   return null;

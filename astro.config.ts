@@ -15,6 +15,9 @@ export default defineConfig({
   integrations: [react(), sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
+  // No markdown code is rendered anywhere, so highlighting stays off: the
+  // default Shiki highlighter uses inline styles, which CSP forbids.
+  markdown: { syntaxHighlight: false },
   vite: {
     plugins: [
       tailwindcss(),
@@ -23,10 +26,12 @@ export default defineConfig({
     ],
   },
   // CSP hashes let the inline Astro and island scripts run without
-  // 'unsafe-inline'. The island also writes style attributes, so those
-  // alone keep 'unsafe-inline'. React Aria injects one style element at
-  // runtime, which no build-time hash can cover, so its hash is pinned. The
-  // e2e console guard fails when a library update changes that text.
+  // 'unsafe-inline'. Stylesheets stay on style-src-elem ('self' scoped
+  // there, not default, so it no longer mixes with the attribute rule);
+  // the island writes style attributes, so those alone keep 'unsafe-inline'.
+  // React Aria injects one style element at runtime, which no build-time
+  // hash can cover, so its hash is pinned. The e2e console guard fails
+  // when a library update changes that text.
   security: {
     csp: {
       directives: [

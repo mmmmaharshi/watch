@@ -1,33 +1,37 @@
 import { Button, Input, Label, Spinner, TextField } from "@heroui/react";
 import type { RefObject } from "react";
 import type { TitleCandidate } from "../../lib/search";
+import type { ContentType } from "../../lib/types";
 import type { Status } from "./use-watch";
 
 interface SearchPanelProps {
   value: string;
+  kind: ContentType;
   inputRef: RefObject<HTMLInputElement | null>;
   status: Status;
   invalid: boolean;
   busy: boolean;
   candidates: Array<TitleCandidate>;
   onChange: (value: string) => void;
+  onKindChange: (kind: ContentType) => void;
   onSubmit: (value: string) => void;
   onPick: (candidate: TitleCandidate) => void;
 }
 
-function candidateMeta(candidate: TitleCandidate): string {
-  const kind = candidate.kind === "tv" ? "TV show" : "Film";
-  return [kind, candidate.year].filter(Boolean).join(" · ");
+function candidateMeta(candidate: TitleCandidate): string | undefined {
+  return candidate.year;
 }
 
 export function SearchPanel({
   value,
+  kind,
   inputRef,
   status,
   invalid,
   busy,
   candidates,
   onChange,
+  onKindChange,
   onSubmit,
   onPick,
 }: SearchPanelProps) {
@@ -56,7 +60,7 @@ export function SearchPanel({
             <Input
               ref={inputRef}
               className="min-h-12 rounded-lg border border-black/15"
-              placeholder="IMDb or TMDB ID, link, or title"
+              placeholder="Title, IMDb or TMDB ID, or link"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
@@ -66,6 +70,19 @@ export function SearchPanel({
               aria-describedby={invalid ? "status search-hint" : "search-hint"}
             />
           </TextField>
+          <label className="sr-only" htmlFor="media-type">
+            Movie or TV show
+          </label>
+          <select
+            id="media-type"
+            value={kind}
+            onChange={(event) => onKindChange(event.target.value === "tv" ? "tv" : "movie")}
+            disabled={busy}
+            className="min-h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+          >
+            <option value="movie">Movie</option>
+            <option value="tv">TV</option>
+          </select>
           <Button
             type="submit"
             isDisabled={busy}
@@ -119,7 +136,9 @@ export function SearchPanel({
                 )}
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-sm font-medium">{candidate.name}</span>
-                  <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                  {candidateMeta(candidate) && (
+                    <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                  )}
                   <span className="font-mono text-xs text-black/44">{candidate.imdbId}</span>
                 </span>
               </button>
