@@ -24,7 +24,9 @@ export default defineConfig({
   },
   // CSP hashes let the inline Astro and island scripts run without
   // 'unsafe-inline'. The island also writes style attributes, so those
-  // alone keep 'unsafe-inline'.
+  // alone keep 'unsafe-inline'. React Aria injects one style element at
+  // runtime, which no build-time hash can cover, so its hash is pinned. The
+  // e2e console guard fails when a library update changes that text.
   security: {
     csp: {
       directives: [
@@ -36,7 +38,16 @@ export default defineConfig({
         "base-uri 'self'",
       ],
       styleDirective: {
-        resources: ["'self'", { resource: "'unsafe-inline'", kind: "attribute" }],
+        resources: [
+          { resource: "'self'", kind: "element" },
+          { resource: "'unsafe-inline'", kind: "attribute" },
+        ],
+        hashes: [
+          {
+            hash: "sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o=",
+            kind: "element",
+          },
+        ],
       },
     },
   },

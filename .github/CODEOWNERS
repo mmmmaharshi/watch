@@ -1,0 +1,5 @@
+# The criteria and the tests that guard them are the contract. A change here
+# needs a review from someone other than the author, so a failing run cannot be
+# silenced by editing the test.
+/docs/agents/acceptance.md @mmmmaharshi
+/e2e/ @mmmmaharshi

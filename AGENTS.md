@@ -23,3 +23,9 @@ Five canonical roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-fo
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agents/domain.md`.
+
+### Verification
+
+Never grade your own change. The criteria live in `docs/agents/acceptance.md`.
+The verifier runs `$verify`, with fresh context and another provider. See
+`docs/agents/qa.md`.
