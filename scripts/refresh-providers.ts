@@ -1,7 +1,7 @@
 import {
   buildEmbedUrl,
   DIRECTORY_URL,
-  originIfAllowed,
+  originIfHttps,
   parseActiveDomains,
   VIDFAST,
   VIDLINK,
@@ -59,27 +59,30 @@ export function isVidZeeAlive(status: number, body: string): boolean {
   return status === 200 && /tmdb|vidzee/i.test(body);
 }
 
-// One entry per origin. VidFast is always last: it is the hardcoded
-// fallback the app uses when every VidSrc domain fails.
+// VidFast is the static last resort, but even it gets probed: a blocked
+// host is left out of the file. The app keeps its own static VIDFAST tier
+// at selection time, so dropping it here only removes a known-dead entry.
+export function isVidFastAlive(status: number): boolean {
+  return status === 200;
+}
+
+// One entry per origin. Static fallbacks go last; pass an empty list to
+// leave a probed-dead fallback out of the file.
 export function buildProvidersJson(
   baseUrls: Array<string>,
   updatedAt: string = new Date().toISOString(),
+  fallbacks: Array<string> = [VIDFAST.baseUrl],
 ): ProvidersFile {
   const seen = new Set<string>();
   const providers: Array<ProviderEntry> = [];
-  for (const baseUrl of [...baseUrls, VIDFAST.baseUrl]) {
-    let url: URL;
-    try {
-      url = new URL(baseUrl);
-    } catch {
-      // Skip the bad entry; the rest of the file still applies.
+  for (const baseUrl of [...baseUrls, ...fallbacks]) {
+    // Skip the bad entry; the rest of the file still applies.
+    const origin = originIfHttps(baseUrl);
+    if (!origin || seen.has(origin)) {
       continue;
     }
-    if (seen.has(url.origin)) {
-      continue;
-    }
-    seen.add(url.origin);
-    providers.push({ name: url.host, baseUrl: url.origin });
+    seen.add(origin);
+    providers.push({ name: new URL(origin).host, baseUrl: origin });
   }
   return { updatedAt, providers };
 }
@@ -98,16 +101,51 @@ async function isVidSrcAlive(origin: string): Promise<boolean> {
   return hasSignedSrc(api.body);
 }
 
+// Twice the Tue+Sat schedule, plus margin. Older than this with no live
+// directory, the run fails red so someone looks before users notice rot.
+export const ROT_ALARM_MS = 7 * 24 * 60 * 60 * 1000;
+
+// True when the on-disk file cannot cover a directory outage: missing or
+// older than the alarm window.
+export function needsRotAlarm(ageMs: number | null): boolean {
+  return ageMs === null || ageMs > ROT_ALARM_MS;
+}
+
+// Age of the on-disk refresh file in ms. Null when missing or unparseable.
+export async function readFileAgeMs(now: number = Date.now()): Promise<number | null> {
+  try {
+    const file: unknown = await Bun.file(
+      new URL("../public/providers.json", import.meta.url),
+    ).json();
+    if (typeof file !== "object" || file === null || Array.isArray(file)) {
+      return null;
+    }
+    const raw = (file as { updatedAt?: unknown }).updatedAt;
+    if (typeof raw !== "string") {
+      return null;
+    }
+    const t = Date.parse(raw);
+    return Number.isNaN(t) ? null : now - t;
+  } catch {
+    return null;
+  }
+}
+
 async function refresh(): Promise<void> {
   let directory: string;
   try {
     directory = (await getText(DIRECTORY_URL)).body;
   } catch {
-    // Directory unreachable. Keep the last good file; do not blank it.
+    const age = await readFileAgeMs();
+    if (needsRotAlarm(age)) {
+      process.stderr.write("Directory fetch failed and no fresh file; failing the run.\n");
+      process.exit(1);
+    }
+    // Directory unreachable but the file is fresh enough. Keep it; do not blank it.
     process.stdout.write("Directory fetch failed; keeping the current providers.json.\n");
     return;
   }
-  const candidates = parseActiveDomains(directory).filter((url) => originIfAllowed(url) !== null);
+  const candidates = parseActiveDomains(directory).filter((url) => originIfHttps(url) !== null);
 
   const alive: Array<string> = [];
   for (const origin of candidates) {
@@ -147,7 +185,27 @@ async function refresh(): Promise<void> {
     process.stdout.write("VidZee probe failed; left out.\n");
   }
 
-  const out = buildProvidersJson(alive);
+  let vidFastDead = false;
+  try {
+    const checked = await getText(buildEmbedUrl(VIDFAST, "movie", PROBE_ID));
+    if (isVidFastAlive(checked.status)) {
+      process.stdout.write("VidFast answers the probe title.\n");
+    } else {
+      process.stdout.write("VidFast is not usable; left out.\n");
+      vidFastDead = true;
+    }
+  } catch {
+    process.stdout.write("VidFast probe failed; left out.\n");
+    vidFastDead = true;
+  }
+
+  const out = buildProvidersJson(alive, undefined, vidFastDead ? [] : [VIDFAST.baseUrl]);
+  if (!out.providers.length) {
+    // Nothing usable anywhere. Fail red instead of shipping an empty file;
+    // the app would fall back to per-request directory probing regardless.
+    process.stderr.write("No provider passed its probe; failing the run.\n");
+    process.exit(1);
+  }
   await Bun.write(
     new URL("../public/providers.json", import.meta.url),
     `${JSON.stringify(out, null, 2)}\n`,

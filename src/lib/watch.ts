@@ -147,45 +147,22 @@ export const VIDFAST: Provider = {
   path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
 };
 
-// Single registry for the static hosts. Add a host here and the allowlist
-// follows; the live VidSrc domains stay dynamic (directory + refresh file).
-const VIDSRC_HOSTS = ["vidsrc.sh", "vidsrc2.ru", "vidsrc.ir"];
-const STATIC_HOSTS = [VIDLINK, VIDZEE, VIDFAST].map((p) => new URL(p.baseUrl).host);
-
-// v1 hosts (spec #25, ticket #28): live VidSrc domains plus the static
-// fallbacks. Dead hosts (videasy, vixcloud) stay out.
-const ALLOWED_EXACT = new Set([...VIDSRC_HOSTS, ...STATIC_HOSTS]);
-
-const ALLOWED_SUFFIX = [...ALLOWED_EXACT].map((host) => `.${host}`);
-
-export function isAllowedProviderHost(host: string): boolean {
-  const lower = host.toLowerCase();
-  if (ALLOWED_EXACT.has(lower)) {
-    return true;
-  }
-  return ALLOWED_SUFFIX.some((suffix) => lower.endsWith(suffix));
-}
-
-// Parse once. Null when the URL is bad.
-export function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
-// The origin when the URL parses and its host passes the allowlist, else
-// null. Single parse, so every filter shares this instead of its own
-// try/catch around new URL.
-export function originIfAllowed(url: string): string | null {
+// No name-based allowlist: a pattern (vidsrc*) trusts blindly, and an
+// exact list blocks legit new mirrors. Trust comes from provenance instead:
+// entries are accepted only from our cron-written file or the curator's
+// active directory section (both TLS), and every candidate still faces a
+// live probe per request before the user is sent anywhere. A bad entry can
+// cost one failed probe, never a redirect.
+// Parse once, https only. Null when the URL is bad or not https.
+export function originIfHttps(url: string): string | null {
   try {
     const parsed = new URL(url);
-    return isAllowedProviderHost(parsed.host) ? parsed.origin : null;
+    return parsed.protocol === "https:" ? parsed.origin : null;
   } catch {
     return null;
   }
 }
+
 export function parseActiveDomains(html: string): Array<string> {
   const start = html.indexOf('id="domains"');
   if (start === -1) {
@@ -194,12 +171,8 @@ export function parseActiveDomains(html: string): Array<string> {
   const end = html.indexOf('id="old"', start);
   const section = html.slice(start, end === -1 ? undefined : end);
   const urls = [...section.matchAll(/data-val="([^"]+)"/g)].flatMap((m) => {
-    try {
-      const origin = new URL(m[1]).origin;
-      return /^https?:\/\//.test(origin) ? [origin] : [];
-    } catch {
-      return [];
-    }
+    const origin = originIfHttps(m[1]);
+    return origin ? [origin] : [];
   });
   return [...new Set(urls)];
 }
@@ -212,8 +185,11 @@ export function buildEmbedUrl(provider: Provider, type: ContentType, id: string)
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
 
-// The refresh file is untrusted input: entries pass the same allowlist as
-// the directory, so a bad write cannot smuggle in an evil host.
+// The refresh file is first-party content (our cron commit, same TLS host
+// as the app), so entries are taken as listed: https-parse only, no name
+// gate. A bad entry costs one failed live probe; the per-request probe in
+// selectStream is the safety net, and the cron rewrite bounds persistence
+// to days. Malformed or non-https entries are dropped.
 function parseRefreshFile(value: LooseJson): { domains: Array<string>; updatedAt: number } | null {
   const providers = value.providers;
   if (!Array.isArray(providers)) {
@@ -228,7 +204,7 @@ function parseRefreshFile(value: LooseJson): { domains: Array<string>; updatedAt
     if (typeof baseUrl !== "string") {
       continue;
     }
-    const origin = originIfAllowed(baseUrl);
+    const origin = originIfHttps(baseUrl);
     if (origin) {
       domains.push(origin);
     }
@@ -248,7 +224,7 @@ async function fetchDirectoryDomains(http: HttpClient): Promise<Array<string>> {
     if (!res.ok) {
       return [];
     }
-    return parseActiveDomains(await res.text()).filter((d) => originIfAllowed(d) !== null);
+    return parseActiveDomains(await res.text());
   } catch {
     // Directory unreachable — no VidSrc domains this round; VidFast still applies.
     return [];

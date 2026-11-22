@@ -212,6 +212,13 @@
       "sourceType": "github",
       "skillPath": "skills/write-swift/SKILL.md",
       "computedHash": "8e4baab8638930f60e44545f9cc2ec61b0ee18b1b9b18aafe29ebc0bdd6972b8"
+    },
+    "zero-tech-debt": {
+      "source": "jeremylongshore/tons-of-skills-marketplace",
+      "commit": "35fc92784294db38f86af963d760a3c49c542ed7",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/zero-tech-debt/SKILL.md",
+      "computedHash": "d7c1563324e62d5bbb6ee86548b41bd930711ed470dfa404078d30e5cdca1882"
     }
   }
 }

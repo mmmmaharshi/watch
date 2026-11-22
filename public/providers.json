@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-21T16:19:19.597Z",
+  "updatedAt": "2026-11-22T11:12:02.798Z",
   "providers": [
     {
       "name": "vidsrc.sh",
@@ -12,6 +12,14 @@
     {
       "name": "vidsrc.ir",
       "baseUrl": "https://vidsrc.ir"
+    },
+    {
+      "name": "vidlink.pro",
+      "baseUrl": "https://vidlink.pro"
+    },
+    {
+      "name": "player.vidzee.wtf",
+      "baseUrl": "https://player.vidzee.wtf"
     },
     {
       "name": "vidfast.vc",

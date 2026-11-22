@@ -3,9 +3,12 @@ import {
   buildProvidersJson,
   hasPlayerApi,
   hasSignedSrc,
+  isVidFastAlive,
   isVidLinkAlive,
   isVidLinkPairAlive,
   isVidZeeAlive,
+  needsRotAlarm,
+  ROT_ALARM_MS,
 } from "./refresh-providers";
 
 // Each test pins one probe signal from research/probe-26.md. A plain HTTP
@@ -58,5 +61,29 @@ test("output keeps one entry per origin, skips bad entries, ends with vidfast", 
   expect(buildProvidersJson(["https://vidsrc.sh", "not a url"], at)).toEqual({
     updatedAt: at,
     providers: [vidsrc, vidfast],
+  });
+  expect(buildProvidersJson(["https://vidsrc.sh"], at, [])).toEqual({
+    updatedAt: at,
+    providers: [vidsrc],
+  });
+});
+
+test("VidFast counts as alive on 200, dead otherwise", () => {
+  expect(isVidFastAlive(200)).toBe(true);
+  expect(isVidFastAlive(403)).toBe(false);
+  expect(isVidFastAlive(500)).toBe(false);
+});
+
+test("rot alarm fires when the file is missing or older than the window", () => {
+  expect(needsRotAlarm(null)).toBe(true);
+  expect(needsRotAlarm(60 * 60 * 1000)).toBe(false);
+  expect(needsRotAlarm(ROT_ALARM_MS)).toBe(false);
+  expect(needsRotAlarm(ROT_ALARM_MS + 1)).toBe(true);
+});
+
+test("empty probe results build an empty list (refresh refuses to write it)", () => {
+  expect(buildProvidersJson([], "2026-11-22T00:00:00Z", [])).toEqual({
+    updatedAt: "2026-11-22T00:00:00Z",
+    providers: [],
   });
 });
