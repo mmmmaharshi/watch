@@ -10,5 +10,5 @@
     "jsxImportSource": "react",
     "skipLibCheck": true
   },
-  "include": ["src", "astro.config.ts"]
+  "include": ["src", "scripts", "e2e", "astro.config.ts", "playwright.config.ts"]
 }

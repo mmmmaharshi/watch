@@ -1,6 +1,7 @@
 import { TMDB_NOT_FOUND } from "./messages";
 import { parseTitleInput } from "./parse-input";
 import { resolveImdbId } from "./tmdb";
+import { SITE_URL } from "../consts";
 import type { ContentType, WatchOutcome } from "./types";
 
 export type { ContentType, WatchResult } from "./types";
@@ -101,7 +102,19 @@ export class Cache<T> {
 
 // VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
 // still answer 200 and get picked ahead of the live one.
-const DIRECTORY_URL = "https://vidsrc.domains/";
+// Fallback only. The refresh file (PROVIDERS_FILE_URL) is the source of
+// truth for the active list; the directory answers only when the file is
+// stale or missing.
+export const DIRECTORY_URL = "https://vidsrc.domains/";
+
+// Refresh file written twice weekly by scripts/refresh-providers.ts (#27).
+// Absolute so the serverless fetch has a host; preview and dev read the
+// same prod file.
+export const PROVIDERS_FILE_URL = `${SITE_URL}/providers.json`;
+// A fresh file answers from cache. Older than this, the file still serves
+// when the directory is down, but a live directory wins.
+export const PROVIDERS_TTL_MS = 60 * 60 * 1000;
+export const PROVIDERS_STALE_MS = 48 * 60 * 60 * 1000;
 
 export interface Provider {
   name: string;
@@ -113,16 +126,65 @@ export interface Provider {
 // Active domains sit in the #domains section, each row carrying its URL in a
 // data-val copy button.
 
-// Directory entries are untrusted: only hosts that look like VidSrc (plus the
-// hardcoded VidFast host) pass. Anything else falls through to the fallbacks.
-const ALLOWED_HOST = /^(?:[a-z0-9-]+\.)*vidsrc\d*\.[a-z.]{2,}$/i;
+// Static fallbacks, tried after every directory domain fails. VidFast goes
+// last. TV needs season/episode, default to 1/1. VidZee keeps the default
+// /embed/{type}/{id} path: probe-26 fetched /embed/movie/tt0133093 and got
+// the Vidzee Movie Player shell, so the default shape is verified.
+export const VIDLINK: Provider = {
+  name: "vidlink.pro",
+  baseUrl: "https://vidlink.pro",
+  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+};
+
+export const VIDZEE: Provider = {
+  name: "player.vidzee.wtf",
+  baseUrl: "https://player.vidzee.wtf",
+};
+
+export const VIDFAST: Provider = {
+  name: "vidfast.vc",
+  baseUrl: "https://vidfast.vc",
+  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+};
+
+// Single registry for the static hosts. Add a host here and the allowlist
+// follows; the live VidSrc domains stay dynamic (directory + refresh file).
+const VIDSRC_HOSTS = ["vidsrc.sh", "vidsrc2.ru", "vidsrc.ir"];
+const STATIC_HOSTS = [VIDLINK, VIDZEE, VIDFAST].map((p) => new URL(p.baseUrl).host);
+
+// v1 hosts (spec #25, ticket #28): live VidSrc domains plus the static
+// fallbacks. Dead hosts (videasy, vixcloud) stay out.
+const ALLOWED_EXACT = new Set([...VIDSRC_HOSTS, ...STATIC_HOSTS]);
+
+const ALLOWED_SUFFIX = [...ALLOWED_EXACT].map((host) => `.${host}`);
 
 export function isAllowedProviderHost(host: string): boolean {
   const lower = host.toLowerCase();
-  if (lower === "vidfast.vc") {
+  if (ALLOWED_EXACT.has(lower)) {
     return true;
   }
-  return ALLOWED_HOST.test(lower);
+  return ALLOWED_SUFFIX.some((suffix) => lower.endsWith(suffix));
+}
+
+// Parse once. Null when the URL is bad.
+export function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+// The origin when the URL parses and its host passes the allowlist, else
+// null. Single parse, so every filter shares this instead of its own
+// try/catch around new URL.
+export function originIfAllowed(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return isAllowedProviderHost(parsed.host) ? parsed.origin : null;
+  } catch {
+    return null;
+  }
 }
 export function parseActiveDomains(html: string): Array<string> {
   const start = html.indexOf('id="domains"');
@@ -146,8 +208,51 @@ function toProviders(baseUrls: Array<string>): Array<Provider> {
   return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
 
-function buildEmbedUrl(provider: Provider, type: ContentType, id: string): string {
+export function buildEmbedUrl(provider: Provider, type: ContentType, id: string): string {
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
+}
+
+// The refresh file is untrusted input: entries pass the same allowlist as
+// the directory, so a bad write cannot smuggle in an evil host.
+function parseRefreshFile(value: LooseJson): { domains: Array<string>; updatedAt: number } | null {
+  const providers = value.providers;
+  if (!Array.isArray(providers)) {
+    return null;
+  }
+  const domains: Array<string> = [];
+  for (const entry of providers) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      continue;
+    }
+    const baseUrl = (entry as { baseUrl?: unknown }).baseUrl;
+    if (typeof baseUrl !== "string") {
+      continue;
+    }
+    const origin = originIfAllowed(baseUrl);
+    if (origin) {
+      domains.push(origin);
+    }
+  }
+  if (!domains.length) {
+    return null;
+  }
+  // An unparseable updatedAt means stale, not missing: the file still serves
+  // when the directory is down.
+  const updatedAt = typeof value.updatedAt === "string" ? Date.parse(value.updatedAt) : Number.NaN;
+  return { domains: [...new Set(domains)], updatedAt };
+}
+
+async function fetchDirectoryDomains(http: HttpClient): Promise<Array<string>> {
+  try {
+    const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) {
+      return [];
+    }
+    return parseActiveDomains(await res.text()).filter((d) => originIfAllowed(d) !== null);
+  } catch {
+    // Directory unreachable — no VidSrc domains this round; VidFast still applies.
+    return [];
+  }
 }
 
 async function loadProviders(
@@ -159,30 +264,35 @@ async function loadProviders(
     return toProviders(cached);
   }
 
-  let domains: Array<string> = [];
+  let file: { domains: Array<string>; updatedAt: number } | null = null;
   try {
-    const res = await http.get(DIRECTORY_URL, { signal: AbortSignal.timeout(5000) });
+    const res = await http.get(PROVIDERS_FILE_URL, { signal: AbortSignal.timeout(5000) });
     if (res.ok) {
-      domains = parseActiveDomains(await res.text()).filter((d) => {
-        try {
-          return isAllowedProviderHost(new URL(d).host);
-        } catch {
-          return false;
-        }
-      });
+      file = parseRefreshFile(await res.json());
     }
   } catch {
-    // Directory unreachable — no VidSrc domains this round; VidFast still applies.
+    // Missing or unreadable file — fall through to the directory.
   }
-  return toProviders(domains);
-}
+  const fresh =
+    file !== null &&
+    !Number.isNaN(file.updatedAt) &&
+    Date.now() - file.updatedAt <= PROVIDERS_STALE_MS;
+  if (file !== null && fresh) {
+    cache.set("domains", file.domains, PROVIDERS_TTL_MS);
+    return toProviders(file.domains);
+  }
 
-// Tried only after every VidSrc domain fails. TV needs season/episode, default to 1/1.
-const VIDFAST: Provider = {
-  name: "vidfast.vc",
-  baseUrl: "https://vidfast.vc",
-  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
-};
+  const domains = await fetchDirectoryDomains(http);
+  if (domains.length) {
+    cache.set("domains", domains, PROVIDERS_TTL_MS);
+    return toProviders(domains);
+  }
+  // Stale file still beats nothing.
+  if (file !== null) {
+    return toProviders(file.domains);
+  }
+  return toProviders([]);
+}
 
 export interface TitleMeta {
   type: ContentType;
@@ -359,10 +469,10 @@ export async function selectStream(args: {
   const { http, type, id, exclude, providerCache, domainCache } = args;
   const cacheKey = `${type}:${id}`;
   const providers = await loadProviders(http, domainCache);
-  const tiers: Array<Array<Provider>> = [providers, [VIDFAST]];
+  const tiers: Array<Array<Provider>> = [providers, [VIDLINK, VIDZEE], [VIDFAST]];
   const cachedName = providerCache.get(cacheKey);
   const cached = cachedName
-    ? [...providers, VIDFAST].find((p) => p.name === cachedName)
+    ? [...providers, VIDLINK, VIDZEE, VIDFAST].find((p) => p.name === cachedName)
     : undefined;
   if (cached) {
     tiers.unshift([cached]);
@@ -518,7 +628,7 @@ export const watchDeps: WatchDeps = {
   http: defaultHttpClient,
   typeCache: new Cache<TypeResult>(60 * 60 * 1000),
   providerCache: new Cache<string>(5 * 60 * 1000),
-  domainCache: new Cache<Array<string>>(24 * 60 * 60 * 1000),
+  domainCache: new Cache<Array<string>>(PROVIDERS_TTL_MS),
 };
 
 export const isLimited = createRateLimiter(15 * 60 * 1000, 100);

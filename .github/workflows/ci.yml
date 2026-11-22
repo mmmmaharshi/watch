@@ -14,6 +14,23 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun test
-      - run: bun run build
+      - run: bun run check
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run e2e
+
+  # Vercel deploys on its own, so wait for this commit's deployment and then
+  # load the live site. A green build alone hid a broken preset for weeks.
+  live:
+    needs: check
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun scripts/deploy-check.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

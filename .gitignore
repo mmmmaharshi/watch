@@ -26,6 +26,10 @@ Thumbs.db
 # logs
 *.log
 
+# e2e
+test-results/
+playwright-report/
+
 # env
 .env
 .env.local
