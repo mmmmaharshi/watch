@@ -171,6 +171,18 @@ test("an ID skips the title search and goes straight to the lookup", async () =>
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(search).not.toHaveBeenCalled();
+  expect(input).toHaveProperty("value", "tt0133093");
+});
+
+test("a pasted link stays in the field instead of becoming the ID", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(input, { target: { value: "https://www.imdb.com/title/tt0133093/" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(input).toHaveProperty("value", "https://www.imdb.com/title/tt0133093/");
 });
 
 test("a bare number falls back to a title search when no TMDB title matches", async () => {

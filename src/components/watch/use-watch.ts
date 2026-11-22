@@ -186,8 +186,7 @@ export function useWatch() {
     if (!data) {
       return;
     }
-    // The server answers with the canonical ID, whether an ID or a link went in.
-    setValue(data.id);
+    // What the person typed stays: a pasted link is not replaced by the ID.
     setStatus(
       candidates.length > 0
         ? { kind: "info", text: matchLabel(candidates.length) }
