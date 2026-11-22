@@ -5,10 +5,9 @@ import {
   createRateLimiter,
   fetchTVMaze,
   handleWatchRequest,
-  isAllowedProviderHost,
   isActionRequest,
   limitResponse,
-  originIfAllowed,
+  originIfHttps,
   parseActiveDomains,
   resolveTitle,
   selectStream,
@@ -235,14 +234,16 @@ test("skips the excluded provider and picks the next one", async () => {
   expect(second.ok && second.result.provider).toBe("vidsrc.ir");
 });
 
-test("originIfAllowed keeps listed origins and drops evil or bad urls", () => {
-  expect(originIfAllowed("https://vidsrc.sh/embed/movie/tt0133093")).toBe("https://vidsrc.sh");
-  expect(originIfAllowed("https://sub.vidlink.pro/movie/tt0133093")).toBe(
-    "https://sub.vidlink.pro",
+test("originIfHttps parses https origins only (trust comes from source, not name)", () => {
+  expect(originIfHttps("https://vidsrc.sh/embed/movie/tt0133093")).toBe("https://vidsrc.sh");
+  expect(originIfHttps("https://sub.vidlink.pro/movie/tt0133093")).toBe("https://sub.vidlink.pro");
+  expect(originIfHttps("https://vidsrc.xyz/")).toBe("https://vidsrc.xyz");
+  expect(originIfHttps("https://evil.example.com/embed/movie/tt0133093")).toBe(
+    "https://evil.example.com",
   );
-  expect(originIfAllowed("https://evil.example.com/embed/movie/tt0133093")).toBeNull();
-  expect(originIfAllowed("https://vidsrc.sh.evil.com/")).toBeNull();
-  expect(originIfAllowed("not a url")).toBeNull();
+  expect(originIfHttps("http://vidsrc.sh/")).toBeNull();
+  expect(originIfHttps("https://vidsrc.sh.evil.com/")).toBe("https://vidsrc.sh.evil.com");
+  expect(originIfHttps("not a url")).toBeNull();
 });
 
 test("reads active domains from the directory and ignores old ones", () => {
@@ -250,28 +251,8 @@ test("reads active domains from the directory and ignores old ones", () => {
   expect(parseActiveDomains("")).toEqual([]);
 });
 
-test("allows only the v1 hosts and their subdomains", () => {
-  expect(isAllowedProviderHost("vidsrc.sh")).toBe(true);
-  expect(isAllowedProviderHost("vidsrc2.ru")).toBe(true);
-  expect(isAllowedProviderHost("vidsrc.ir")).toBe(true);
-  expect(isAllowedProviderHost("vidlink.pro")).toBe(true);
-  expect(isAllowedProviderHost("player.vidzee.wtf")).toBe(true);
-  expect(isAllowedProviderHost("VIDFAST.VC")).toBe(true);
-  expect(isAllowedProviderHost("sub.vidlink.pro")).toBe(true);
-  expect(isAllowedProviderHost("evil.com")).toBe(false);
-  expect(isAllowedProviderHost("vidsrc-evil.com")).toBe(false);
-  expect(isAllowedProviderHost("evilvidsrc.com")).toBe(false);
-  expect(isAllowedProviderHost("vidsrc.evil.com")).toBe(false);
-  expect(isAllowedProviderHost("vidsrc.sh.evil.com")).toBe(false);
-  expect(isAllowedProviderHost("evil-vidlink.pro.com")).toBe(false);
-  expect(isAllowedProviderHost("vidlink.pro.evil.com")).toBe(false);
-  expect(isAllowedProviderHost("player.videasy.net")).toBe(false);
-  expect(isAllowedProviderHost("vixcloud.cc")).toBe(false);
-  expect(isAllowedProviderHost("v\u0456dsrc.to")).toBe(false);
-});
-
-test("drops unlisted directory hosts and uses VidFast", async () => {
-  let sawEvil = false;
+test("directory hosts are probed and probe failures fall back to VidFast", async () => {
+  let evilProbes = 0;
   const http: HttpClient = {
     get: async (url) => {
       if (url === DIRECTORY) {
@@ -284,7 +265,7 @@ test("drops unlisted directory hosts and uses VidFast", async () => {
         return reply(true);
       }
       if (url.includes("evil")) {
-        sawEvil = true;
+        evilProbes++;
       }
       return reply(false);
     },
@@ -299,7 +280,9 @@ test("drops unlisted directory hosts and uses VidFast", async () => {
     { id: "tt0133093" },
   );
   expect(out.ok && out.result.provider).toBe("vidfast.vc");
-  expect(sawEvil).toBe(false);
+  // The evil host is touched by one safe GET probe, then dropped. It is
+  // never the returned provider.
+  expect(evilProbes).toBeGreaterThan(0);
 });
 
 test("prefers the refresh file and skips the directory fetch", async () => {
@@ -468,8 +451,8 @@ test("still uses a stale refresh file when the directory is down", async () => {
   expect(out.ok && out.result.provider).toBe("vidsrc2.ru");
 });
 
-test("filters unlisted hosts out of the refresh file", async () => {
-  let sawEvil = false;
+test("refresh file hosts are probed and failures are skipped", async () => {
+  let evilProbes = 0;
   const http: HttpClient = {
     get: async (url) => {
       if (url === FILE_URL) {
@@ -482,7 +465,7 @@ test("filters unlisted hosts out of the refresh file", async () => {
         return reply(url.includes("/meta/movie/"), MATRIX);
       }
       if (url.includes("evil")) {
-        sawEvil = true;
+        evilProbes++;
       }
       return reply(url.includes("vidsrc.sh"));
     },
@@ -497,7 +480,9 @@ test("filters unlisted hosts out of the refresh file", async () => {
     { id: "tt0133093" },
   );
   expect(out.ok && out.result.provider).toBe("vidsrc.sh");
-  expect(sawEvil).toBe(false);
+  // The file is first-party content, so its entries are probed like any
+  // other candidate; the failing evil entry is skipped, never returned.
+  expect(evilProbes).toBeGreaterThan(0);
 });
 
 test("uses only VidFast when the directory is unreachable", async () => {
