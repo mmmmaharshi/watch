@@ -182,3 +182,23 @@ test.describe("A9 on a phone", () => {
     await expect(field(page)).not.toBeFocused();
   });
 });
+
+test("A10 a paste before hydration survives it", async ({ page }) => {
+  // Hold the island JS back so the link lands in the SSR field first, like a
+  // fast paste on a slow phone. Hydration must adopt the typed text, not wipe
+  // it, and submit must use it.
+  await page.route("**/*.js", async (route) => {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 1500);
+    });
+    await route.continue();
+  });
+
+  await page.goto("/");
+  await field(page).fill(`https://www.imdb.com/title/${MATRIX}/`);
+  await expect(page.locator("astro-island")).not.toHaveAttribute("ssr", { timeout: 30_000 });
+  await expect(field(page)).toHaveValue(`https://www.imdb.com/title/${MATRIX}/`);
+
+  await page.getByRole("button", { name: "Watch now" }).click();
+  await expect(page.locator("#status")).toHaveText("Finding a working stream...");
+});

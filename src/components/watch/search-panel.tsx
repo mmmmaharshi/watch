@@ -45,7 +45,9 @@ export function SearchPanel({
           className="mt-8 flex flex-col gap-3 sm:flex-row"
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit(value);
+            // The closed-over value can lag a fast keystroke; the field is
+            // the source of truth at submit time.
+            onSubmit(inputRef.current?.value ?? value);
           }}
         >
           <TextField

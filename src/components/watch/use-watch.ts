@@ -277,8 +277,13 @@ export function useWatch() {
       // eslint-disable-next-line react/set-state-in-effect
       setValue(shared);
       void lookupAndOpen(shared, kind);
-    } else if (canAutoFocus()) {
-      inputRef.current?.focus();
+    } else {
+      // A fast paste can land in the SSR field before hydration; the
+      // controlled input would reset to "". Adopt what is already typed.
+      setValue(inputRef.current?.value ?? "");
+      if (canAutoFocus()) {
+        inputRef.current?.focus();
+      }
     }
     // Help links change only the hash, which does not reload the page.
     // Same-document clicks go through the router (popstate, no hashchange);

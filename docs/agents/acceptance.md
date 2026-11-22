@@ -76,3 +76,10 @@ open in both cases.
 
 The field does not take focus on load. The keyboard stays closed until the
 person taps the field.
+
+## A10 — A paste before load finishes survives it
+
+1. Paste `https://www.imdb.com/title/tt0133093/` before the page finishes loading.
+2. Press **Watch now** after load.
+
+The field still holds the link. A lookup starts.
