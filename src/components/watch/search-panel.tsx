@@ -18,9 +18,8 @@ interface SearchPanelProps {
   onPick: (candidate: TitleCandidate) => void;
 }
 
-function candidateMeta(candidate: TitleCandidate): string {
-  const kind = candidate.kind === "tv" ? "TV show" : "Film";
-  return [kind, candidate.year].filter(Boolean).join(" · ");
+function candidateMeta(candidate: TitleCandidate): string | undefined {
+  return candidate.year;
 }
 
 export function SearchPanel({
@@ -61,7 +60,7 @@ export function SearchPanel({
             <Input
               ref={inputRef}
               className="min-h-12 rounded-lg border border-black/15"
-              placeholder="IMDb or TMDB ID, link, or title"
+              placeholder="Title, IMDb or TMDB ID, or link"
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="none"
@@ -79,7 +78,7 @@ export function SearchPanel({
             value={kind}
             onChange={(event) => onKindChange(event.target.value === "tv" ? "tv" : "movie")}
             disabled={busy}
-            className="min-h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium"
+            className="min-h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
           >
             <option value="movie">Movie</option>
             <option value="tv">TV</option>
@@ -119,7 +118,9 @@ export function SearchPanel({
                 onClick={() => onPick(candidate)}
               >
                 <span className="text-sm font-medium">{candidate.name}</span>
-                <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                {candidateMeta(candidate) && (
+                  <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                )}
               </button>
             </li>
           ))}

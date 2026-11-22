@@ -90,7 +90,7 @@ test("a title shows candidates and picking one opens the result", async () => {
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
 
-  const first = await screen.findByRole("button", { name: /The Matrix Film/ });
+  const first = await screen.findByRole("button", { name: /The Matrix 1999/ });
   fireEvent.click(first);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
@@ -110,14 +110,14 @@ test("keeps the candidates after opening and closing a result", async () => {
 
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
-  fireEvent.click(await screen.findByRole("button", { name: /The Matrix Film/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /The Matrix 1999/ }));
   await screen.findByRole("dialog", { name: "The Matrix" });
 
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
   expect(screen.getByRole("status").textContent).toBe("1 match. Choose one.");
-  expect(screen.getByRole("button", { name: /The Matrix Film/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /The Matrix 1999/ })).toBeTruthy();
   expect(input).toHaveProperty("value", "The Matrix");
 });
 
@@ -133,14 +133,14 @@ test("keeps the match count after watching", async () => {
 
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
-  fireEvent.click(await screen.findByRole("button", { name: /The Matrix Film/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /The Matrix 1999/ }));
   await screen.findByRole("dialog", { name: "The Matrix" });
 
   fireEvent.click(screen.getByRole("button", { name: "Watch" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
   expect(screen.getByRole("status").textContent).toBe("1 match. Choose one.");
-  expect(screen.getByRole("button", { name: /The Matrix Film/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /The Matrix 1999/ })).toBeTruthy();
 });
 
 test("a title with no matches shows an error", async () => {
