@@ -6,6 +6,7 @@ import { SEARCH_FAILED } from "../../lib/messages";
 import { parseTitleInput } from "../../lib/parse-input";
 import type { TitleCandidate } from "../../lib/search";
 import { shareUrl } from "../../lib/share";
+import type { ContentType } from "../../lib/types";
 import type { WatchResult } from "../../lib/types";
 import { parseSharedId } from "../../lib/watch-view";
 
@@ -44,8 +45,8 @@ function canAutoFocus(): boolean {
   return navigator.maxTouchPoints === 0;
 }
 
-async function fetchWatch(id: string, exclude?: string) {
-  const response = await actions.watch({ id, exclude });
+async function fetchWatch(id: string, kind: ContentType, exclude?: string) {
+  const response = await actions.watch({ id, kind, exclude });
   if (response.error) {
     throw new Error(response.error.message);
   }
@@ -55,8 +56,8 @@ async function fetchWatch(id: string, exclude?: string) {
   return response.data;
 }
 
-async function fetchSearch(query: string) {
-  const response = await actions.search({ query });
+async function fetchSearch(query: string, kind: ContentType) {
+  const response = await actions.search({ query, kind });
   if (response.error) {
     throw new Error(response.error.message);
   }
@@ -72,6 +73,7 @@ export function useWatch() {
   const loadingId = useRef<string | null>(null);
 
   const [value, setValue] = useState("");
+  const [kind, setKind] = useState<ContentType>("movie");
   const [phase, setPhase] = useState<Phase>("idle");
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [candidates, setCandidates] = useState<Array<TitleCandidate>>([]);
@@ -103,9 +105,9 @@ export function useWatch() {
   );
 
   const search = useCallback(
-    async (query: string) => {
+    async (query: string, searchKind: ContentType) => {
       const out = await run("searching", MESSAGES.searching, SEARCH_FAILED, () =>
-        fetchSearch(query),
+        fetchSearch(query, searchKind),
       );
       if (!out) {
         return;
@@ -125,12 +127,12 @@ export function useWatch() {
   );
 
   const lookupAndOpen = useCallback(
-    async (raw: string): Promise<WatchResult | null> => {
+    async (raw: string, lookupKind: ContentType): Promise<WatchResult | null> => {
       const input = raw.trim();
       loadingId.current = input;
       try {
         const out = await run("looking", MESSAGES.looking, MESSAGES.lookupFailed, () =>
-          fetchWatch(input),
+          fetchWatch(input, lookupKind),
         );
         if (!out) {
           return null;
@@ -138,7 +140,7 @@ export function useWatch() {
         if (!out.ok) {
           // A bare number may be a title ("1917") rather than a TMDB ID.
           if (/^[1-9]\d{0,7}$/.test(input) && out.reason === "tmdb_not_found") {
-            await search(input);
+            await search(input, lookupKind);
             return null;
           }
           setStatus({ kind: "error", text: out.error });
@@ -176,11 +178,11 @@ export function useWatch() {
         setStatus({ kind: "error", text: MESSAGES.badLink });
         return;
       }
-      await search(input);
+      await search(input, kind);
       return;
     }
 
-    const data = await lookupAndOpen(input);
+    const data = await lookupAndOpen(input, kind);
     if (!data) {
       return;
     }
@@ -194,7 +196,7 @@ export function useWatch() {
   }
 
   async function pick(candidate: TitleCandidate) {
-    const data = await lookupAndOpen(candidate.imdbId);
+    const data = await lookupAndOpen(candidate.imdbId, kind);
     if (!data) {
       return;
     }
@@ -210,8 +212,9 @@ export function useWatch() {
     if (!result || retrying) {
       return;
     }
+    const retryKind: ContentType = result.type;
     const out = await run("retrying", MESSAGES.retrying, MESSAGES.noProviders, () =>
-      fetchWatch(result.id, result.provider),
+      fetchWatch(result.id, retryKind, result.provider),
     );
     if (!out) {
       return;
@@ -262,13 +265,18 @@ export function useWatch() {
     }
   }
 
+  function changeKind(next: ContentType) {
+    setKind(next);
+    setCandidates([]);
+  }
+
   useEffect(() => {
     const shared = parseSharedId(location.search, location.hash);
     if (shared) {
       // The URL is the source of truth on mount; the lookup below corrects it.
       // eslint-disable-next-line react/set-state-in-effect
       setValue(shared);
-      void lookupAndOpen(shared);
+      void lookupAndOpen(shared, kind);
     } else if (canAutoFocus()) {
       inputRef.current?.focus();
     }
@@ -282,7 +290,7 @@ export function useWatch() {
       }
       setCandidates([]);
       setValue(id);
-      void lookupAndOpen(id);
+      void lookupAndOpen(id, kind);
     }
     window.addEventListener("hashchange", handleHash);
     window.addEventListener("popstate", handleHash);
@@ -290,7 +298,7 @@ export function useWatch() {
       window.removeEventListener("hashchange", handleHash);
       window.removeEventListener("popstate", handleHash);
     };
-  }, [lookupAndOpen]);
+  }, [lookupAndOpen, kind]);
 
   // The input is disabled while the lookup runs, so React Aria saves `body`
   // as the element to focus on close. On desktop, send focus back to the field.
@@ -302,7 +310,9 @@ export function useWatch() {
 
   return {
     value,
+    kind,
     change,
+    changeKind,
     inputRef,
     status,
     invalid: status.kind === "field",

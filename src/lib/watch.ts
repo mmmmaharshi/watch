@@ -527,14 +527,16 @@ export interface WatchDeps {
   domainCache: Cache<Array<string>>;
 }
 
-// One shape for every transport. Status mirrors the old API.
+// One shape for every transport. Status mirrors the old API. The kind hint
+// comes from the Movie/TV selector: a bare TMDB number takes it, so the
+// ambiguous dual lookup never runs for UI flows.
 export async function handleWatchRequest(
   deps: WatchDeps,
-  input: { id: string; exclude?: string },
+  input: { id: string; exclude?: string; kind?: ContentType },
 ): Promise<WatchOutcome> {
   const { http, typeCache, providerCache, domainCache } = deps;
 
-  const parsed = parseTitleInput(input.id);
+  const parsed = parseTitleInput(input.id, input.kind);
   if (!parsed) {
     return {
       ok: false,

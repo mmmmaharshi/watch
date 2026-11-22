@@ -1,16 +1,19 @@
 import { Button, Input, Label, Spinner, TextField } from "@heroui/react";
 import type { RefObject } from "react";
 import type { TitleCandidate } from "../../lib/search";
+import type { ContentType } from "../../lib/types";
 import type { Status } from "./use-watch";
 
 interface SearchPanelProps {
   value: string;
+  kind: ContentType;
   inputRef: RefObject<HTMLInputElement | null>;
   status: Status;
   invalid: boolean;
   busy: boolean;
   candidates: Array<TitleCandidate>;
   onChange: (value: string) => void;
+  onKindChange: (kind: ContentType) => void;
   onSubmit: (value: string) => void;
   onPick: (candidate: TitleCandidate) => void;
 }
@@ -22,12 +25,14 @@ function candidateMeta(candidate: TitleCandidate): string {
 
 export function SearchPanel({
   value,
+  kind,
   inputRef,
   status,
   invalid,
   busy,
   candidates,
   onChange,
+  onKindChange,
   onSubmit,
   onPick,
 }: SearchPanelProps) {
@@ -66,6 +71,19 @@ export function SearchPanel({
               aria-describedby={invalid ? "status" : undefined}
             />
           </TextField>
+          <label className="sr-only" htmlFor="media-type">
+            Movie or TV show
+          </label>
+          <select
+            id="media-type"
+            value={kind}
+            onChange={(event) => onKindChange(event.target.value === "tv" ? "tv" : "movie")}
+            disabled={busy}
+            className="min-h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium"
+          >
+            <option value="movie">Movie</option>
+            <option value="tv">TV</option>
+          </select>
           <Button
             type="submit"
             isDisabled={busy}

@@ -9,7 +9,10 @@ test("parses an IMDb id or link", () => {
   });
 });
 
-test("parses a bare TMDB id without guessing its type", () => {
+test("parses a bare TMDB id with the selected type, no guessing", () => {
+  expect(parseTitleInput("27205", "movie")).toEqual({ kind: "tmdb", type: "movie", id: "27205" });
+  expect(parseTitleInput("1396", "tv")).toEqual({ kind: "tmdb", type: "tv", id: "1396" });
+  // No hint keeps the old untyped shape for link-only callers.
   expect(parseTitleInput("27205")).toEqual({ kind: "tmdb", id: "27205" });
 });
 

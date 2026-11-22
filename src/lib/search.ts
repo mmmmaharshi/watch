@@ -101,54 +101,25 @@ function releaseYear(candidate: TitleCandidate): number {
   return candidate.year ? Number(candidate.year) : 0;
 }
 
-// 2 for the same title, 1 for a title that starts with the query, 0 otherwise.
-function relevance(name: string, wanted: string): number {
-  if (name === wanted) {
-    return 2;
-  }
-  const startsWithWord =
-    name.startsWith(`${wanted} `) || name.startsWith(`${wanted}:`) || name.startsWith(`${wanted}'`);
-  return startsWithWord ? 1 : 0;
-}
+// Newest release first; titles without a year go last, input order kept.
+export function sortResults(candidates: Array<TitleCandidate>): Array<TitleCandidate> {
+  const wanted = new Set<string>();
+  const deduped: Array<TitleCandidate> = [];
 
-// Alternate the two sources, then order by relevance tier and newest release.
-// A movie and a show can share a name ("The Office", "Dune"), so both stay
-// visible.
-export function mergeCandidates(
-  query: string,
-  movies: Array<TitleCandidate>,
-  shows: Array<TitleCandidate>,
-): Array<TitleCandidate> {
-  const wanted = normalize(query);
-  const seen = new Set<string>();
-  const merged: Array<TitleCandidate> = [];
-
-  for (let i = 0; i < Math.max(movies.length, shows.length); i++) {
-    for (const candidate of [movies[i], shows[i]]) {
-      if (!candidate) {
-        continue;
-      }
-      // A remake can share a name and year across regions; one row is enough.
-      const label = `${normalize(candidate.name)}|${candidate.year ?? ""}|${candidate.kind}`;
-      if (seen.has(candidate.imdbId) || seen.has(label)) {
-        continue;
-      }
-      seen.add(candidate.imdbId);
-      seen.add(label);
-      merged.push(candidate);
+  for (const candidate of candidates) {
+    // A remake can share a name and year across regions; one row is enough.
+    const label = `${normalize(candidate.name)}|${candidate.year ?? ""}|${candidate.kind}`;
+    if (wanted.has(candidate.imdbId) || wanted.has(label)) {
+      continue;
     }
+    wanted.add(candidate.imdbId);
+    wanted.add(label);
+    deduped.push(candidate);
   }
 
-  return merged
-    .map((candidate, index) => ({
-      candidate,
-      index,
-      tier: relevance(normalize(candidate.name), wanted),
-    }))
-    .sort(
-      (a, b) =>
-        b.tier - a.tier || releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index,
-    )
+  return deduped
+    .map((candidate, index) => ({ candidate, index }))
+    .sort((a, b) => releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index)
     .slice(0, MAX_CANDIDATES)
     .map((entry) => entry.candidate);
 }
@@ -184,10 +155,14 @@ function respond(deps: SearchDeps, key: string, candidates: Array<TitleCandidate
   return { ok: true, candidates };
 }
 
-export async function searchTitles(deps: SearchDeps, query: string): Promise<SearchOutcome> {
+export async function searchTitles(
+  deps: SearchDeps,
+  query: string,
+  kind: "movie" | "tv" = "movie",
+): Promise<SearchOutcome> {
   const cleaned = query.trim();
-  const key = cleaned.toLowerCase();
-  if (!key) {
+  const key = `${kind}:${cleaned.toLowerCase()}`;
+  if (!cleaned) {
     return { ok: true, candidates: [] };
   }
 
@@ -196,40 +171,31 @@ export async function searchTitles(deps: SearchDeps, query: string): Promise<Sea
     return { ok: true, candidates: cached };
   }
 
-  const [movies, shows] = await Promise.all([
-    fetchWith(deps.http, cinemetaUrl("movie", cleaned), (value) => parseCinemeta(value, "movie")),
-    fetchWith(deps.http, cinemetaUrl("series", cleaned), (value) => parseCinemeta(value, "tv")),
-  ]);
-  const moviePool = movies?.slice(0, SOURCE_LIMIT) ?? [];
-  const showPool = shows?.slice(0, SOURCE_LIMIT) ?? [];
-  const baseMerged = mergeCandidates(cleaned, moviePool, showPool);
-
-  // Cinemeta is undocumented, so shows get a second source. Ask it when the
-  // series half failed or when no title came back at all.
-  const needsTvSource = shows === null || baseMerged.length === 0;
-  const tvmaze = needsTvSource
-    ? await fetchWith(deps.http, TVMAZE + encodeURIComponent(cleaned), parseTVMaze)
-    : null;
-
-  const candidates =
-    tvmaze !== null && tvmaze.length > 0
-      ? mergeCandidates(cleaned, moviePool, [...showPool, ...tvmaze.slice(0, SOURCE_LIMIT)])
-      : baseMerged;
-
-  if (candidates.length > 0) {
-    return respond(deps, key, candidates);
+  if (kind === "movie") {
+    const movies = await fetchWith(deps.http, cinemetaUrl("movie", cleaned), (value) =>
+      parseCinemeta(value, "movie"),
+    );
+    if (movies === null) {
+      return { ok: false };
+    }
+    return respond(deps, key, sortResults(movies.slice(0, SOURCE_LIMIT)));
   }
 
-  // An empty list is only verified when both media types answered: movies from
-  // Cinemeta, shows from Cinemeta or TVMaze. Otherwise leave it uncached so the
-  // next attempt can recover.
-  const moviesAnswered = movies !== null;
-  const showsAnswered = shows !== null || tvmaze !== null;
-  if (!moviesAnswered || !showsAnswered) {
+  const shows = await fetchWith(deps.http, cinemetaUrl("series", cleaned), (value) =>
+    parseCinemeta(value, "tv"),
+  );
+  // Cinemeta is undocumented, so shows get a second source. Ask it when the
+  // series catalog failed or came back empty.
+  const seriesPool = shows ?? [];
+  const tvmaze =
+    shows === null || seriesPool.length === 0
+      ? await fetchWith(deps.http, TVMAZE + encodeURIComponent(cleaned), parseTVMaze)
+      : null;
+  if (shows === null && tvmaze === null) {
     return { ok: false };
   }
 
-  return respond(deps, key, []);
+  return respond(deps, key, sortResults([...seriesPool, ...(tvmaze ?? []).slice(0, SOURCE_LIMIT)]));
 }
 
 // Per-instance, like the watch caches. The Cinemeta and TVMaze endpoints are

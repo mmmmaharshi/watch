@@ -94,7 +94,7 @@ test("a title shows candidates and picking one opens the result", async () => {
   fireEvent.click(first);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
-  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: undefined });
+  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: undefined, kind: "movie" });
   expect(input).toHaveProperty("value", "The Matrix");
 });
 
@@ -181,7 +181,19 @@ test("a bare number falls back to a title search when no TMDB title matches", as
   fireEvent.submit(input.closest("form")!);
 
   expect(await screen.findByRole("button", { name: /1917/ })).toBeTruthy();
-  expect(search).toHaveBeenCalledWith({ query: "1917" });
+  expect(search).toHaveBeenCalledWith({ query: "1917", kind: "movie" });
+});
+
+test("switching the selector to TV sends kind tv to the search", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+
+  fireEvent.change(screen.getByLabelText(/movie or tv show/i), { target: { value: "tv" } });
+  fireEvent.change(input, { target: { value: "The Office" } });
+  fireEvent.submit(input.closest("form")!);
+
+  await waitFor(() => expect(search).toHaveBeenCalled());
+  expect(search).toHaveBeenCalledWith({ query: "The Office", kind: "tv" });
 });
 
 test("a search failure shows the error without marking the field invalid", async () => {
@@ -241,7 +253,7 @@ test("a shared link runs the lookup and opens the result dialog", async () => {
   render(<WatchApp />);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
-  expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined });
+  expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined, kind: "movie" });
   expect(window.location.hash).toBe("#id=tt0133093");
 });
 
@@ -275,7 +287,7 @@ test("try another asks for a new stream without the current provider", async () 
   expect(
     await screen.findByRole("link", { name: "https://vidfast.vc/movie/tt0133093" }),
   ).toBeTruthy();
-  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: "vidsrc.in" });
+  expect(lookup).toHaveBeenLastCalledWith({ id: "tt0133093", exclude: "vidsrc.in", kind: "movie" });
 });
 
 test("a backdrop click does not close the dialog", async () => {
