@@ -36,6 +36,7 @@ const tvmaze = [
       name: "The Office",
       premiered: "2005-03-24",
       externals: { imdb: "tt0386676" },
+      image: { medium: "https://static.tvmaze.com/medium.jpg" },
     },
   },
   {
@@ -59,7 +60,40 @@ test("parses Cinemeta films and shows, dropping non-IMDb rows", () => {
 
 test("parses TVMaze shows above the score floor", () => {
   expect(parseTVMaze(tvmaze)).toEqual([
-    { imdbId: "tt0386676", name: "The Office", year: "2005", kind: "tv" },
+    {
+      imdbId: "tt0386676",
+      name: "The Office",
+      year: "2005",
+      kind: "tv",
+      poster: "https://static.tvmaze.com/medium.jpg",
+    },
+  ]);
+});
+
+test("parses Cinemeta poster art when present", () => {
+  expect(
+    parseCinemeta(
+      {
+        metas: [
+          {
+            imdb_id: "tt0133093",
+            type: "movie",
+            name: "The Matrix",
+            releaseInfo: "1999",
+            poster: "https://images.metahub.space/poster/small/tt0133093/img",
+          },
+        ],
+      },
+      "movie",
+    ),
+  ).toEqual([
+    {
+      imdbId: "tt0133093",
+      name: "The Matrix",
+      year: "1999",
+      kind: "movie",
+      poster: "https://images.metahub.space/poster/small/tt0133093/img",
+    },
   ]);
 });
 

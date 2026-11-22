@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TMDB_NOT_FOUND } from "../lib/messages";
+import type { TitleCandidate } from "../lib/search";
 import type { WatchOutcome, WatchResult } from "../lib/types";
 
 // Bun cannot resolve astro:actions, so stub the action before the island loads.
@@ -29,12 +30,7 @@ const lookup = mock(
 const search = mock(async (_input: { query: string }) => ({
   data: {
     ok: true as const,
-    candidates: [] as Array<{
-      imdbId: string;
-      name: string;
-      year?: string;
-      kind: "movie" | "tv";
-    }>,
+    candidates: [] as Array<TitleCandidate>,
   },
 }));
 
@@ -79,7 +75,13 @@ test("a title shows candidates and picking one opens the result", async () => {
     data: {
       ok: true,
       candidates: [
-        { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" },
+        {
+          imdbId: "tt0133093",
+          name: "The Matrix",
+          year: "1999",
+          kind: "movie",
+          poster: "https://images.metahub.space/poster/small/tt0133093/img",
+        },
         { imdbId: "tt0234215", name: "The Matrix Reloaded", year: "2003", kind: "movie" },
       ],
     },
@@ -87,10 +89,17 @@ test("a title shows candidates and picking one opens the result", async () => {
   render(<WatchApp />);
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
 
+  expect(screen.getByText(/paste an id or link/i)).toBeTruthy();
+  expect(input.getAttribute("aria-describedby")).toContain("search-hint");
+
   fireEvent.change(input, { target: { value: "The Matrix" } });
   fireEvent.submit(input.closest("form")!);
 
   const first = await screen.findByRole("button", { name: /The Matrix Film/ });
+  expect(first.textContent).toContain("tt0133093");
+  expect(first.querySelector("img")?.getAttribute("src")).toBe(
+    "https://images.metahub.space/poster/small/tt0133093/img",
+  );
   fireEvent.click(first);
 
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
@@ -226,13 +235,13 @@ test("the error clears when the user types", () => {
   const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
 
   fireEvent.submit(input.closest("form")!);
-  expect(input.getAttribute("aria-describedby")).toBe("status");
+  expect(input.getAttribute("aria-describedby")).toBe("status search-hint");
 
   fireEvent.change(input, { target: { value: "tt0133093" } });
 
   expect(screen.getByRole("status").textContent).toBe("");
   expect(input.getAttribute("aria-invalid")).toBe("false");
-  expect(input.getAttribute("aria-describedby")).toBeNull();
+  expect(input.getAttribute("aria-describedby")).toBe("search-hint");
 });
 
 test("a shared link runs the lookup and opens the result dialog", async () => {

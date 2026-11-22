@@ -22,6 +22,7 @@ export interface TitleCandidate {
   name: string;
   year?: string;
   kind: "movie" | "tv";
+  poster?: string;
 }
 
 export interface SearchDeps {
@@ -62,7 +63,17 @@ export function parseCinemeta(
       return [];
     }
     const rowKind = KIND_BY_TYPE.get(asString(meta.type) ?? "") ?? kind;
-    return [{ imdbId, name, year: yearOf(meta.releaseInfo), kind: rowKind }];
+    const candidate: TitleCandidate = {
+      imdbId,
+      name,
+      year: yearOf(meta.releaseInfo),
+      kind: rowKind,
+    };
+    const poster = asString(meta.poster);
+    if (poster) {
+      candidate.poster = poster;
+    }
+    return [candidate];
   });
 }
 
@@ -84,7 +95,17 @@ export function parseTVMaze(payload: unknown): Array<TitleCandidate> | null {
     if (!imdbId || !name) {
       return [];
     }
-    return [{ imdbId, name, year: yearOf(show.premiered), kind: "tv" as const }];
+    const candidate: TitleCandidate = {
+      imdbId,
+      name,
+      year: yearOf(show.premiered),
+      kind: "tv" as const,
+    };
+    const image = isLooseJson(show.image) ? asString(show.image.medium) : undefined;
+    if (image) {
+      candidate.poster = image;
+    }
+    return [candidate];
   });
 }
 

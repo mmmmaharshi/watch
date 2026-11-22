@@ -63,7 +63,7 @@ export function SearchPanel({
               spellCheck={false}
               enterKeyHint="go"
               aria-invalid={invalid}
-              aria-describedby={invalid ? "status" : undefined}
+              aria-describedby={invalid ? "status search-hint" : "search-hint"}
             />
           </TextField>
           <Button
@@ -77,6 +77,10 @@ export function SearchPanel({
         </form>
       </search>
 
+      <p id="search-hint" className="mt-3 text-xs leading-relaxed text-black/64">
+        Paste an ID or link, or type a title. Bare numbers try TMDB first.
+      </p>
+
       <p
         id="status"
         role="status"
@@ -84,7 +88,7 @@ export function SearchPanel({
         className={
           // The line keeps its height when empty, so an error does not shift
           // the centered page.
-          "mt-3 min-h-[1.625em] text-sm leading-relaxed " +
+          "mt-1 min-h-[1.625em] text-sm leading-relaxed " +
           (strong ? "font-medium text-black" : "text-black/64")
         }
       >
@@ -97,11 +101,27 @@ export function SearchPanel({
             <li key={candidate.imdbId}>
               <button
                 type="button"
-                className="flex w-full flex-col gap-0.5 py-3 text-left hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                className="flex w-full items-center gap-3 py-3 text-left hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                 onClick={() => onPick(candidate)}
               >
-                <span className="text-sm font-medium">{candidate.name}</span>
-                <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                {candidate.poster && (
+                  <img
+                    src={candidate.poster}
+                    alt=""
+                    loading="lazy"
+                    width={40}
+                    height={60}
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                    className="h-[60px] w-10 shrink-0 rounded-lg bg-black/5 object-cover"
+                  />
+                )}
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-sm font-medium">{candidate.name}</span>
+                  <span className="text-sm text-black/64">{candidateMeta(candidate)}</span>
+                  <span className="font-mono text-xs text-black/44">{candidate.imdbId}</span>
+                </span>
               </button>
             </li>
           ))}

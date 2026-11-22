@@ -219,7 +219,7 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 
 The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
-`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. The status line follows with `mt-3` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
+`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. A quiet hint line (`search-hint`, `text-xs text-black/64`) sits under the form so help does not rely on the placeholder. The status line follows with `mt-1` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
 
 The footer is pushed to the bottom by `justify-between` and keeps `mt-14`. It has `border-t border-black/10 pt-5`, and its paragraph is left aligned.
 
@@ -266,14 +266,14 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
-- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` points at `status` only while the field is invalid, so the error text is not read before it appears. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
+- **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` always points at the hint, plus `status` while the field is invalid, so help stays tied to the field and the error text is not read before it appears. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
 - **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
 
 ### Title Search
 
 - **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action. A bare number is tried as a TMDB ID first; if TMDB has no such title, the number is searched as a title. A link that is not an IMDb title link or a TMDB movie/TV link is rejected with a message.
-- **Server:** `src/lib/search.ts` asks the Cinemeta movie and series catalogs in parallel. Each row already carries an IMDb ID, a name, and a release year. When the series half fails, or the merged list is empty, TVMaze searches shows as a fallback and keeps scores of 0.5 or more. The merge alternates the two sources, then orders by relevance tier: exact title (diacritics folded), then a title that starts with the query on a word boundary, then everything else. Within a tier, the newest release comes first. It dedupes by IMDb ID and by name/year/kind, takes the first 6 rows of each catalog before merging, caps the list at 6, and adds up to 6 more shows from the TVMaze fallback. Successful results and a verified empty list are cached for 10 minutes per instance; a total outage is not cached.
-- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left`; the name is `text-sm font-medium`, the second line reads "Film · 1999" or "TV show · 2005" in `text-sm text-black/64`. Hover and focus use `bg-black/5`; the focus ring is 2px ink.
+- **Server:** `src/lib/search.ts` asks the Cinemeta movie and series catalogs in parallel. Each row keeps IMDb ID, name, release year, and poster art when present. When the series half fails, or the merged list is empty, TVMaze searches shows as a fallback and keeps scores of 0.5 or more, using its medium image. The merge alternates the two sources, then orders by relevance tier: exact title (diacritics folded), then a title that starts with the query on a word boundary, then everything else. Within a tier, the newest release comes first. It dedupes by IMDb ID and by name/year/kind, takes the first 6 rows of each catalog before merging, caps the list at 6, and adds up to 6 more shows from the TVMaze fallback. Successful results and a verified empty list are cached for 10 minutes per instance; a total outage is not cached.
+- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left` in a row: an optional 40 by 60 poster thumb (`rounded-lg object-cover`) plus name, second line, and IMDb ID. The name is `text-sm font-medium`, the second line reads "Film · 1999" or "TV show · 2005" in `text-sm text-black/64`, and the third line shows the IMDb ID in mono `text-xs text-black/44` so remakes stay apart. Hover and focus use `bg-black/5`; the focus ring is 2px ink. Thumbs load lazy and hide when no art ships.
 - **Picking:** keeps the typed title in the input, runs the normal lookup, and updates the hash to the IMDb ID. The list stays in place, so after the dialog closes the user can pick another title. A failed or empty search reports through the status line.
 - **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
 
@@ -304,7 +304,7 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "watch your fave movie or show. free. say less.".
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Search a title, or paste an IMDb or TMDB ID or link."
 - **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 
