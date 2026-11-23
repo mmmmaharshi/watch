@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import type { LookupDeps, LookupOutcome } from "../../backend/src/lookup-machine";
 import { LOOKUP_FAILED, SEARCH_FAILED } from "./messages";
-import type { SearchOutcome, WatchOutcome } from "./types";
+import type { ContentType, SearchOutcome, WatchOutcome } from "./types";
 
 // The Astro action result, structurally. A call that reaches the edge answers
 // with data; a call that fails answers with an error, or rejects.
@@ -15,12 +15,12 @@ interface ActionResponse<A> {
 export interface LookupTransport {
   readonly watch: (input: {
     readonly id: string;
-    readonly kind?: "movie" | "tv";
+    readonly kind?: ContentType;
     readonly exclude?: string;
   }) => Promise<ActionResponse<WatchOutcome>>;
   readonly search: (input: {
     readonly query: string;
-    readonly kind: "movie" | "tv";
+    readonly kind: ContentType;
   }) => Promise<ActionResponse<SearchOutcome>>;
 }
 

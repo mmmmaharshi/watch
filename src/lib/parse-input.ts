@@ -1,6 +1,8 @@
+import type { ContentType } from "./types";
+
 export type TitleInput =
   | { kind: "imdb"; id: string }
-  | { kind: "tmdb"; type?: "movie" | "tv"; id: string };
+  | { kind: "tmdb"; type?: ContentType; id: string };
 
 const IMDB_ID = /tt\d{7,8}(?!\d)/;
 const TMDB_MOVIE = /themoviedb\.org\/movie\/([1-9]\d{0,7})/i;
@@ -42,7 +44,7 @@ export function shareUrl(origin: string, id: string): string {
   return `${origin.replace(/\/$/, "")}/${hashForId(id)}`;
 }
 
-export function fullLinkForId(id: string, kind: "movie" | "tv"): string | null {
+export function fullLinkForId(id: string, kind: ContentType): string | null {
   const value = id.trim();
   if (isImdbId(value)) {
     return imdbUrl(value.toLowerCase());
@@ -56,7 +58,7 @@ export function fullLinkForId(id: string, kind: "movie" | "tv"): string | null {
 // One input box plus a Movie/TV selector: IMDb IDs and links pass through;
 // TMDB URLs carry their own type; a bare TMDB number takes the selected
 // type, so it is never ambiguous.
-export function parseTitleInput(input: string, hint?: "movie" | "tv"): TitleInput | null {
+export function parseTitleInput(input: string, hint?: ContentType): TitleInput | null {
   const value = input.trim().toLowerCase();
 
   const movieUrl = value.match(TMDB_MOVIE);

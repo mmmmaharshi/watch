@@ -2,7 +2,7 @@ import { Cache, defaultHttpClient, isLooseJson } from "./http";
 import type { HttpClient } from "./http";
 import { SEARCH_FAILED } from "./messages";
 import { isImdbId } from "./parse-input";
-import type { Candidate, Mutable, SearchOutcome } from "./types";
+import type { Candidate, ContentType, Mutable, SearchOutcome } from "./types";
 import { yearOf } from "./year";
 import { CINEMETA_HOST, TVMAZE_HOST, USER_AGENT } from "../consts";
 
@@ -16,7 +16,7 @@ const SOURCE_LIMIT = 6;
 // TVMaze scores the best match around 1.2. Below 0.5 the results stop sharing
 // a title with the query.
 const TVMAZE_SCORE_FLOOR = 0.5;
-const KIND_BY_TYPE = new Map<string, "movie" | "tv">([
+const KIND_BY_TYPE = new Map<string, ContentType>([
   ["movie", "movie"],
   ["series", "tv"],
 ]);
@@ -41,10 +41,7 @@ function validImdb(value: unknown): string | undefined {
 
 // Null means the payload was not the shape we expect. An empty array is a
 // valid "no results" answer.
-export function parseCinemeta(
-  payload: unknown,
-  kind: "movie" | "tv",
-): Array<TitleCandidate> | null {
+export function parseCinemeta(payload: unknown, kind: ContentType): Array<TitleCandidate> | null {
   if (!isLooseJson(payload) || !Array.isArray(payload.metas)) {
     return null;
   }
@@ -173,7 +170,7 @@ function respond(deps: SearchDeps, key: string, candidates: Array<TitleCandidate
 export async function searchTitles(
   deps: SearchDeps,
   query: string,
-  kind: "movie" | "tv" = "movie",
+  kind: ContentType = "movie",
 ): Promise<SearchOutcome> {
   const cleaned = query.trim();
   const key = `${kind}:${cleaned.toLowerCase()}`;
