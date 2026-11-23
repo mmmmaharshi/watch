@@ -47,12 +47,12 @@ stream URL. The stream URL is a link that opens in a new tab.
 The dialog closes. The field still holds `The Matrix`. The list still shows the
 same titles.
 
-## A6 — A shared link opens the result
+## A6 — A shared link prefills the field
 
 Open `/#id=tt0133093` directly.
 
-The result for The Matrix opens without a click. The field shows
-`https://www.imdb.com/title/tt0133093/`.
+The field shows `https://www.imdb.com/title/tt0133093/`. No result opens
+until the person presses Watch now.
 
 ## A7 — Copy gives the share link
 

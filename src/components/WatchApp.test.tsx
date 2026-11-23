@@ -330,43 +330,46 @@ test("the error clears when the user types", () => {
   expect(input.getAttribute("aria-describedby")).toBe("search-hint");
 });
 
-test("a shared link runs the lookup and opens the result dialog", async () => {
+test("a shared link prefills the full link without opening the dialog", async () => {
   window.history.replaceState(null, "", "/#id=tt0133093");
 
   render(<WatchApp />);
+  const field = await screen.findByRole("textbox", { name: /imdb or tmdb/i });
 
-  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
-  expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined, kind: "movie" });
+  expect(field).toHaveProperty("value", "https://www.imdb.com/title/tt0133093/");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(lookup).not.toHaveBeenCalled();
   expect(window.location.hash).toBe("#id=tt0133093");
-  expect(screen.getByRole("textbox", { name: /imdb or tmdb/i })).toHaveProperty(
-    "value",
-    "https://www.imdb.com/title/tt0133093/",
-  );
 });
 
-test("a shared TMDB id prefills the full TMDB link", async () => {
+test("a shared TMDB id prefills the full TMDB link without opening the dialog", async () => {
   window.history.replaceState(null, "", "/#id=27205");
 
   render(<WatchApp />);
+  const field = await screen.findByRole("textbox", { name: /imdb or tmdb/i });
 
-  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
-  expect(lookup).toHaveBeenCalledWith({ id: "27205", exclude: undefined, kind: "movie" });
-  expect(screen.getByRole("textbox", { name: /imdb or tmdb/i })).toHaveProperty(
-    "value",
-    "https://www.themoviedb.org/movie/27205",
-  );
+  expect(field).toHaveProperty("value", "https://www.themoviedb.org/movie/27205");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(lookup).not.toHaveBeenCalled();
 });
 
+async function submitLink(link: string) {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+  fireEvent.change(input, { target: { value: link } });
+  fireEvent.submit(input.closest("form")!);
+  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
+  return { input, dialog };
+}
+
 test("copy writes the share link and shows the toast", async () => {
-  window.history.replaceState(null, "", "/#id=tt0133093");
   const writeText = mock(async () => {});
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText },
     configurable: true,
   });
 
-  render(<WatchApp />);
-  await screen.findByRole("dialog", { name: "The Matrix" });
+  await submitLink("https://www.imdb.com/title/tt0133093/");
 
   fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
 
@@ -377,10 +380,8 @@ test("copy writes the share link and shows the toast", async () => {
 test("try another asks for a new stream without the current provider", async () => {
   lookup.mockResolvedValueOnce({ data: { ok: true, result: MATRIX } });
   lookup.mockResolvedValueOnce({ data: { ok: true, result: OTHER } });
-  window.history.replaceState(null, "", "/#id=tt0133093");
 
-  render(<WatchApp />);
-  await screen.findByRole("dialog", { name: "The Matrix" });
+  await submitLink("https://www.imdb.com/title/tt0133093/");
 
   fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
 
@@ -391,10 +392,7 @@ test("try another asks for a new stream without the current provider", async () 
 });
 
 test("a backdrop click does not close the dialog", async () => {
-  window.history.replaceState(null, "", "/#id=tt0133093");
-
-  render(<WatchApp />);
-  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
+  const { dialog } = await submitLink("https://www.imdb.com/title/tt0133093/");
 
   const backdrop = document.querySelector('[data-slot="modal-backdrop"]')!;
   fireEvent.pointerDown(backdrop);
@@ -409,10 +407,7 @@ test("a backdrop click does not close the dialog", async () => {
 test("Escape does not close the dialog while the next stream loads", async () => {
   lookup.mockResolvedValueOnce({ data: { ok: true, result: MATRIX } });
   lookup.mockImplementationOnce(() => new Promise(() => {}));
-  window.history.replaceState(null, "", "/#id=tt0133093");
-
-  render(<WatchApp />);
-  const dialog = await screen.findByRole("dialog", { name: "The Matrix" });
+  const { dialog } = await submitLink("https://www.imdb.com/title/tt0133093/");
 
   fireEvent.click(screen.getByRole("button", { name: "Get another stream link" }));
   await screen.findByText("Finding another stream...");

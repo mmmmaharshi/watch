@@ -137,11 +137,11 @@ test("A5 the search survives the dialog @live", async ({ page }) => {
   await expect(page.locator("ul li")).toHaveCount(count);
 });
 
-test("A6 a shared link opens the result @live", async ({ page }) => {
+test("A6 a shared link prefills the full link without opening the dialog", async ({ page }) => {
   await open(page, `/#id=${MATRIX}`);
 
-  await expect(resultTitle(page)).toHaveText("The Matrix", { timeout: 60_000 });
   await expect(field(page)).toHaveValue(`https://www.imdb.com/title/${MATRIX}/`);
+  await expect(dialog(page)).toHaveCount(0);
 });
 
 test("A7 copy gives the share link @live", async ({ page }) => {

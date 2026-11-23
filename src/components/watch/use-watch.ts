@@ -69,9 +69,7 @@ async function fetchSearch(query: string, kind: ContentType) {
 
 export function useWatch() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const currentId = useRef<string | null>(null);
-  const loadingId = useRef<string | null>(null);
-
+  const openedId = useRef<string | null>(null);
   const [value, setValue] = useState("");
   const [kind, setKind] = useState<ContentType>("movie");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -129,38 +127,34 @@ export function useWatch() {
   const lookupAndOpen = useCallback(
     async (raw: string, lookupKind: ContentType): Promise<WatchResult | null> => {
       const input = raw.trim();
-      loadingId.current = input;
-      try {
-        const out = await run("looking", MESSAGES.looking, MESSAGES.lookupFailed, () =>
-          fetchWatch(input, lookupKind),
-        );
-        if (!out) {
-          return null;
-        }
-        if (!out.ok) {
-          // A bare number may be a title ("1917") rather than a TMDB ID.
-          if (/^[1-9]\d{0,7}$/.test(input) && out.reason === "tmdb_not_found") {
-            await search(input, lookupKind);
-            return null;
-          }
-          setStatus({ kind: "error", text: out.error });
-          return null;
-        }
-        if (!isWatchResult(out.result)) {
-          setStatus({ kind: "error", text: MESSAGES.lookupFailed });
-          return null;
-        }
-        currentId.current = out.result.id;
-        if (location.hash !== `#id=${out.result.id}`) {
-          history.pushState(null, "", `#id=${out.result.id}`);
-        }
-        setResult(out.result);
-        setOpen(true);
-        setStatus({ kind: "idle" });
-        return out.result;
-      } finally {
-        loadingId.current = null;
+      const out = await run("looking", MESSAGES.looking, MESSAGES.lookupFailed, () =>
+        fetchWatch(input, lookupKind),
+      );
+      if (!out) {
+        return null;
       }
+      if (!out.ok) {
+        // A bare number may be a title ("1917") rather than a TMDB ID.
+        if (/^[1-9]\d{0,7}$/.test(input) && out.reason === "tmdb_not_found") {
+          await search(input, lookupKind);
+          return null;
+        }
+        setStatus({ kind: "error", text: out.error });
+        return null;
+      }
+      if (!isWatchResult(out.result)) {
+        setStatus({ kind: "error", text: MESSAGES.lookupFailed });
+        return null;
+      }
+      if (location.hash !== `#id=${out.result.id}`) {
+        history.pushState(null, "", `#id=${out.result.id}`);
+      }
+      // The id with an open dialog: its own history echo is not a navigation.
+      openedId.current = out.result.id;
+      setResult(out.result);
+      setOpen(true);
+      setStatus({ kind: "idle" });
+      return out.result;
     },
     [run, search],
   );
@@ -257,7 +251,7 @@ export function useWatch() {
 
   function close() {
     setOpen(false);
-    currentId.current = null;
+    openedId.current = null;
   }
 
   function change(next: string) {
@@ -276,11 +270,12 @@ export function useWatch() {
   useEffect(() => {
     const shared = parseSharedId(location.search, location.hash);
     if (shared) {
-      // The URL is the source of truth on mount; the lookup below corrects it.
-      // The field shows the full link, not the bare id.
-      // eslint-disable-next-line react/set-state-in-effect
-      setValue(fullLinkForId(shared, kind) ?? shared);
-      void lookupAndOpen(shared, kind);
+      // A shared link prefills the field but never opens the dialog on its
+      // own. The visitor presses Watch now when ready. Typed text wins over
+      // a re-run: flipping the selector must not wipe it.
+      if (!inputRef.current?.value) {
+        setValue(fullLinkForId(shared, kind) ?? shared);
+      }
     } else {
       // A fast paste can land in the SSR field before hydration; the
       // controlled input would reset to "". Adopt what is already typed.
@@ -290,16 +285,21 @@ export function useWatch() {
       }
     }
     // Help links change only the hash, which does not reload the page.
-    // Same-document clicks go through the router (popstate, no hashchange);
-    // back/forward can fire both, so an id that is showing or loading is skipped.
+    // Same-document clicks go through the router (popstate, no hashchange).
+    // A new id prefills the field; nothing opens on its own.
     function handleHash() {
       const id = parseSharedId(location.search, location.hash);
-      if (!id || id === currentId.current || id === loadingId.current) {
+      if (!id || id === openedId.current) {
+        return;
+      }
+      const link = fullLinkForId(id, kind) ?? id;
+      // Re-applying the link the field already shows must be a no-op, so a
+      // repeated navigation never clears fresh state.
+      if (inputRef.current?.value === link) {
         return;
       }
       setCandidates([]);
-      setValue(fullLinkForId(id, kind) ?? id);
-      void lookupAndOpen(id, kind);
+      setValue(link);
     }
     window.addEventListener("hashchange", handleHash);
     window.addEventListener("popstate", handleHash);
@@ -307,7 +307,7 @@ export function useWatch() {
       window.removeEventListener("hashchange", handleHash);
       window.removeEventListener("popstate", handleHash);
     };
-  }, [lookupAndOpen, kind]);
+  }, [kind]);
 
   // The input is disabled while the lookup runs, so React Aria saves `body`
   // as the element to focus on close. On desktop, send focus back to the field.
