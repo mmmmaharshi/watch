@@ -2,6 +2,7 @@
   "name": "watch-movie",
   "version": "1.0.0",
   "type": "module",
+  "workspaces": ["backend"],
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -9,9 +10,10 @@
     "sync": "astro sync",
     "lint": "oxlint --type-aware --type-check",
     "test": "bun test",
+    "check:backend": "bun run --filter @watch/backend check",
     "e2e": "playwright test --project=ci",
     "e2e:live": "playwright test --project=live --project=live-mobile --retries=2",
-    "check": "bun run sync && bun run lint && bun test && bun run build",
+    "check": "bun run sync && bun run lint && bun test && bun run check:backend && bun run build",
     "prepare": "husky"
   },
   "dependencies": {
