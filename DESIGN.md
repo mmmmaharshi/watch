@@ -160,7 +160,7 @@ The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now.
 
 ## Colors
 
-The palette is neutral. The page is white and the ink is black. Intermediate tones come from alpha black over white, not from tinted grey tokens. The HeroUI theme's muted and accent tokens are not used for text or surfaces. `src/styles/global.css` sets `--focus` and `--link` to the foreground ink, so focus and link states stay on the same ladder. The page sets no `dark` class and offers no theme switch.
+The palette is neutral. The page is white and the ink is black. Intermediate tones come from alpha black over white, not from tinted grey tokens. `src/styles/global.css` defines the only theme tokens the view reads, `--foreground`, `--overlay-shadow`, `--focus`, and `--link`, and it sets focus and link to the foreground ink, so those states stay on the same ladder. The page sets no `dark` class and offers no theme switch.
 
 ### Primary
 

@@ -8,8 +8,8 @@ export const PROVIDER_LIST_NAMESPACE = "provider-list";
 export const CACHE_NAMESPACE = "cache";
 
 // Same expression as .github/workflows/refresh-providers.yml: Tue and Sat,
-// 05:00 UTC. The workflow is deleted at cutover; this becomes the schedule.
+// 05:00 UTC. The workflow is deleted when this stack takes over the schedule.
 export const REFRESH_CRON = "0 5 * * 2,6";
 
-// Claimed by the prod stage only, when the domain moves off Vercel.
+// Claimed by the prod stage only.
 export const SITE_DOMAIN = "watch.maharshi.work";

@@ -57,5 +57,5 @@ cf rulesets rules delete f8cc7c20464343b7a366869bd724685e --zone maharshi.work
 
 ## Other path
 
-`docs/agents/cutover.md` describes an Alchemy stack for the same app. It has
-never been deployed. Keep the Wrangler path above as the one that runs.
+The Alchemy stack in `backend/src/stack.ts` declares the same app. It has never
+been deployed. Keep the Wrangler path above as the one that runs.

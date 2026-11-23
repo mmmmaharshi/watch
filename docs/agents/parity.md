@@ -18,20 +18,20 @@ Commands:
 
 ## Result
 
-| Check | Old app | Port |
-| --- | --- | --- |
-| A1 empty submit | pass | pass |
-| A2 bad link rejected | pass | pass |
-| A6 shared link prefills, no dialog | pass | pass |
-| A6b shared TMDB id prefills | pass | pass |
-| A9 phone does not autofocus | pass | pass |
-| A10 paste survives the app start | pass | pass |
-| A3 title list (live) | pass | pass |
-| A4 pick opens result (live) | pass | pass |
-| A5 search survives dialog (live) | pass | pass |
-| A7 copy share link (live) | pass | pass |
-| A8 retry uses another provider (live) | pass | pass |
-| Total | 11/11 | 11/11 |
+| Check                                 | Old app | Port  |
+| ------------------------------------- | ------- | ----- |
+| A1 empty submit                       | pass    | pass  |
+| A2 bad link rejected                  | pass    | pass  |
+| A6 shared link prefills, no dialog    | pass    | pass  |
+| A6b shared TMDB id prefills           | pass    | pass  |
+| A9 phone does not autofocus           | pass    | pass  |
+| A10 paste survives the app start      | pass    | pass  |
+| A3 title list (live)                  | pass    | pass  |
+| A4 pick opens result (live)           | pass    | pass  |
+| A5 search survives dialog (live)      | pass    | pass  |
+| A7 copy share link (live)             | pass    | pass  |
+| A8 retry uses another provider (live) | pass    | pass  |
+| Total                                 | 11/11   | 11/11 |
 
 ## Other measurements
 
@@ -43,7 +43,7 @@ Commands:
 - A TMDB TV link opens the same show on both: Breaking Bad, 2008, IMDb 9.5.
 - A successful lookup writes `#id=<imdb id>` on both.
 - `src/middleware.ts` is identical, so the rate limit is unchanged.
-- `vercel.json` is identical.
+- `vercel.json` was identical at the time of measurement; that file no longer exists.
 - `public/og.png` and `public/providers.json` are byte identical.
 - `public/robots.txt` differs only in line endings; the text is identical.
 - Failure copy is identical: invalid input, ambiguous TMDB id, TMDB id not

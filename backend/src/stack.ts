@@ -14,7 +14,7 @@ const Site = Website.Astro(
   Effect.gen(function* () {
     const { stage } = yield* Stack;
     // Only prod claims the domain; every other stage stays on workers.dev so a
-    // preview cannot take traffic from Vercel.
+    // preview cannot take traffic from the live host.
     const domain = stage === "prod" ? { domain: SITE_DOMAIN } : {};
     return {
       env: {
