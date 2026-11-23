@@ -29,3 +29,8 @@ Single-context: one `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/a
 Never grade your own change. The criteria live in `docs/agents/acceptance.md`.
 The verifier runs `$verify`, with fresh context and another provider. See
 `docs/agents/qa.md`.
+
+### Deploys
+
+The site runs on Cloudflare. The Worker, the host, and the security header rule
+are in `docs/agents/deploy.md`. Use the `cf` CLI for Cloudflare commands.

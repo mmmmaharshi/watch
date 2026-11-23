@@ -60,10 +60,10 @@ One bug per section. No praise, no summary of the code.
 
 ## Two speeds
 
-| Command            | Covers                            | Runs                      |
-| ------------------ | --------------------------------- | ------------------------- |
-| `bun run e2e`      | A1, A2, A9 — no network           | every pull request        |
-| `bun run e2e:live` | A3–A8 — real search and providers | nightly, and after deploy |
+| Command            | Covers                            | Runs                    |
+| ------------------ | --------------------------------- | ----------------------- |
+| `bun run e2e`      | A1, A2, A9 — no network           | every pull request      |
+| `bun run e2e:live` | A3–A8 — real search and providers | after a deploy, by hand |
 
 `bun run e2e:live` uses the local dev server by default. Set `LIVE_URL` to
 grade the deployed site:
@@ -75,8 +75,7 @@ LIVE_URL=https://watch.maharshi.work bun run e2e:live
 The scripted suite covers the listed criteria. The verifier still explores by
 hand, because a script only finds what it was told to look for.
 
-The live project runs twice: once as a desktop browser, once as a phone. Add the
-`run-live-qa` label to a pull request to run it there too.
+The live project runs twice: once as a desktop browser, once as a phone.
 
 ## Measure the grade, not the suite
 
