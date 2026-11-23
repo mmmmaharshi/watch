@@ -32,11 +32,14 @@ export default defineConfig({
   // React Aria injects one style element at runtime, which no build-time
   // hash can cover, so its hash is pinned. The e2e console guard fails
   // when a library update changes that text.
+  // Poster art loads from two metadata hosts: the Cinemeta CDN
+  // (images.metahub.space) and TVMaze images (static.tvmaze.com).
+  // Everything else stays locked down.
   security: {
     csp: {
       directives: [
         "default-src 'self'",
-        "img-src 'self' data:",
+        "img-src 'self' data: https://images.metahub.space https://static.tvmaze.com",
         "font-src 'self'",
         "connect-src 'self'",
         "object-src 'none'",

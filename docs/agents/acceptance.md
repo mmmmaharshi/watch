@@ -28,8 +28,9 @@ runs.
 1. Type `The Matrix`.
 2. Press **Watch now**.
 
-The page lists at most 6 titles. Each row shows the name and the kind (Film or
-TV show). The year shows when it is known. The 1999 film is in the list.
+The page lists at most 6 titles. Each row shows the name, the year when it
+is known, and the IMDb ID. The kind comes from the Movie/TV selector. The
+1999 film is in the list.
 
 ## A4 — A pick opens a result
 

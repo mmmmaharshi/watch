@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 // The @live tests talk to Cinemeta and the stream providers. They run nightly
 // and against the deployed site, not on every pull request.
@@ -11,14 +12,35 @@ const NO_PROVIDERS = "No other providers available.";
 const MATRIX = "tt0133093";
 
 // A hidden console error is a bug the screenshots never show. Every test fails
-// if the page logged one or threw.
+// if the page logged one or threw. Third-party poster art is the exception:
+// a dead poster image logs a network resource error the app already handles
+// by hiding the thumb, so those do not fail the run. Policy violations
+// ("Refused to load...") still do. The trusted hosts come from the CSP
+// img-src line in astro.config.ts, so the allow-list lives in one place.
 const consoleErrors = new WeakMap<Page, Array<string>>();
+const POSTER_HOSTS: Array<string> = await readFile(
+  new URL("../astro.config.ts", import.meta.url),
+  "utf8",
+).then(
+  (text) =>
+    text
+      .split("\n")
+      .find((line) => line.includes("img-src"))
+      ?.match(/https:\/\/([\w.-]+)/g)
+      ?.map((match) => match.replace("https://", "")) ?? [],
+);
+
+function isPosterHostFailure(text: string): boolean {
+  return (
+    text.startsWith("Failed to load resource") && POSTER_HOSTS.some((host) => text.includes(host))
+  );
+}
 
 test.beforeEach(({ page }) => {
   const errors: Array<string> = [];
   consoleErrors.set(page, errors);
   page.on("console", (message) => {
-    if (message.type() === "error") {
+    if (message.type() === "error" && !isPosterHostFailure(message.text())) {
       errors.push(message.text());
     }
   });
@@ -99,7 +121,7 @@ test("A2 a link that is not IMDb or TMDB is rejected", async ({ page }) => {
   await expect(page.locator("ul li")).toHaveCount(0);
 });
 
-test("A3 a title search lists titles with their kind @live", async ({ page }) => {
+test("A3 a title search lists titles @live", async ({ page }) => {
   await open(page);
   await searchMatrix(page);
 
@@ -107,7 +129,10 @@ test("A3 a title search lists titles with their kind @live", async ({ page }) =>
   const count = await rows.count();
   expect(count).toBeGreaterThan(0);
   expect(count).toBeLessThanOrEqual(6);
-  await expect(rows.first()).toContainText(/(Film|TV show)/);
+  await expect(rows.first()).toContainText(/tt\d{7,8}/);
+  // A bare \d{4} also matches inside an IMDb id; require non-digit edges so
+  // only a standalone year counts.
+  await expect(rows.first()).toContainText(/(?:^|\D)\d{4}(?:\D|$)/);
   await expect(page.getByRole("status")).toHaveText(
     count === 1 ? "1 match. Choose one." : `${count} matches. Choose one.`,
   );
