@@ -12,6 +12,8 @@ root installs it, and the Astro app stays untouched.
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry
   count.
+- `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
+  through Wikidata.
 - `test/` — behavior tests through the service interfaces, plus property tests
   for the cache rules.
 
@@ -26,15 +28,15 @@ root installs it, and the Astro app stays untouched.
 Versions are exact, with no `^`, so the compiler and test diagnostics cannot
 move under us.
 
-| Package         | Version |
-| --------------- | ------- |
-| `effect`        | 4.1.5   |
-| `@effect/vitest`| 4.1.5   |
-| `vitest`        | 5.1.1   |
-| `typescript`    | 7.0.2   |
-| `oxlint`        | 1.94.0  |
-| `oxfmt`         | 0.79.0  |
-| `@types/node`   | 26.6.6  |
+| Package          | Version |
+| ---------------- | ------- |
+| `effect`         | 4.1.5   |
+| `@effect/vitest` | 4.1.5   |
+| `vitest`         | 5.1.1   |
+| `typescript`     | 7.0.2   |
+| `oxlint`         | 1.94.0  |
+| `oxfmt`          | 0.79.0  |
+| `@types/node`    | 26.6.6  |
 
 `@effect/vitest` 4.1.5 accepts `vitest >=5.0.0 <6.0.0`; 5.1.1 is the newest
 release in that range. The service patterns follow rat-stack's Effect 4.1.4
