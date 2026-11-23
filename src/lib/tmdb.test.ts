@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { resolveImdbId } from "./tmdb";
-import type { HttpClient } from "./watch";
+import type { HttpClient } from "./http";
 
 test("identifies itself to Wikidata", async () => {
   let headers: Record<string, string> | undefined;

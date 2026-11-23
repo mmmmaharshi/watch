@@ -3,10 +3,12 @@ import {
   DIRECTORY_URL,
   originIfHttps,
   parseActiveDomains,
+  PROVIDERS_FILENAME,
   VIDFAST,
   VIDLINK,
   VIDZEE,
-} from "../src/lib/watch";
+} from "../src/lib/providers";
+import type { ProviderEntry, ProvidersFile } from "../src/lib/providers";
 
 // Twice-weekly probe. Reads the live directory, keeps only hosts that pass
 // a real check, and writes public/providers.json. A plain HTTP 200 proves
@@ -15,16 +17,6 @@ import {
 const PROBE_ID = "tt0133093";
 const BOGUS_ID = "tt0000000";
 const TIMEOUT_MS = 8000;
-
-export interface ProviderEntry {
-  name: string;
-  baseUrl: string;
-}
-
-export interface ProvidersFile {
-  updatedAt: string;
-  providers: Array<ProviderEntry>;
-}
 
 // The embed page is wired when it points at the vs_src API hook.
 export function hasPlayerApi(embedHtml: string): boolean {
@@ -66,8 +58,6 @@ export function isVidFastAlive(status: number): boolean {
   return status === 200;
 }
 
-// One entry per origin. Static fallbacks go last; pass an empty list to
-// leave a probed-dead fallback out of the file.
 export function buildProvidersJson(
   baseUrls: Array<string>,
   updatedAt: string = new Date().toISOString(),
@@ -76,7 +66,6 @@ export function buildProvidersJson(
   const seen = new Set<string>();
   const providers: Array<ProviderEntry> = [];
   for (const baseUrl of [...baseUrls, ...fallbacks]) {
-    // Skip the bad entry; the rest of the file still applies.
     const origin = originIfHttps(baseUrl);
     if (!origin || seen.has(origin)) {
       continue;
@@ -93,7 +82,9 @@ async function getText(url: string): Promise<{ status: number; body: string }> {
 }
 
 async function isVidSrcAlive(origin: string): Promise<boolean> {
-  const embed = await getText(`${origin}/embed/movie/${PROBE_ID}`);
+  const embed = await getText(
+    buildEmbedUrl({ name: new URL(origin).host, baseUrl: origin }, "movie", PROBE_ID),
+  );
   if (!embed.body || !hasPlayerApi(embed.body)) {
     return false;
   }
@@ -105,17 +96,14 @@ async function isVidSrcAlive(origin: string): Promise<boolean> {
 // directory, the run fails red so someone looks before users notice rot.
 export const ROT_ALARM_MS = 7 * 24 * 60 * 60 * 1000;
 
-// True when the on-disk file cannot cover a directory outage: missing or
-// older than the alarm window.
 export function needsRotAlarm(ageMs: number | null): boolean {
   return ageMs === null || ageMs > ROT_ALARM_MS;
 }
 
-// Age of the on-disk refresh file in ms. Null when missing or unparseable.
 export async function readFileAgeMs(now: number = Date.now()): Promise<number | null> {
   try {
     const file: unknown = await Bun.file(
-      new URL("../public/providers.json", import.meta.url),
+      new URL(`../public/${PROVIDERS_FILENAME}`, import.meta.url),
     ).json();
     if (typeof file !== "object" || file === null || Array.isArray(file)) {
       return null;
@@ -145,7 +133,7 @@ async function refresh(): Promise<void> {
     process.stdout.write("Directory fetch failed; keeping the current providers.json.\n");
     return;
   }
-  const candidates = parseActiveDomains(directory).filter((url) => originIfHttps(url) !== null);
+  const candidates = parseActiveDomains(directory);
 
   const alive: Array<string> = [];
   for (const origin of candidates) {
@@ -207,7 +195,7 @@ async function refresh(): Promise<void> {
     process.exit(1);
   }
   await Bun.write(
-    new URL("../public/providers.json", import.meta.url),
+    new URL(`../public/${PROVIDERS_FILENAME}`, import.meta.url),
     `${JSON.stringify(out, null, 2)}\n`,
   );
   process.stdout.write(`Wrote ${out.providers.length} providers.\n`);

@@ -77,7 +77,7 @@ typography:
     lineHeight: 1.625
 rounded:
   control: "8px"
-  record: "16px"
+  record: "12px"
   separator: "4px"
   spinner: "50%"
 spacing:
@@ -154,7 +154,7 @@ The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now.
 - White canvas, black ink, and alpha-black neutrals. No blue accent.
 - Left-aligned text in one column capped by `max-w-[42rem]`.
 - Goeist Sans for the interface; Goeist Mono for identifiers.
-- Restrained radii: 8px controls and a 16px dialog.
+- Restrained radii: 8px controls and a 12px dialog.
 - The exact provider, IMDb ID, and stream URL show before the user leaves; both safety notes stay quiet.
 
 ## Colors
@@ -219,11 +219,11 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 
 The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
-`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The submit button keeps its own width with `min-h-12`. A quiet hint line (`search-hint`, `text-xs text-black/64`) sits under the form so help does not rely on the placeholder. The status line follows with `mt-1` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
+`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The type selector and the submit button keep their own width with `min-h-12`. A quiet hint line (`search-hint`, `text-xs text-black/64`) sits under the form so help does not rely on the placeholder. The status line follows with `mt-1` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
 
 The footer is pushed to the bottom by `justify-between` and keeps `mt-14`. It has `border-t border-black/10 pt-5`, and its paragraph is left aligned.
 
-The result opens in a modal over the theme scrim. `Modal.Container` uses `size="lg"`, and the dialog adds `rounded-2xl border border-black/10 sm:max-w-[42rem]`. The dialog has `p-6`. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
+The result opens in a modal over the theme scrim. `Modal.Container` uses `size="lg"`, and the dialog adds `rounded-xl border border-black/10 sm:max-w-[42rem]`. The dialog has `p-6`. Inside it, the `Card` runs `variant="transparent"` with `gap-0 p-0`.
 
 At `sm`, which is 40rem, the form sits in one row, the dialog widens, the footer note and the actions share one row, and the row keys move beside their values in a `sm:w-28` key column. Below `sm`, the form stacks, each row key sits above its value, and the actions wrap.
 
@@ -250,13 +250,13 @@ The radii are restrained:
 
 - **Buttons:** `rounded-lg`, 8px.
 - **Text field:** `rounded-lg`, 8px.
-- **Dialog:** `rounded-2xl`, 16px.
+- **Dialog:** `rounded-xl`, 12px.
 - **Separator:** `rounded-sm`, 4px, on a 1px bar.
 - **Spinner:** a circle.
 
 Rows are divided by 1px hairline bars. There are no pills and no clipped corners.
 
-**The Soft-Corner Rule.** Keep controls at 8px and the dialog at 16px. Do not use pill buttons.
+**The Soft-Corner Rule.** Keep controls at 8px and the dialog at 12px. Do not use pill buttons.
 
 ## Components
 
@@ -268,19 +268,20 @@ The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
 - **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` always points at the hint, plus `status` while the field is invalid, so help stays tied to the field and the error text is not read before it appears. A shared link prefills the full link, not the bare id. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
 - **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
+- **Type `select`** sits between the field and the submit: `min-h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium`. The `sr-only` label reads "Movie or TV show". A successful pasted-link lookup sets it to the result type.
 
 ### Title Search
 
 - **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action. A bare number is tried as a TMDB ID first; if TMDB has no such title, the number is searched as a title. A link that is not an IMDb title link or a TMDB movie/TV link is rejected with a message.
-- **Server:** `src/lib/search.ts` asks the Cinemeta movie and series catalogs in parallel. Each row keeps IMDb ID, name, release year, and poster art when present. When the series half fails, or the merged list is empty, TVMaze searches shows as a fallback and keeps scores of 0.5 or more, using its medium image. The merge alternates the two sources, then orders by relevance tier: exact title (diacritics folded), then a title that starts with the query on a word boundary, then everything else. Within a tier, the newest release comes first. It dedupes by IMDb ID and by name/year/kind, takes the first 6 rows of each catalog before merging, caps the list at 6, and adds up to 6 more shows from the TVMaze fallback. Successful results and a verified empty list are cached for 10 minutes per instance; a total outage is not cached.
-- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left` in a row: an optional 40 by 60 poster thumb (`rounded-lg object-cover`) plus name, second line, and IMDb ID. The name is `text-sm font-medium`, the second line reads "Film · 1999" or "TV show · 2005" in `text-sm text-black/64`, and the third line shows the IMDb ID in mono `text-xs text-black/44` so remakes stay apart. Hover and focus use `bg-black/5`; the focus ring is 2px ink. Thumbs load lazy and hide when no art ships.
+- **Server:** `src/lib/search.ts` searches one catalog per the Movie/TV selector. Movies ask the Cinemeta movie catalog; a failure answers no titles. Shows ask the Cinemeta series catalog, with a TVMaze fallback when it fails or comes back empty, keeping scores of 0.5 or more and using its medium image. Each row keeps IMDb ID, name, release year, and poster art when present. `sortResults` dedupes by IMDb ID and by name/year/kind, orders newest release first, and caps the list at 6. The query plus the selected kind form the cache key; successful results and a verified empty list are cached for 10 minutes per instance, while a total outage is not cached.
+- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left` in a row: an optional 40 by 60 poster thumb (`rounded-lg object-cover`) plus name, year, and IMDb ID. The name is `text-sm font-medium`, the year follows in `text-sm text-black/64` only when known, and the IMDb ID shows in mono `text-xs text-black/44` so remakes stay apart. Hover and focus use `bg-black/5`; the focus ring is 2px ink. Thumbs load lazy and hide when no art ships.
 - **Picking:** keeps the typed title in the input, runs the normal lookup, and updates the hash to the IMDb ID. A pasted ID or link also stays as typed. A pasted link sets the selector to the result type. The list stays in place, so after the dialog closes the user can pick another title. A failed or empty search reports through the status line.
 - **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
 
 ### Result Dialog
 
 - **`Modal.Backdrop`** uses the theme scrim. The backdrop does not dismiss the dialog. Escape closes it, except while `fetching`.
-- **`Modal.Container size="lg"`** and **`Modal.Dialog`** form the shell. The dialog is white, `rounded-2xl`, with `border border-black/10`, the overlay shadow, and `p-6`. It scrolls with `max-h-full overflow-y-auto overscroll-contain`, so the actions stay reachable at large text sizes. It is named by `aria-labelledby="result-title"`, which points at the card title.
+- **`Modal.Container size="lg"`** and **`Modal.Dialog`** form the shell. The dialog is white, `rounded-xl`, with `border border-black/10`, the overlay shadow, and `p-6`. It scrolls with `max-h-full overflow-y-auto overscroll-contain`, so the actions stay reachable at large text sizes. It is named by `aria-labelledby="result-title"`, which points at the card title.
 - **Scrollbar:** the `watch-dialog` class sets a 6px rounded thumb at 18% ink on a transparent track, darkening to 30% on hover. Firefox gets `scrollbar-width: thin` with the same colour. `scrollbar-gutter: stable` keeps the content from shifting when the thumb appears.
 - **`Card variant="transparent" className="gap-0 p-0"`** removes the card fill, border, padding, and shadow.
 - **`Card.Header`** holds the title (`text-2xl font-semibold tracking-tight text-balance`) and the meta line.

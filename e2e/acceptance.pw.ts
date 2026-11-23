@@ -48,7 +48,7 @@ async function submit(page: Page, text: string) {
 
 async function searchMatrix(page: Page) {
   await submit(page, "The Matrix");
-  // Row text runs name and meta together: "The MatrixFilm · 1999".
+  // Row text runs the name, year and id together: "The Matrix1999tt0133093".
   const row = page
     .locator("ul button")
     .filter({ hasText: "The Matrix" })

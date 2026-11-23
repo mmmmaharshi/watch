@@ -11,7 +11,7 @@ interface UnknownResult {
   message?: unknown;
 }
 
-export function isRecord(value: unknown): value is UnknownResult {
+function isRecord(value: unknown): value is UnknownResult {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

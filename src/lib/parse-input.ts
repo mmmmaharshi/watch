@@ -11,12 +11,23 @@ export function isImdbId(value: string): boolean {
   return value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
 }
 
-// A bare id prefills as the full link: an IMDb id becomes its title URL, a
-// bare TMDB number takes the selected type. Links and titles pass through.
+export function isLinkLike(value: string): boolean {
+  const trimmed = value.trim().toLowerCase();
+  return (
+    trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("www.")
+  );
+}
+
+// The canonical title URL for an IMDb id. The dialog and the shared-link
+// prefill both point here, so the shape lives in one place.
+export function imdbUrl(id: string): string {
+  return `https://www.imdb.com/title/${id}/`;
+}
+
 export function fullLinkForId(id: string, kind: "movie" | "tv"): string | null {
   const value = id.trim();
   if (isImdbId(value)) {
-    return `https://www.imdb.com/title/${value.toLowerCase()}/`;
+    return imdbUrl(value.toLowerCase());
   }
   if (BARE_TMDB.test(value)) {
     return `https://www.themoviedb.org/${kind === "tv" ? "tv" : "movie"}/${value}`;

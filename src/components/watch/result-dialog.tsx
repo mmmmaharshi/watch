@@ -1,5 +1,6 @@
 import { Button, Card, Modal, Separator, Spinner } from "@heroui/react";
 import type { ReactNode } from "react";
+import { imdbUrl } from "../../lib/parse-input";
 import type { WatchResult } from "../../lib/types";
 import { resultMeta, resultTitle, resultType } from "../../lib/watch-view";
 
@@ -119,7 +120,7 @@ export function ResultDialog({
                         "font-mono underline underline-offset-2" +
                         (busy ? " pointer-events-none" : "")
                       }
-                      href={`https://www.imdb.com/title/${result.id}/`}
+                      href={imdbUrl(result.id)}
                       target="_blank"
                       rel="noopener"
                       tabIndex={busy ? -1 : undefined}

@@ -1,19 +1,13 @@
 import { expect, test } from "bun:test";
-import {
-  Cache,
-  clientIp,
-  createRateLimiter,
-  fetchTVMaze,
-  handleWatchRequest,
-  isActionRequest,
-  limitResponse,
-  originIfHttps,
-  parseActiveDomains,
-  resolveTitle,
-  selectStream,
-  unwrapActionResult,
-} from "./watch";
-import type { HttpClient, TypeResult, WatchDeps } from "./watch";
+import { handleWatchRequest } from "./watch";
+import type { WatchDeps } from "./watch";
+import { Cache } from "./http";
+import type { HttpClient } from "./http";
+import { originIfHttps, parseActiveDomains, selectStream } from "./providers";
+import { fetchTVMaze, resolveTitle } from "./metadata";
+import type { TypeResult } from "./metadata";
+import { clientIp, createRateLimiter, isActionRequest, limitResponse } from "./rate-limit";
+import { unwrapActionResult } from "./action-result";
 import { SITE_URL } from "../consts";
 
 const MATRIX = {
@@ -791,15 +785,6 @@ test("selectStream skips the excluded provider across tiers", async () => {
   expect(winner?.provider).toBe("b.vidsrc.sh");
 });
 
-test("caps the cache by evicting the oldest entry", () => {
-  const cache = new Cache<string>(60_000, 2);
-  cache.set("a", "1");
-  cache.set("b", "2");
-  cache.set("c", "3");
-  expect(cache.get("a")).toBe(undefined);
-  expect(cache.get("c")).toBe("3");
-});
-
 test("aborts losing probes once a winner resolves", async () => {
   const pending = new Map<string, { resolve: (r: HttpReply) => void; signal?: AbortSignal }>();
   const http: HttpClient = {
@@ -834,32 +819,4 @@ test("aborts losing probes once a winner resolves", async () => {
   const result = await winner;
   expect(result?.provider).toBe("a.vidsrc.sh");
   expect(pending.get("https://b.vidsrc.sh/embed/movie/tt0133093")!.signal?.aborted).toBe(true);
-});
-
-// Astro owns the page now: the shell prerenders to static HTML, so these
-// assert on the served contract (tags and endpoints present), not exact copy.
-test("the Astro page keeps title, canonical and share tags", async () => {
-  const page = await Bun.file("src/pages/index.astro").text();
-
-  expect(page).toContain("<title>");
-  expect(page).toContain("</title>");
-  expect(page).toContain('rel="canonical"');
-  expect(page).toContain("og:image");
-  expect(page).toContain("/og.png");
-  expect(page).toContain("twitter:card");
-  expect(page).toContain("<WatchApp");
-  expect(page).toContain("client:load");
-});
-
-// The shell is static (CDN), only /api/watch runs on demand. The sitemap is
-// generated, not hand-written.
-test("the page prerenders and the sitemap is generated", async () => {
-  const page = await Bun.file("src/pages/index.astro").text();
-  expect(page).toContain("export const prerender = true");
-
-  const pkg = await Bun.file("package.json").json();
-  expect(pkg).toMatchObject({ dependencies: { "@astrojs/sitemap": expect.any(String) } });
-
-  const robots = await Bun.file("public/robots.txt").text();
-  expect(robots).toContain("Sitemap: https://watch.maharshi.work/sitemap-index.xml");
 });

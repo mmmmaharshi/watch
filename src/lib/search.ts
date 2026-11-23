@@ -1,9 +1,11 @@
-import { Cache, defaultHttpClient, isLooseJson } from "./watch";
-import type { HttpClient } from "./watch";
+import { Cache, defaultHttpClient, isLooseJson } from "./http";
+import type { HttpClient } from "./http";
+import { isImdbId } from "./parse-input";
+import { yearOf } from "./metadata";
+import { CINEMETA_HOST, TVMAZE_HOST, USER_AGENT } from "../consts";
 
-const CINEMETA = "https://v3-cinemeta.strem.io/catalog";
-const TVMAZE = "https://api.tvmaze.com/search/shows?q=";
-const USER_AGENT = "watch-app/1.0 (+https://github.com/mmmmaharshi/watch)";
+const CINEMETA = `${CINEMETA_HOST}/catalog`;
+const TVMAZE = `${TVMAZE_HOST}/search/shows?q=`;
 const TIMEOUT_MS = 5000;
 const MAX_CANDIDATES = 6;
 // Each catalog returns 20 rows. Keep the relevant head so a dozen obscure
@@ -36,12 +38,10 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+// IMDb ids are canonically lowercase; an odd-cased payload row is the same
+// title, so keep it normalized instead of dropping it.
 function validImdb(value: unknown): string | undefined {
-  return typeof value === "string" && /^tt\d{7,8}$/.test(value) ? value : undefined;
-}
-
-function yearOf(value: unknown): string | undefined {
-  return asString(value)?.match(/^\d{4}/)?.[0];
+  return typeof value === "string" && isImdbId(value) ? value.toLowerCase() : undefined;
 }
 
 // Null means the payload was not the shape we expect. An empty array is a
@@ -122,7 +122,6 @@ function releaseYear(candidate: TitleCandidate): number {
   return candidate.year ? Number(candidate.year) : 0;
 }
 
-// Newest release first; titles without a year go last, input order kept.
 export function sortResults(candidates: Array<TitleCandidate>): Array<TitleCandidate> {
   const wanted = new Set<string>();
   const deduped: Array<TitleCandidate> = [];

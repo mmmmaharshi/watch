@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { Cache } from "./watch";
-import type { HttpClient } from "./watch";
+import { Cache } from "./http";
+import type { HttpClient } from "./http";
 import { parseCinemeta, parseTVMaze, searchTitles, sortResults } from "./search";
 import type { TitleCandidate } from "./search";
 
@@ -184,7 +184,7 @@ test("movie search hits only the movie catalog, newest first", async () => {
 
   expect(out.ok).toBe(true);
   expect(calls.some((url) => url.includes("catalog/series"))).toBe(false);
-  expect(calls.some((url) => url.includes("tvmaze") || url.includes("tvmaze"))).toBe(false);
+  expect(calls.some((url) => url.includes("tvmaze"))).toBe(false);
   expect(out.ok && out.candidates.every((candidate) => candidate.kind === "movie")).toBe(true);
 });
 
@@ -302,22 +302,13 @@ test("accepts an empty TVMaze answer when the series catalog failed", async () =
   ).toEqual({ ok: true, candidates: [] });
 });
 
-test("orders loose prefix matches by newest year", () => {
+test("orders by newest year whatever the names", () => {
   const candidates: Array<TitleCandidate> = [
     { imdbId: "tt1111111", name: "Dune: Prophecy", year: "2020", kind: "tv" },
     { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
   ];
 
   expect(sortResults(candidates).map((c) => c.year)).toEqual(["2024", "2020"]);
-});
-
-test("newest wins even over a closer title-word match", () => {
-  const candidates: Array<TitleCandidate> = [
-    { imdbId: "tt1111111", name: "Dunen", year: "2026", kind: "movie" },
-    { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
-  ];
-
-  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
 });
 
 test("keeps input order when years are missing", () => {

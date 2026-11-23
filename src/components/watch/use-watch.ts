@@ -3,7 +3,7 @@ import { toast } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isWatchResult } from "../../lib/action-result";
 import { SEARCH_FAILED } from "../../lib/messages";
-import { fullLinkForId, parseTitleInput } from "../../lib/parse-input";
+import { fullLinkForId, isLinkLike, parseTitleInput } from "../../lib/parse-input";
 import type { TitleCandidate } from "../../lib/search";
 import { shareUrl } from "../../lib/share";
 import type { ContentType } from "../../lib/types";
@@ -174,7 +174,7 @@ export function useWatch() {
     }
 
     if (!parseTitleInput(input)) {
-      if (/^https?:\/\//i.test(input) || /^www\./i.test(input)) {
+      if (isLinkLike(input)) {
         setStatus({ kind: "error", text: MESSAGES.badLink });
         return;
       }
@@ -188,7 +188,7 @@ export function useWatch() {
     }
     // What the person typed stays: a pasted link is not replaced by the ID.
     // The selector follows a pasted link; bare ids leave it alone.
-    if (/^https?:\/\//i.test(input) || /^www\./i.test(input)) {
+    if (isLinkLike(input)) {
       setKind(data.type);
     }
     setStatus(

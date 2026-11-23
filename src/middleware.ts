@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { isActionRequest, limitResponse } from "./lib/watch";
+import { isActionRequest, limitResponse } from "./lib/rate-limit";
 
 // The page is static, so only action calls reach this. Same limit as before.
 export const onRequest = defineMiddleware(async ({ request }, next) => {

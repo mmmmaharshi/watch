@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { fullLinkForId, parseTitleInput } from "./parse-input";
+import { fullLinkForId, imdbUrl, isLinkLike, parseTitleInput } from "./parse-input";
 
 test("parses an IMDb id or link", () => {
   expect(parseTitleInput("tt0133093")).toEqual({ kind: "imdb", id: "tt0133093" });
@@ -48,4 +48,13 @@ test("a bare id prefills as its full link", () => {
   expect(fullLinkForId("27205", "movie")).toBe("https://www.themoviedb.org/movie/27205");
   expect(fullLinkForId("1396", "tv")).toBe("https://www.themoviedb.org/tv/1396");
   expect(fullLinkForId("not an id", "movie")).toBeNull();
+});
+
+test("a link is link-like whatever its case, a title is not", () => {
+  expect(isLinkLike("https://www.imdb.com/title/tt0133093/")).toBe(true);
+  expect(isLinkLike("HTTP://example.com/movie/42")).toBe(true);
+  expect(isLinkLike("www.themoviedb.org/movie/27205")).toBe(true);
+  expect(isLinkLike("tt0133093")).toBe(false);
+  expect(isLinkLike("The Matrix")).toBe(false);
+  expect(imdbUrl("tt0133093")).toBe("https://www.imdb.com/title/tt0133093/");
 });

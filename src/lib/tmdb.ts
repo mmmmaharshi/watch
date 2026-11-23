@@ -1,9 +1,9 @@
 import { isImdbId } from "./parse-input";
-import type { HttpClient } from "./watch";
+import type { HttpClient } from "./http";
+import { USER_AGENT } from "../consts";
 
 const WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql";
 // WDQS rejects unidentified clients with 403 in current Node/Bun runtimes.
-const USER_AGENT = "watch-app/1.0 (+https://github.com/mmmmaharshi/watch)";
 
 // Wikidata stores TMDB movie IDs in P4947 and TMDB TV IDs in P4983.
 const ID_PROPERTY = { movie: "P4947", tv: "P4983" } as const;
