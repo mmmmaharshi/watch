@@ -1,7 +1,6 @@
 import { defineConfig } from "astro/config";
 import vercel from "@astrojs/vercel";
 import sitemap from "@astrojs/sitemap";
-import react from "@astrojs/react";
 import tailwindcss from "@tailwindcss/vite";
 import { qrcode } from "vite-plugin-qrcode";
 import { SITE_URL } from "./src/consts";
@@ -12,7 +11,7 @@ export default defineConfig({
   site: SITE_URL,
   output: "server",
   adapter: vercel(),
-  integrations: [react(), sitemap()],
+  integrations: [sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
   // No markdown code is rendered anywhere, so highlighting stays off: the
@@ -25,13 +24,13 @@ export default defineConfig({
       qrcode({ filter: (url) => !url.includes("localhost") }),
     ],
   },
-  // CSP hashes let the inline Astro and island scripts run without
-  // 'unsafe-inline'. Stylesheets stay on style-src-elem ('self' scoped
-  // there, not default, so it no longer mixes with the attribute rule);
-  // the island writes style attributes, so those alone keep 'unsafe-inline'.
-  // React Aria injects one style element at runtime, which no build-time
-  // hash can cover, so its hash is pinned. The e2e console guard fails
-  // when a library update changes that text.
+  // CSP hashes let the inline Astro scripts run without 'unsafe-inline'.
+  // Stylesheets stay on style-src-elem ('self' scoped there, not default, so
+  // it no longer mixes with the attribute rule); the dialog sets style
+  // attributes, so style-src-attr alone keeps 'unsafe-inline'. The second
+  // style hash is pinned for a runtime-injected style element, which no
+  // build-time hash can cover; the e2e console guard fails when a library
+  // update changes that text.
   // Poster art loads from two metadata hosts: the Cinemeta CDN
   // (images.metahub.space) and TVMaze images (static.tvmaze.com).
   // Everything else stays locked down.

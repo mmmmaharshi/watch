@@ -1,14 +1,17 @@
 # Backend
 
-The Effect backend for the CAFE port. Nothing here serves traffic yet; this
-package holds the shared layers that the provider, metadata, and mapping
-services will use, plus the Alchemy stack that will deploy the site and the
+The Effect backend for the CAFE port. `backend/src/compose.ts` builds the
+handler the Astro actions call; the Alchemy stack deploys the site and the
 provider-refresh cron.
 
 ## Layout
 
 `backend/` is a Bun workspace of the root package. One `bun install` at the repo
 root installs it, and the Astro app stays untouched.
+
+- `src/compose.ts` — `handlerFor`: one handler over the services, over the
+  fetch transport and the two stores. KV-backed in a Worker, in-memory
+  elsewhere.
 
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry

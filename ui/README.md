@@ -1,8 +1,8 @@
 # UI
 
 The Foldkit program for the watch page: one Model, one Message union, one pure
-`update`, and named Commands. This package is not mounted yet; build ticket 50
-serves it.
+`update`, and named Commands. The Astro page mounts it with
+`start(deps, container)`.
 
 ## Layout
 
@@ -17,6 +17,7 @@ serves it.
 - `src/update.ts` — the pure transition function.
 - `src/view.ts` — the page, form, candidate list, and result dialog.
 - `src/entry.ts` — `start(deps, container)`, called by the host page.
+- `src/render.ts` — the page's static markup, rendered at build time.
 - `test/` — story tests over `update` and scene tests through the view.
 
 ## How a lookup runs

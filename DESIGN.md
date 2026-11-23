@@ -149,6 +149,7 @@ watch is one plain screen with three parts: a short wordmark and intro, one inpu
 The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now. A title is searched on Cinemeta, with TVMaze as a fallback for shows, and shown as a short list of films and shows; picking one runs the normal lookup. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
+
 - One input, one primary action, one result dialog.
 - A title search shows a short candidate list before the lookup.
 - White canvas, black ink, and alpha-black neutrals. No blue accent.
@@ -219,7 +220,7 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 
 The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
-`WatchApp` adds `mt-8` above the form. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The type selector and the submit button keep their own width with `min-h-12`. A quiet hint line (`search-hint`, `text-xs text-black/64`) sits under the form so help does not rely on the placeholder. The status line follows with `mt-1` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
+The form adds `mt-8` above it. The form sits in a `<search>` landmark and is `flex flex-col gap-3 sm:flex-row`. The text field takes the remaining width (`min-w-0 flex-1`). The type selector and the submit button keep their own width with `min-h-12`. A quiet hint line (`search-hint`, `text-xs text-black/64`) sits under the form so help does not rely on the placeholder. The status line follows with `mt-1` and reserves `min-h-[1.625em]`, so an error does not shift the page. It clears when the user types and is left aligned.
 
 The footer is pushed to the bottom by `justify-between` and keeps `mt-14`. It has `border-t border-black/10 pt-5`, and its paragraph is left aligned.
 
@@ -260,7 +261,7 @@ Rows are divided by 1px hairline bars. There are no pills and no clipped corners
 
 ## Components
 
-The island imports from `@heroui/react` in `src/components/WatchApp.tsx`.
+The Foldkit view implements the components in `ui/src/view.ts`.
 
 ### Form
 
