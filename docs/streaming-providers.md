@@ -1,6 +1,6 @@
 # Streaming Embed Providers and Metadata Sources
 
-Context: [`src/lib/watch.ts`](../src/lib/watch.ts) builds a provider URL as
+Context: [`src/lib/providers.ts`](../src/lib/providers.ts) builds a provider URL as
 `baseUrl + (path ? path(type, id) : /embed/${type}/${id})`, then sends one HTTP GET. An `ok` status
 means the provider is alive. The ID is canonical IMDb `tt...`; TMDB IDs and links are mapped to
 IMDb first by [`src/lib/tmdb.ts`](../src/lib/tmdb.ts) using Wikidata. TV titles need a
@@ -35,10 +35,10 @@ aggregator lists were used as evidence.
 
 - **Drop-in today:** another VidSrc domain. `buildEmbedUrl` already produces `/embed/movie/tt...` and
   `/embed/tv/tt...`, which match the [vidsrc.to docs](https://vidsrc.to/embed/movie) exactly. The app
-  reads active domains from the vidsrc.domains directory at runtime ([watch.ts](../src/lib/watch.ts)),
+  reads active domains from the vidsrc.domains directory at runtime ([providers.ts](../src/lib/providers.ts)),
   with no name-based gate: listing plus a live probe decides.
 - **Already wired:** VidFast uses a custom path `/movie/{id}` for movies and `/tv/{id}/1/1` for TV
-  ([watch.ts](../src/lib/watch.ts)), matching the [official endpoints](https://vidfast.vc/).
+  ([providers.ts](../src/lib/providers.ts)), matching the [official endpoints](https://vidfast.vc/).
 - **Small change:** AutoEmbed and SuperEmbed accept IMDb IDs, so they need only a custom `path` plus
   a host-allowlist edit; SuperEmbed uses a query string, not path segments
   ([AutoEmbed](https://autoembed.me), [SuperEmbed](https://www.superembed.stream/)).
@@ -51,7 +51,7 @@ aggregator lists were used as evidence.
   live per-request probe before redirect. Any other provider needs a `Provider`
   entry with the right path shape, not an allowlist edit.
 - **TV default:** for providers with required season/episode, the existing `1/1` convention from the
-  VidFast fallback can be reused ([watch.ts](../src/lib/watch.ts)).
+  VidFast fallback can be reused ([providers.ts](../src/lib/providers.ts)).
 
 ## Gaps / needs validation
 
@@ -66,6 +66,6 @@ aggregator lists were used as evidence.
 - SuperEmbed's JSON example uses a numeric IMDb ID (`id=10872600`); `tt`-prefixed IDs are shown only
   for the iframe. JSON-API ID format is unvalidated.
 - None of the embed docs state the HTTP status returned for an unknown or expired ID. The repo's
-  GET-probe success check ([watch.ts](../src/lib/watch.ts)) may select a provider that returns 200
+  GET-probe success check ([providers.ts](../src/lib/providers.ts)) may select a provider that returns 200
   for a missing title.
 - No live provider API was called during this research; only public documentation pages were fetched.

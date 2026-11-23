@@ -17,25 +17,25 @@ live provider is used below.
 
 ## What the code assumes
 
-- `probeProvider` sends one GET to the embed URL and throws only when `res.ok` is false
-  [watch.ts:315-331](../src/lib/watch.ts).
-- `probeProvider` never reads `res.text()` or `res.json()`. It returns the URL and provider name on
-  any `ok` response [watch.ts:330-331](../src/lib/watch.ts).
+- `probe` sends one GET to the embed URL and throws only when `res.ok` is false
+  [providers.ts:110-117](../backend/src/providers.ts).
+- `probe` never reads `res.text()` or `res.json()`. It returns the URL and provider name on
+  any `ok` response [providers.ts:110-117](../backend/src/providers.ts).
 - `defaultHttpClient.get` copies `Response.ok` from `fetch` into the `ok` field
-  [watch.ts:51-63](../src/lib/watch.ts).
+  [http.ts](../src/lib/http.ts).
 - `Response.ok` is true only for status 200-299. It says nothing about the response body
   [MDN Response.ok](https://developer.mozilla.org/en-US/docs/Web/API/Response/ok),
   [Fetch spec](https://fetch.spec.whatwg.org/#ref-for-dom-response-ok).
-- `selectStream` runs the probes with `Promise.any`. The first promise that resolves wins. A slow
+- `selectStream` races the probes with `Effect.raceAll`. The first to resolve wins. A slow
   working provider loses to a fast dead one if both answer 2xx
-  [watch.ts:353-371](../src/lib/watch.ts).
+  [providers.ts](../backend/src/providers.ts).
 - A cached provider name is re-probed, but the same `ok`-only check applies
-  [watch.ts:345-350](../src/lib/watch.ts),
-  [watch.test.ts:315-342](../src/lib/watch.test.ts).
+  [providers.ts](../backend/src/providers.ts),
+  [providers.test.ts](../backend/test/providers.test.ts).
 - The tests encode the assumption. `makeDeps` returns `reply(true)` with an empty body for a
-  "working" provider [watch.test.ts:40-57](../src/lib/watch.test.ts). The tier test returns
+  "working" provider [providers.test.ts](../backend/test/providers.test.ts). The tier test returns
   `reply(true)` for every provider and still expects a winner
-  [watch.test.ts:430-448](../src/lib/watch.test.ts).
+  [providers.test.ts](../backend/test/providers.test.ts).
 
 Assumption stated plainly: a 2xx on `/embed/{type}/{id}` means the provider can play that exact ID.
 
@@ -63,24 +63,24 @@ different, so the probe has no status-based way to tell them apart
 [MDN Response.ok](https://developer.mozilla.org/en-US/docs/Web/API/Response/ok).
 
 Bounded local evidence: the offline suite passes (33 tests, 0 failures)
-[watch.test.ts](../src/lib/watch.test.ts). A one-off call to
+[providers.test.ts](../backend/test/providers.test.ts). A one-off call to
 `selectStream` with a fake HTTP that answers 200 and body `Video not found or removed` returned
 `{"url":"https://vidsrc.test/embed/movie/tt9999999","provider":"vidsrc.test"}`. The code accepted
-a dead embed because `ok` was true [watch.ts:315-331](../src/lib/watch.ts).
+a dead embed because `ok` was true [providers.ts:110-117](../backend/src/providers.ts).
 
 ## Consequence for provider selection
 
 - `selectStream` returns the first 2xx provider. A dead embed that answers 200 with an error page
   wins if it answers first. A working provider that answers later loses
-  [watch.ts:353-364](../src/lib/watch.ts).
-- The winner name goes into `providerCache` for 5 minutes
-  [watch.ts:363](../src/lib/watch.ts), [watch.ts:513](../src/lib/watch.ts). The next request
-  probes that cached name first [watch.ts:345-350](../src/lib/watch.ts). A dead-but-200 provider
+  [providers.ts](../backend/src/providers.ts).
+- The winner name goes into the stream cache for 5 minutes
+  [providers.ts](../backend/src/providers.ts), [providers.ts](../backend/src/providers.ts). The next request
+  probes that cached name first [providers.ts](../backend/src/providers.ts). A dead-but-200 provider
   keeps winning.
-- `handleWatchRequest` then returns `ok: true` with that URL
-  [watch.ts:490-505](../src/lib/watch.ts). The user gets an iframe with no playable stream.
+- The request handler then returns `ok: true` with that URL
+  [providers.ts](../backend/src/providers.ts). The user gets an iframe with no playable stream.
 - The `503 No working providers available` path runs only when every probe throws
-  [watch.ts:365-372](../src/lib/watch.ts), [watch.ts:498-499](../src/lib/watch.ts). A 200 dead embed
+  [providers.ts](../backend/src/providers.ts), [providers.ts](../backend/src/providers.ts). A 200 dead embed
   never triggers it. The API reports success for a dead embed.
 
 ## What the ticket forces

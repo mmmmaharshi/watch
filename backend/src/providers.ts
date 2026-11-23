@@ -26,7 +26,7 @@ export interface Stream {
 
 // A fresh refresh file answers alone. Older than this, the file still serves
 // when the directory is down, but a live directory wins.
-export const PROVIDERS_TTL_MS = 60 * 60 * 1000;
+const PROVIDERS_TTL_MS = 60 * 60 * 1000;
 export const PROVIDERS_STALE_MS = 48 * 60 * 60 * 1000;
 // A chosen provider is remembered briefly, so "Get another stream link" moves on.
 const STREAM_TTL_MS = 5 * 60 * 1000;

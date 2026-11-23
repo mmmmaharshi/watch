@@ -13,6 +13,7 @@ import {
   parseActiveDomains,
 } from "../../src/lib/providers";
 import type { Provider, ProvidersFile } from "../../src/lib/providers";
+import { Kind } from "../../src/lib/types";
 import { PROVIDERS_STALE_MS, Providers } from "../src/providers";
 import type { ProvidersShape } from "../src/providers";
 import type { ContentType } from "../../src/lib/types";
@@ -342,7 +343,6 @@ describe("Providers", () => {
 });
 
 const Label = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0), Schema.isLessThanOrEqualTo(999));
-const Type = Schema.Literals(["movie", "tv"]);
 
 describe("Providers rules", () => {
   it.prop(
@@ -369,14 +369,14 @@ describe("Providers rules", () => {
     }
   });
 
-  it.prop("a provider without a path uses the embed shape", [Type, Schema.String], ([type, id]) => {
+  it.prop("a provider without a path uses the embed shape", [Kind, Schema.String], ([type, id]) => {
     assert.strictEqual(
       buildEmbedUrl({ name: "x", baseUrl: "https://x.test" }, type, id),
       `https://x.test/embed/${type}/${id}`,
     );
   });
 
-  it.prop("a provider with a path keeps its base and path", [Type, Schema.String], ([type, id]) => {
+  it.prop("a provider with a path keeps its base and path", [Kind, Schema.String], ([type, id]) => {
     const provider = {
       name: "x",
       baseUrl: "https://x.test",

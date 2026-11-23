@@ -1,6 +1,7 @@
 import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect";
 import { CINEMETA_HOST, TVMAZE_HOST } from "../../src/consts";
 import type { ContentType, Mutable } from "../../src/lib/types";
+import { Kind as MediaKind } from "../../src/lib/types";
 import { yearOf } from "../../src/lib/year";
 import { Cache } from "./cache";
 import { Http } from "./http";
@@ -11,7 +12,7 @@ export class MetadataMissing extends Schema.TaggedError<MetadataMissing>()("Meta
 }) {}
 
 const TitleMeta = Schema.Struct({
-  type: Schema.Literals(["movie", "tv"]),
+  type: MediaKind,
   name: Schema.String,
   year: Schema.optional(Schema.String),
   rating: Schema.optional(Schema.String),

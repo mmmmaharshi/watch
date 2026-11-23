@@ -8,7 +8,7 @@ Date: 2026-11-21. Source: live fetches of `https://vidsrc.domains/` and probe UR
 - Active rows (2026-11-21): `vidsrc.sh` (Primary), `vidsrc2.ru`, `vidsrc.ir`.
 - Each active row holds its URL in a copy button: `<button class="chip-copy" data-val="https://...">`.
 - Old section rows have either a `data-val` button (`Use New`: vidsrc.me, vidsrc.io, vidsrc.bz, vidsrc.gd, vidsrc.do, vidsrc.tw, vidsrc-embed.ru, vidsrc-embed.su) or plain text with no button (`Dead`: vsrc.su, vidsrc.in, vidsrc.net, and others).
-- Rule that works: parse only the slice between `id="domains"` and `id="old"`, take `data-val` URLs. This matches `parseActiveDomains` in `src/lib/watch.ts`. Never parse the whole page. Old `data-val` entries must stay out.
+- Rule that works: parse only the slice between `id="domains"` and `id="old"`, take `data-val` URLs. This matches `parseActiveDomains` in `src/lib/providers.ts`. Never parse the whole page. Old `data-val` entries must stay out.
 - Note: `vidsrc.sh` and `vidsrc.me` served with expired certs on this date (Python SSL verify failed; browsers may still load). `vidsrc.io` redirects in a loop (HTTP 308).
 
 ## Probe results (valid title: tt0133093 movie, tt0903747 tv; bogus: tt0000000)

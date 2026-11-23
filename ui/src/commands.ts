@@ -5,8 +5,8 @@ import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../../backend/src/lookup-machine";
 import type { LookupDeps } from "../../backend/src/lookup-machine";
 import { hashForId, shareUrl } from "../../src/lib/parse-input";
-import { LookupEvent } from "./lookup";
-import type { LookupState, Phase } from "./lookup";
+import { LookupEvent, Phase } from "./lookup";
+import type { LookupState } from "./lookup";
 import { COPY } from "./copy";
 import { Message } from "./messages";
 import { SEARCH_FIELD_ID } from "./view";
@@ -14,13 +14,10 @@ import { SEARCH_FIELD_ID } from "./view";
 type Machine = ReturnType<typeof createLookupMachine>;
 type Snapshot = SnapshotFrom<Machine>;
 
-const isPhase = (value: unknown): value is Phase =>
-  value === "idle" || value === "searching" || value === "looking" || value === "retrying";
-
 // The machine's snapshot is the only lookup state. Plain data goes in the
 // Model; the machine stays the owner of the moves.
 const toLookupState = (snapshot: Snapshot): LookupState => ({
-  phase: isPhase(snapshot.value) ? snapshot.value : "idle",
+  phase: Schema.is(Phase)(snapshot.value) ? snapshot.value : "idle",
   kind: snapshot.context.kind,
   candidates: snapshot.context.candidates,
   result: snapshot.context.result,

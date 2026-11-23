@@ -32,13 +32,14 @@ export interface RefreshDeps {
   readonly save: (file: ProvidersFile) => Effect.Effect<void, unknown>;
 }
 
-export type RefreshFailureReason =
-  | "directory_unreachable_and_stale"
-  | "no_providers"
-  | "write_failed";
+const FAILURE_REASONS = [
+  "directory_unreachable_and_stale",
+  "no_providers",
+  "write_failed",
+] as const;
 
 export class RefreshFailed extends Schema.TaggedError<RefreshFailed>()("RefreshFailed", {
-  reason: Schema.Literals(["directory_unreachable_and_stale", "no_providers", "write_failed"]),
+  reason: Schema.Literals(FAILURE_REASONS),
   detail: Schema.String,
 }) {}
 

@@ -5,6 +5,7 @@ import { z } from "astro/zod";
 import { handlerFor } from "../../backend/src/compose";
 import type { Bindings } from "../../backend/src/compose";
 import type { KvNamespace } from "../../backend/src/kv";
+import { KINDS } from "../lib/types";
 import type { Mutable } from "../lib/types";
 import { searchDeps, searchTitles } from "../lib/search";
 
@@ -36,7 +37,7 @@ const bindingsOf = (source: unknown): Bindings => {
   return picked;
 };
 
-const kindSchema = z.enum(["movie", "tv"]);
+const kindSchema = z.enum(KINDS);
 
 export const server = {
   watch: defineAction({

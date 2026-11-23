@@ -38,7 +38,7 @@ Name: watch. Voice: plain, direct, non-promotional. The app must state that it h
 ## Evidence on Hand
 
 - Live site: <https://watch.maharshi.work>
-- Source contracts in `src/lib/watch.ts`, `src/lib/tmdb.ts`, `src/lib/parse-input.ts`.
+- Source contracts in `src/lib/providers.ts`, `src/lib/parse-input.ts`, and `backend/src/providers.ts`.
 - Provider and metadata research in `docs/streaming-providers.md` and `docs/cinemeta-alternatives.md`.
 - No customer counts, testimonials, uptime figures, or licensing claims are available. Do not invent them.
 

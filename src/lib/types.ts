@@ -1,8 +1,9 @@
 import { Schema } from "effect";
 
-// The shapes that cross the action boundary. The page, the UI, and the machine
-// all import these, so one edit moves all of them.
-export const Kind = Schema.Literals(["movie", "tv"]);
+// The wire shapes that cross the action boundary. The page, the UI, and the
+// machine all import these, so one edit moves all of them.
+export const KINDS = ["movie", "tv"] as const;
+export const Kind = Schema.Literals(KINDS);
 export type Kind = typeof Kind.Type;
 export type ContentType = Kind;
 
