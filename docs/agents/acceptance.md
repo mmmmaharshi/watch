@@ -6,6 +6,13 @@ this file and nothing else. Do not edit it to make a test pass.
 Each criterion has one test in `e2e/acceptance.pw.ts` with the same ID.
 `e2e/acceptance.test.ts` fails when the two lists drift apart.
 
+## Parity
+
+`e2e/parity.pw.ts` holds one suite that runs against both the old React app and
+the Foldkit port. Every assertion is role, label, or text based, so the same
+file proves the two builds behave alike. `bun run e2e:parity` runs the offline
+half. Set `PARITY_MODE=live` to include the criteria that reach real services.
+
 ## A1 — An empty submit asks for a title
 
 1. Open the site.
