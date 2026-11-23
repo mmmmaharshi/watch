@@ -1,0 +1,9 @@
+{
+  // Astro generates the Worker entry and assets bindings for this app.
+  // Keep only the settings that must be explicit here.
+  "name": "watch",
+  "compatibility_date": "2026-11-23",
+  "observability": {
+    "enabled": true,
+  },
+}

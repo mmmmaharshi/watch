@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 // Astro owns the page now: the shell prerenders to static HTML, so these
-// assert on the served contract (tags and endpoints present), not exact copy.
+// assert on the served contract (tags and mount) not exact copy.
 test("the Astro page keeps title, canonical and share tags", async () => {
   const page = await Bun.file("src/pages/index.astro").text();
 
@@ -11,15 +11,18 @@ test("the Astro page keeps title, canonical and share tags", async () => {
   expect(page).toContain("og:image");
   expect(page).toContain("/og.png");
   expect(page).toContain("twitter:card");
-  expect(page).toContain("<WatchApp");
-  expect(page).toContain("client:load");
+  expect(page).toContain('id="app"');
+  expect(page).toContain("start(");
+  expect(page).toContain("makeLookupDeps");
+  expect(page).not.toContain("astro-island");
 });
 
-// The shell is static (CDN), only /api/watch runs on demand. The sitemap is
+// The shell is static (CDN), only the actions run on demand. The sitemap is
 // generated, not hand-written.
 test("the page prerenders and the sitemap is generated", async () => {
   const page = await Bun.file("src/pages/index.astro").text();
   expect(page).toContain("export const prerender = true");
+  expect(page).toContain("render()");
 
   const pkg = await Bun.file("package.json").json();
   expect(pkg).toMatchObject({ dependencies: { "@astrojs/sitemap": expect.any(String) } });

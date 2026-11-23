@@ -1,9 +1,11 @@
 ---
 import { SITE_URL } from "../consts";
-import WatchApp from "../components/WatchApp";
+import { render } from "../../ui/src/render";
 import "../styles/global.css";
 
 export const prerender = true;
+
+const html = render();
 ---
 
 <!DOCTYPE html>
@@ -30,31 +32,21 @@ export const prerender = true;
 <meta name="twitter:description" content="Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.">
 </head>
 <body class="min-h-dvh bg-white px-6 text-black antialiased">
-  <main class="mx-auto flex min-h-dvh w-full max-w-[42rem] flex-col py-14 sm:py-20">
-    <div class="w-full sm:my-auto">
-      <header class="w-full border-b border-black/10 pb-6">
-        <h1 class="text-2xl font-semibold tracking-tight">watch</h1>
-        <p class="mt-1 text-sm text-black/64">
-          Find a movie or TV show. Free, no sign-up.
-        </p>
-      </header>
+  <div id="app" set:html={html}></div>
+  <noscript>
+    <p class="mt-4 text-sm leading-relaxed text-black/64">
+      This page needs JavaScript to find a stream link.
+    </p>
+  </noscript>
+  <script>
+    import { start } from "../../ui/src/entry";
+    import { actions } from "astro:actions";
+    import { makeLookupDeps } from "../lib/ui-deps";
 
-      <div class="w-full">
-        <WatchApp client:load />
-        <noscript>
-          <p class="mt-4 text-sm leading-relaxed text-black/64">
-            This page needs JavaScript to find a stream link.
-          </p>
-        </noscript>
-      </div>
-    </div>
-
-    <footer class="mt-14 w-full border-t border-black/10 pt-5">
-      <p class="text-xs leading-relaxed text-black/64">
-        We don't host anything. We only link to third-party providers. Check the URL before playing.
-        Prefer an ad blocker for safety.
-      </p>
-    </footer>
-  </main>
+    start(
+      makeLookupDeps({ watch: actions.watch, search: actions.search }),
+      document.getElementById("app"),
+    );
+  </script>
 </body>
 </html>

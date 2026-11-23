@@ -30,9 +30,10 @@ const POSTER_HOSTS: Array<string> = await readFile(
       ?.map((match) => match.replace("https://", "").replace(/^\*\./, "")) ?? [],
 );
 
-function isPosterHostFailure(text: string): boolean {
+function isPosterHostFailure(text: string, url: string): boolean {
   return (
-    text.startsWith("Failed to load resource") && POSTER_HOSTS.some((host) => text.includes(host))
+    text.startsWith("Failed to load resource") &&
+    POSTER_HOSTS.some((host) => text.includes(host) || url.includes(host))
   );
 }
 
@@ -40,8 +41,9 @@ test.beforeEach(({ page }) => {
   const errors: Array<string> = [];
   consoleErrors.set(page, errors);
   page.on("console", (message) => {
-    if (message.type() === "error" && !isPosterHostFailure(message.text())) {
-      errors.push(message.text());
+    const url = message.location().url;
+    if (message.type() === "error" && !isPosterHostFailure(message.text(), url)) {
+      errors.push(url === "" ? message.text() : `${message.text()} (${url})`);
     }
   });
   page.on("pageerror", (error) => {
@@ -53,10 +55,38 @@ test.afterEach(({ page }) => {
   expect(consoleErrors.get(page) ?? []).toEqual([]);
 });
 
+// The runtime replaces the server-rendered field on boot. Tag the served node
+// when it appears, so a test can tell the mounted app from the static page.
+const tagServerField = () => {
+  const seen = new WeakSet<Element>();
+  const mark = () => {
+    const field = document.querySelector<Element & { serverRendered?: boolean }>("#search-field");
+    if (field !== null && !field.serverRendered) {
+      seen.add(field);
+      field.serverRendered = true;
+      observer.disconnect();
+    }
+  };
+  const observer = new MutationObserver(mark);
+  observer.observe(document, { childList: true, subtree: true });
+  mark();
+};
+
+async function mounted(page: Page) {
+  await page.waitForFunction(
+    () => {
+      const field = document.querySelector<Element & { serverRendered?: boolean }>("#search-field");
+      return field !== null && field.serverRendered !== true;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+}
+
 async function open(page: Page, path = "/") {
+  await page.addInitScript(tagServerField);
   await page.goto(path);
-  // Astro drops the ssr marker once React takes over the island.
-  await expect(page.locator("astro-island")).not.toHaveAttribute("ssr");
+  await mounted(page);
 }
 
 function field(page: Page) {
@@ -84,7 +114,7 @@ function dialog(page: Page) {
 }
 
 function resultTitle(page: Page) {
-  return page.locator("#result-title");
+  return dialog(page).getByRole("heading", { level: 2 });
 }
 
 function streamLink(page: Page) {
@@ -188,13 +218,22 @@ test("A8 another stream uses another provider @live", async ({ page }) => {
   const before = await providerOf(page);
   const retry = dialog(page).getByRole("button", { name: "Get another stream link" });
   await retry.click();
-  await expect(retry).toBeEnabled({ timeout: 60_000 });
 
-  if ((await page.getByRole("status").innerText()) === NO_PROVIDERS) {
-    await expect(dialog(page)).toBeVisible();
-    return;
-  }
-  expect(await providerOf(page)).not.toBe(before);
+  // The open dialog inerts the page, so its status live region is outside the
+  // accessibility tree. Read it anyway; the message is still what it holds.
+  const status = page.getByRole("status", { includeHidden: true });
+  // Retry replies asynchronously, so poll for the settled outcome: either a
+  // different provider or the exhausted message. A single read can race it.
+  await expect
+    .poll(
+      async () => {
+        const text = await status.innerText();
+        return text === NO_PROVIDERS ? NO_PROVIDERS : providerOf(page);
+      },
+      { timeout: 60_000 },
+    )
+    .not.toBe(before);
+  await expect(dialog(page)).toBeVisible();
 });
 
 test.describe("A9 on a phone", () => {
@@ -209,19 +248,22 @@ test.describe("A9 on a phone", () => {
 });
 
 test("A10 a paste before hydration survives it", async ({ page }) => {
-  // Hold the island JS back so the link lands in the SSR field first, like a
-  // fast paste on a slow phone. Hydration must adopt the typed text, not wipe
-  // it, and submit must use it.
+  // Hold the app JS back so the link lands in the server-rendered field first,
+  // like a fast paste on a slow phone. Mount must adopt the typed text, not
+  // wipe it, and submit must use it.
   await page.route("**/*.js", async (route) => {
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 1500);
     });
     await route.continue();
   });
+  await page.addInitScript(tagServerField);
 
-  await page.goto("/");
+  // commit, not load: deferred module scripts run before load, and the paste
+  // must beat them.
+  await page.goto("/", { waitUntil: "commit" });
   await field(page).fill(`https://www.imdb.com/title/${MATRIX}/`);
-  await expect(page.locator("astro-island")).not.toHaveAttribute("ssr", { timeout: 30_000 });
+  await mounted(page);
   await expect(field(page)).toHaveValue(`https://www.imdb.com/title/${MATRIX}/`);
 
   await page.getByRole("button", { name: "Watch now" }).click();

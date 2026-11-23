@@ -1,6 +1,10 @@
 {
   "name": "watch-movie",
   "version": "1.0.0",
+  "workspaces": [
+    "backend",
+    "ui"
+  ],
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -9,33 +13,32 @@
     "sync": "astro sync",
     "lint": "oxlint --type-aware --type-check",
     "test": "bun test",
+    "check:backend": "bun run --filter @watch/backend check",
+    "check:ui": "bun run --filter @watch/ui check",
     "e2e": "playwright test --project=ci",
+    "e2e:parity": "playwright test e2e/parity.pw.ts --project=ci --workers=1",
     "e2e:live": "playwright test --project=live --project=live-mobile --retries=2",
-    "check": "bun run sync && bun run lint && bun test && bun run build",
+    "check": "bun run sync && bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build",
     "prepare": "husky"
   },
   "dependencies": {
-    "@astrojs/react": "7.1.9",
     "@astrojs/sitemap": "^3.7.6",
     "@astrojs/vercel": "^11.0.22",
-    "@heroui/react": "3.2.7",
     "@heroui/styles": "3.2.7",
     "@tailwindcss/vite": "4.3.5",
     "astro": "^7.4.13",
     "goeist": "^0.1.0",
-    "react": "19",
-    "react-dom": "19",
     "tailwindcss": "4.3.5"
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
+    "@alchemy.run/frontend-frameworks": "2.0.0-beta.87",
     "@cloudflare/oxlint-config": "^0.1.0",
     "@happy-dom/global-registrator": "^21.0.4",
     "@playwright/test": "^1.65.1",
-    "@testing-library/dom": "^10.4.2",
-    "@testing-library/react": "^16.3.3",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
+    "alchemy": "2.0.0-beta.87",
     "bun-types": "^1.4.5",
+    "effect": "4.1.5",
     "happy-dom": "^21.0.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.1",
