@@ -14,6 +14,8 @@ root installs it, and the Astro app stays untouched.
   count.
 - `src/providers.ts` — `Providers` service: directory and refresh-file loading
   plus tiered probing with cancellation.
+- `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
+  through Wikidata.
 - `test/` — behavior tests through the service interfaces, plus property tests
   for the cache and provider rules.
 

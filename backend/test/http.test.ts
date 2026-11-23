@@ -2,6 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { assertInstanceOf } from "@effect/vitest/utils";
 import { Effect, Schema } from "effect";
 import { createServer } from "node:http";
+import type { IncomingHttpHeaders } from "node:http";
+import { USER_AGENT } from "../../src/consts";
 import { Http, HttpError } from "../src/http";
 
 const Answer = Schema.Struct({ id: Schema.String });
@@ -13,20 +15,26 @@ interface Responder {
 
 // The test holds the server open with acquireRelease; a random port keeps
 // parallel test runs apart.
-const startServer = (handler: (url: string | undefined, respond: Responder) => void) =>
+const startServer = (
+  handler: (url: string | undefined, respond: Responder, headers: IncomingHttpHeaders) => void,
+) =>
   Effect.acquireRelease(
     Effect.promise(async () => {
       const server = createServer((request, response) =>
-        handler(request.url, {
-          json: (body) => {
-            response.setHeader("content-type", "application/json");
-            response.end(JSON.stringify(body));
+        handler(
+          request.url,
+          {
+            json: (body) => {
+              response.setHeader("content-type", "application/json");
+              response.end(JSON.stringify(body));
+            },
+            fail: (status) => {
+              response.statusCode = status;
+              response.end();
+            },
           },
-          fail: (status) => {
-            response.statusCode = status;
-            response.end();
-          },
-        }),
+          request.headers,
+        ),
       );
       await new Promise<void>((resolve) => {
         server.listen(0, "127.0.0.1", () => resolve());
@@ -69,6 +77,19 @@ describe("Http", () => {
       assert.strictEqual(title.id, "tt0133093");
     }).pipe(Effect.provide(Http.fetchLayer)),
   );
+
+  it.effect("the fetch layer sends the caller's headers", () => {
+    let seen: string | undefined;
+    return Effect.gen(function* () {
+      const { baseUrl } = yield* startServer((_url, respond, headers) => {
+        seen = headers["user-agent"];
+        respond.json({});
+      });
+      const http = yield* Http;
+      yield* http.getText(`${baseUrl}/identify`, { "User-Agent": USER_AGENT });
+      assert.strictEqual(seen, USER_AGENT);
+    }).pipe(Effect.provide(Http.fetchLayer));
+  });
 
   it.effect("the fetch layer reports the status of a failed response", () =>
     Effect.gen(function* () {
