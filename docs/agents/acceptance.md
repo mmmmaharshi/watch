@@ -51,7 +51,8 @@ same titles.
 
 Open `/#id=tt0133093` directly.
 
-The result for The Matrix opens without a click. The field shows `tt0133093`.
+The result for The Matrix opens without a click. The field shows
+`https://www.imdb.com/title/tt0133093/`.
 
 ## A7 — Copy gives the share link
 

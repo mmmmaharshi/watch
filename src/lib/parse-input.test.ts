@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseTitleInput } from "./parse-input";
+import { fullLinkForId, parseTitleInput } from "./parse-input";
 
 test("parses an IMDb id or link", () => {
   expect(parseTitleInput("tt0133093")).toEqual({ kind: "imdb", id: "tt0133093" });
@@ -41,4 +41,11 @@ test("a TMDB slug containing digits that look like an IMDb id stays a TMDB URL",
     type: "movie",
     id: "123",
   });
+});
+
+test("a bare id prefills as its full link", () => {
+  expect(fullLinkForId("tt0133093", "movie")).toBe("https://www.imdb.com/title/tt0133093/");
+  expect(fullLinkForId("27205", "movie")).toBe("https://www.themoviedb.org/movie/27205");
+  expect(fullLinkForId("1396", "tv")).toBe("https://www.themoviedb.org/tv/1396");
+  expect(fullLinkForId("not an id", "movie")).toBeNull();
 });

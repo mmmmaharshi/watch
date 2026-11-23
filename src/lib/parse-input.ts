@@ -11,6 +11,19 @@ export function isImdbId(value: string): boolean {
   return value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
 }
 
+// A bare id prefills as the full link: an IMDb id becomes its title URL, a
+// bare TMDB number takes the selected type. Links and titles pass through.
+export function fullLinkForId(id: string, kind: "movie" | "tv"): string | null {
+  const value = id.trim();
+  if (isImdbId(value)) {
+    return `https://www.imdb.com/title/${value.toLowerCase()}/`;
+  }
+  if (BARE_TMDB.test(value)) {
+    return `https://www.themoviedb.org/${kind === "tv" ? "tv" : "movie"}/${value}`;
+  }
+  return null;
+}
+
 // One input box plus a Movie/TV selector: IMDb IDs and links pass through;
 // TMDB URLs carry their own type; a bare TMDB number takes the selected
 // type, so it is never ambiguous.

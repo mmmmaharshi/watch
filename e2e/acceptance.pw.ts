@@ -141,7 +141,7 @@ test("A6 a shared link opens the result @live", async ({ page }) => {
   await open(page, `/#id=${MATRIX}`);
 
   await expect(resultTitle(page)).toHaveText("The Matrix", { timeout: 60_000 });
-  await expect(field(page)).toHaveValue(MATRIX);
+  await expect(field(page)).toHaveValue(`https://www.imdb.com/title/${MATRIX}/`);
 });
 
 test("A7 copy gives the share link @live", async ({ page }) => {

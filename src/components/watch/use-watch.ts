@@ -3,7 +3,7 @@ import { toast } from "@heroui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isWatchResult } from "../../lib/action-result";
 import { SEARCH_FAILED } from "../../lib/messages";
-import { parseTitleInput } from "../../lib/parse-input";
+import { fullLinkForId, parseTitleInput } from "../../lib/parse-input";
 import type { TitleCandidate } from "../../lib/search";
 import { shareUrl } from "../../lib/share";
 import type { ContentType } from "../../lib/types";
@@ -273,8 +273,9 @@ export function useWatch() {
     const shared = parseSharedId(location.search, location.hash);
     if (shared) {
       // The URL is the source of truth on mount; the lookup below corrects it.
+      // The field shows the full link, not the bare id.
       // eslint-disable-next-line react/set-state-in-effect
-      setValue(shared);
+      setValue(fullLinkForId(shared, kind) ?? shared);
       void lookupAndOpen(shared, kind);
     } else {
       // A fast paste can land in the SSR field before hydration; the
@@ -293,7 +294,7 @@ export function useWatch() {
         return;
       }
       setCandidates([]);
-      setValue(id);
+      setValue(fullLinkForId(id, kind) ?? id);
       void lookupAndOpen(id, kind);
     }
     window.addEventListener("hashchange", handleHash);

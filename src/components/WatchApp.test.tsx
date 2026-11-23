@@ -276,6 +276,23 @@ test("a shared link runs the lookup and opens the result dialog", async () => {
   expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
   expect(lookup).toHaveBeenCalledWith({ id: "tt0133093", exclude: undefined, kind: "movie" });
   expect(window.location.hash).toBe("#id=tt0133093");
+  expect(screen.getByRole("textbox", { name: /imdb or tmdb/i })).toHaveProperty(
+    "value",
+    "https://www.imdb.com/title/tt0133093/",
+  );
+});
+
+test("a shared TMDB id prefills the full TMDB link", async () => {
+  window.history.replaceState(null, "", "/#id=27205");
+
+  render(<WatchApp />);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(lookup).toHaveBeenCalledWith({ id: "27205", exclude: undefined, kind: "movie" });
+  expect(screen.getByRole("textbox", { name: /imdb or tmdb/i })).toHaveProperty(
+    "value",
+    "https://www.themoviedb.org/movie/27205",
+  );
 });
 
 test("copy writes the share link and shows the toast", async () => {
