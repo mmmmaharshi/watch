@@ -39,7 +39,7 @@ export default defineConfig({
     csp: {
       directives: [
         "default-src 'self'",
-        "img-src 'self' data: https://images.metahub.space https://static.tvmaze.com",
+        "img-src 'self' data: https://*.metahub.space https://static.tvmaze.com",
         "font-src 'self'",
         "connect-src 'self'",
         "object-src 'none'",

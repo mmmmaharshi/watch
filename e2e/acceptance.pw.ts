@@ -26,8 +26,8 @@ const POSTER_HOSTS: Array<string> = await readFile(
     text
       .split("\n")
       .find((line) => line.includes("img-src"))
-      ?.match(/https:\/\/([\w.-]+)/g)
-      ?.map((match) => match.replace("https://", "")) ?? [],
+      ?.match(/https:\/\/[*\w.-]+/g)
+      ?.map((match) => match.replace("https://", "").replace(/^\*\./, "")) ?? [],
 );
 
 function isPosterHostFailure(text: string): boolean {
