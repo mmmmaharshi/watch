@@ -1,16 +1,17 @@
 import { defineConfig } from "astro/config";
-import vercel from "@astrojs/vercel";
+import cloudflare from "@astrojs/cloudflare";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import { qrcode } from "vite-plugin-qrcode";
 import { SITE_URL } from "./src/consts";
 
-// SSR on Vercel. The page shell is static, /api/watch runs on demand.
-// host:true listens on LAN too, so phones reach the dev server.
+// Server-rendered on Cloudflare Workers. The page shell prerenders, the
+// lookup action runs on demand. host:true listens on LAN too, so phones
+// reach the dev server.
 export default defineConfig({
   site: SITE_URL,
   output: "server",
-  adapter: vercel(),
+  adapter: cloudflare(),
   integrations: [sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },

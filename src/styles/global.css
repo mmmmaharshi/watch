@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@heroui/styles";
 @import "goeist/sans.css";
 @import "goeist/mono.css";
 
@@ -8,8 +7,11 @@
   --font-mono: "Goeist Mono", ui-monospace, monospace;
 }
 
-/* Keep focus and link states on the ink ladder, not the blue accent. */
+/* The palette is ink on paper. These tokens are the only theme surface the
+   view reads, so the UI no longer needs a component library for them. */
 :root {
+  --foreground: #000000;
+  --overlay-shadow: 0 10px 30px rgb(0 0 0 / 12%);
   --focus: var(--foreground);
   --link: var(--foreground);
 }

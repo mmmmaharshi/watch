@@ -42,9 +42,13 @@ export function createRateLimiter(
 export const isLimited = createRateLimiter(15 * 60 * 1000, 100);
 
 export function clientIp(req: Request): string {
-  // Vercel appends the verified client IP last, so earlier entries (spoofable
-  // by the caller) are ignored. Direct spoofing of the last entry is not
-  // possible through the edge: it always appends the connecting IP.
+  // Cloudflare sets cf-connecting-ip at the edge, so a caller cannot forge it.
+  const direct = req.headers.get("cf-connecting-ip")?.trim();
+  if (direct) {
+    return direct;
+  }
+  // Behind another proxy, the last forwarded entry is the one that proxy
+  // appended. Earlier entries are caller-supplied and untrusted.
   const forwarded = req.headers.get("x-forwarded-for")?.split(",");
   const last = forwarded?.at(-1)?.trim();
   return last || "unknown";

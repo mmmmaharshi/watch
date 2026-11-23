@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import { defineAction } from "astro:actions";
+import { env } from "cloudflare:workers";
 import { z } from "astro/zod";
 import { handlerFor } from "../../backend/src/compose";
 import type { Bindings } from "../../backend/src/compose";
@@ -17,34 +18,25 @@ const isKv = (value: unknown): value is KvNamespace =>
   typeof value.put === "function";
 
 // Both bindings are optional, so a partial env builds without conditions at
-// the call site.
-interface ManagedBindings {
+// the call site. Astro v6 reads Worker bindings from cloudflare:workers.
+// The collector is writable; the exported contract stays read-only.
+interface WiredBindings {
   CACHE?: KvNamespace;
   PROVIDERS?: KvNamespace;
 }
 
-// The site Worker binds both namespaces. A local run has no runtime, so the
-// composition falls back to in-memory stores.
-const bindingsOf = (locals: unknown): Bindings => {
-  if (!isObject(locals) || !("runtime" in locals)) {
+const bindingsOf = (source: unknown): Bindings => {
+  if (!isObject(source)) {
     return {};
   }
-  const { runtime } = locals;
-  if (!isObject(runtime) || !("env" in runtime)) {
-    return {};
+  const picked: WiredBindings = {};
+  if ("CACHE" in source && isKv(source.CACHE)) {
+    picked.CACHE = source.CACHE;
   }
-  const { env } = runtime;
-  if (!isObject(env)) {
-    return {};
+  if ("PROVIDERS" in source && isKv(source.PROVIDERS)) {
+    picked.PROVIDERS = source.PROVIDERS;
   }
-  const bindings: ManagedBindings = {};
-  if ("CACHE" in env && isKv(env.CACHE)) {
-    bindings.CACHE = env.CACHE;
-  }
-  if ("PROVIDERS" in env && isKv(env.PROVIDERS)) {
-    bindings.PROVIDERS = env.PROVIDERS;
-  }
-  return bindings;
+  return picked;
 };
 
 export const server = {
@@ -54,8 +46,8 @@ export const server = {
       exclude: z.string().optional(),
       kind: z.enum(["movie", "tv"]).optional(),
     }),
-    handler: async ({ id, exclude, kind }, context) => {
-      const handler = handlerFor(bindingsOf(context.locals));
+    handler: async ({ id, exclude, kind }) => {
+      const handler = handlerFor(bindingsOf(env));
       return Effect.runPromise(handler.handle({ id, exclude, kind }));
     },
   }),

@@ -6,7 +6,7 @@ dist/
 .astro/
 
 # deployment
-.vercel
+.wrangler/
 
 # tooling
 .commandcode/

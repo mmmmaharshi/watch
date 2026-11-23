@@ -19,12 +19,11 @@
     "e2e:parity": "playwright test e2e/parity.pw.ts --project=ci --workers=1",
     "e2e:live": "playwright test --project=live --project=live-mobile --retries=2",
     "check": "bun run sync && bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build",
+    "deploy": "bun run build && wrangler deploy",
     "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.6",
-    "@astrojs/vercel": "^11.0.22",
-    "@heroui/styles": "3.2.7",
     "@tailwindcss/vite": "4.3.5",
     "astro": "^7.4.13",
     "goeist": "^0.1.0",
@@ -33,6 +32,7 @@
   "devDependencies": {
     "@alchemy.run/cloudflare": "2.0.0-beta.87",
     "@alchemy.run/frontend-frameworks": "2.0.0-beta.87",
+    "@astrojs/cloudflare": "14.4.9",
     "@cloudflare/oxlint-config": "^0.1.0",
     "@happy-dom/global-registrator": "^21.0.4",
     "@playwright/test": "^1.65.1",
@@ -46,6 +46,7 @@
     "oxlint": "^1.94.0",
     "tsrs": "^7.1.0-beta.tsrs3",
     "typescript": "^7.0.2",
-    "vite-plugin-qrcode": "^0.4.1"
+    "vite-plugin-qrcode": "^0.4.1",
+    "wrangler": "^4.166.0"
   }
 }

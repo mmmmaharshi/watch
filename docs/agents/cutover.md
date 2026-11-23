@@ -1,7 +1,10 @@
-# Cutover to Cloudflare
+# Cutover to the Alchemy stack
 
-This page lists the steps to move the app from Vercel to the Alchemy stack.
-The stack is declared and tested. It is not deployed. Only the owner runs
+Status: not run. The app already runs on Cloudflare through Wrangler. See
+`docs/agents/deploy.md` for the path that ships.
+
+This page describes the alternative path: declare the same app with the Alchemy
+stack. The stack is declared and tested. It is not deployed. Only the owner runs
 these steps.
 
 The declaration lives in `backend/src/stack.ts`. `alchemy.run.ts` at the repo
