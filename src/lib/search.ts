@@ -1,7 +1,9 @@
 import { Cache, defaultHttpClient, isLooseJson } from "./http";
 import type { HttpClient } from "./http";
+import { SEARCH_FAILED } from "./messages";
 import { isImdbId } from "./parse-input";
-import { yearOf } from "./metadata";
+import type { Candidate, Mutable, SearchOutcome } from "./types";
+import { yearOf } from "./year";
 import { CINEMETA_HOST, TVMAZE_HOST, USER_AGENT } from "../consts";
 
 const CINEMETA = `${CINEMETA_HOST}/catalog`;
@@ -19,20 +21,13 @@ const KIND_BY_TYPE = new Map<string, "movie" | "tv">([
   ["series", "tv"],
 ]);
 
-export interface TitleCandidate {
-  imdbId: string;
-  name: string;
-  year?: string;
-  kind: "movie" | "tv";
-  poster?: string;
-}
+// Built field by field, so the optional keys only appear when present.
+export type TitleCandidate = Mutable<Candidate>;
 
 export interface SearchDeps {
   http: HttpClient;
   cache: Cache<Array<TitleCandidate>>;
 }
-
-export type SearchOutcome = { ok: true; candidates: Array<TitleCandidate> } | { ok: false };
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.length > 0 ? value : undefined;
@@ -196,7 +191,7 @@ export async function searchTitles(
       parseCinemeta(value, "movie"),
     );
     if (movies === null) {
-      return { ok: false };
+      return { ok: false, error: SEARCH_FAILED };
     }
     return respond(deps, key, sortResults(movies.slice(0, SOURCE_LIMIT)));
   }
@@ -212,7 +207,7 @@ export async function searchTitles(
       ? await fetchWith(deps.http, TVMAZE + encodeURIComponent(cleaned), parseTVMaze)
       : null;
   if (shows === null && tvmaze === null) {
-    return { ok: false };
+    return { ok: false, error: SEARCH_FAILED };
   }
 
   return respond(deps, key, sortResults([...seriesPool, ...(tvmaze ?? []).slice(0, SOURCE_LIMIT)]));

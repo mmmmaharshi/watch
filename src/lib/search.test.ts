@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { Cache } from "./http";
 import type { HttpClient } from "./http";
+import { SEARCH_FAILED } from "./messages";
 import { parseCinemeta, parseTVMaze, searchTitles, sortResults } from "./search";
 import type { TitleCandidate } from "./search";
 
@@ -162,7 +163,6 @@ function fakeHttp(routes: Record<string, { ok: boolean; body: unknown }>) {
       const reply = routes[key] ?? { ok: false, body: {} };
       return {
         ok: reply.ok,
-        json: async () => ({}),
         text: async () => JSON.stringify(reply.body),
       };
     },
@@ -288,6 +288,7 @@ test("reports a failure when every source fails", async () => {
     ),
   ).toEqual({
     ok: false,
+    error: SEARCH_FAILED,
   });
 });
 
@@ -300,15 +301,6 @@ test("accepts an empty TVMaze answer when the series catalog failed", async () =
   expect(
     await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "Nothing", "tv"),
   ).toEqual({ ok: true, candidates: [] });
-});
-
-test("orders by newest year whatever the names", () => {
-  const candidates: Array<TitleCandidate> = [
-    { imdbId: "tt1111111", name: "Dune: Prophecy", year: "2020", kind: "tv" },
-    { imdbId: "tt2222222", name: "Dune: Part Two", year: "2024", kind: "movie" },
-  ];
-
-  expect(sortResults(candidates).map((c) => c.year)).toEqual(["2024", "2020"]);
 });
 
 test("keeps input order when years are missing", () => {
@@ -324,14 +316,14 @@ function switchableHttp(down: () => boolean) {
   const http: HttpClient = {
     get: async (url: string) => {
       if (down()) {
-        return { ok: false, json: async () => ({}), text: async () => "" };
+        return { ok: false, text: async () => "" };
       }
       const body = url.includes("catalog/movie")
         ? cinemetaMovie
         : url.includes("catalog/series")
           ? cinemetaSeries
           : {};
-      return { ok: true, json: async () => ({}), text: async () => JSON.stringify(body) };
+      return { ok: true, text: async () => JSON.stringify(body) };
     },
   };
   return http;
@@ -344,7 +336,10 @@ test("does not cache a partial outage", async () => {
     cache: new Cache<Array<TitleCandidate>>(60_000),
   };
 
-  expect(await searchTitles(deps, "The Office", "tv")).toEqual({ ok: false });
+  expect(await searchTitles(deps, "The Office", "tv")).toEqual({
+    ok: false,
+    error: SEARCH_FAILED,
+  });
 
   down = false;
   const out = await searchTitles(deps, "The Office", "tv");

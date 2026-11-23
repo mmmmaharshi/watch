@@ -6,15 +6,16 @@ import type { HttpShape } from "../src/http";
 import { ProviderList } from "../src/provider-list";
 import {
   DIRECTORY_URL,
-  PROVIDERS_STALE_MS,
-  Providers,
   VIDFAST,
   VIDLINK,
   VIDZEE,
   buildEmbedUrl,
   parseActiveDomains,
-} from "../src/providers";
-import type { ContentType, Provider, ProvidersFile, ProvidersShape } from "../src/providers";
+} from "../../src/lib/providers";
+import type { Provider, ProvidersFile } from "../../src/lib/providers";
+import { PROVIDERS_STALE_MS, Providers } from "../src/providers";
+import type { ProvidersShape } from "../src/providers";
+import type { ContentType } from "../../src/lib/types";
 
 const FILE_URL = "https://file.test/providers.json";
 const embeds = (base: string, type: ContentType = "movie", id = "tt1") =>

@@ -24,13 +24,13 @@ export function isLooseJson(value: unknown): value is LooseJson {
   return isJsonValue(value) && typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// Upstream bodies are JSON text; each caller parses and checks the shape.
 export interface HttpClient {
   get(
     url: string,
     options?: { signal?: AbortSignal; headers?: Record<string, string> },
   ): Promise<{
     ok: boolean;
-    json: () => Promise<LooseJson>;
     text: () => Promise<string>;
   }>;
 }
@@ -38,14 +38,7 @@ export interface HttpClient {
 export const defaultHttpClient: HttpClient = {
   get: async (url, options) => {
     const res = await fetch(url, options);
-    return {
-      ok: res.ok,
-      json: async () => {
-        const value: unknown = await res.json();
-        return isLooseJson(value) ? value : {};
-      },
-      text: () => res.text(),
-    };
+    return { ok: res.ok, text: () => res.text() };
   },
 };
 

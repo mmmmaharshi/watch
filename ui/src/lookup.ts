@@ -1,44 +1,15 @@
 import { Schema } from "effect";
+import { Status } from "../../backend/src/lookup-machine";
+import { Candidate, Kind, Result } from "../../src/lib/types";
 
-// Mirrors the shapes declared in backend/src/lookup-machine.ts. The machine's
-// snapshot is the single source of lookup state; these schemas only make it
-// storable in the Foldkit Model and visible to Messages.
-export const Kind = Schema.Literals(["movie", "tv"]);
-export type Kind = typeof Kind.Type;
+// The candidate, kind, and result shapes come from the wire contract, and the
+// status comes from the machine, so the UI cannot drift from what it renders.
+export { Candidate, Kind, Result, Status };
 
 export const Phase = Schema.Literals(["idle", "searching", "looking", "retrying"]);
 export type Phase = typeof Phase.Type;
 
-export const Candidate = Schema.Struct({
-  imdbId: Schema.String,
-  name: Schema.String,
-  year: Schema.optionalKey(Schema.String),
-  kind: Kind,
-  poster: Schema.optionalKey(Schema.String),
-});
-export type Candidate = typeof Candidate.Type;
-
-export const Result = Schema.Struct({
-  id: Schema.String,
-  url: Schema.String,
-  provider: Schema.String,
-  type: Kind,
-  name: Schema.String,
-  year: Schema.optionalKey(Schema.String),
-  rating: Schema.optionalKey(Schema.String),
-  description: Schema.optionalKey(Schema.String),
-});
-export type Result = typeof Result.Type;
-
-export const Status = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("idle") }),
-  Schema.Struct({ kind: Schema.Literal("info"), text: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("loading"), text: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("error"), text: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("field"), text: Schema.String }),
-]);
-export type Status = typeof Status.Type;
-
+// The machine's context minus `value`, which the Foldkit Model holds as `query`.
 export const LookupState = Schema.Struct({
   phase: Phase,
   kind: Kind,

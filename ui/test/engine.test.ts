@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Deferred, Effect } from "effect";
-import type { LookupDeps, SearchOutcome } from "../../backend/src/lookup-machine";
+import type { LookupDeps } from "../../backend/src/lookup-machine";
+import type { SearchOutcome } from "../../src/lib/types";
 import { LookupEngine, lookupEngineLayer } from "../src/commands";
 
 const MATRIX = {

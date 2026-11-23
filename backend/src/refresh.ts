@@ -17,8 +17,8 @@ import {
   VIDZEE,
   buildEmbedUrl,
   parseActiveDomains,
-} from "./providers";
-import type { Provider, ProvidersFile } from "./providers";
+} from "../../src/lib/providers";
+import type { Provider, ProvidersFile } from "../../src/lib/providers";
 
 export interface ProbeResponse {
   readonly status: number;
@@ -52,7 +52,7 @@ export interface RefreshOutcome {
 // The plain-HTTP probe used by both the Bun script and the Worker: a non-ok
 // answer is data, a network failure is an error.
 export const fetchProbe =
-  (timeoutMs: number = 8000): RefreshDeps["probe"] =>
+  (timeoutMs: number): RefreshDeps["probe"] =>
   (url) =>
     Effect.tryPromise({
       try: async () => {

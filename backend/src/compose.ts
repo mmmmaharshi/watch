@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { SITE_URL } from "../../src/consts";
+import { PROVIDERS_FILE_URL } from "../../src/lib/providers";
 import { Cache } from "./cache";
 import { Handler } from "./handler";
 import type { HandlerShape } from "./handler";
@@ -33,7 +33,7 @@ export const providerListLayer = (bindings: Bindings): Layer.Layer<ProviderList>
 export const handlerLayer = (bindings: Bindings): Layer.Layer<Handler> =>
   Handler.layer.pipe(
     Layer.provide(
-      Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer(`${SITE_URL}/providers.json`)),
+      Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer(PROVIDERS_FILE_URL)),
     ),
     Layer.provide(
       Layer.mergeAll(Http.fetchLayer, cacheLayer(bindings), providerListLayer(bindings)),

@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import type { KvNamespace } from "../src/kv";
 import { ProviderList } from "../src/provider-list";
 import { PROVIDER_LIST_KEY } from "../src/providers";
-import type { ProvidersFile } from "../src/providers";
+import type { ProvidersFile } from "../../src/lib/providers";
 
 interface StubKv extends KvNamespace {
   readonly values: Map<string, string>;

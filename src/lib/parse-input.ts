@@ -6,6 +6,7 @@ const IMDB_ID = /tt\d{7,8}(?!\d)/;
 const TMDB_MOVIE = /themoviedb\.org\/movie\/([1-9]\d{0,7})/i;
 const TMDB_TV = /themoviedb\.org\/tv\/([1-9]\d{0,7})/i;
 const BARE_TMDB = /^[1-9]\d{0,7}$/;
+const SHARED_ID = "id";
 
 export function isImdbId(value: string): boolean {
   return value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
@@ -22,6 +23,23 @@ export function isLinkLike(value: string): boolean {
 // prefill both point here, so the shape lives in one place.
 export function imdbUrl(id: string): string {
   return `https://www.imdb.com/title/${id}/`;
+}
+
+// The ID in a shared link rides in the hash, so a shared title never creates a
+// second URL for search engines to index. The query form is read for older
+// links. This is the inverse of fullLinkForId.
+export function parseSharedId(search: string, hash: string): string | null {
+  return new URLSearchParams(search || hash.slice(1)).get(SHARED_ID);
+}
+
+// The hash half of the share link, used for the history entry too.
+export function hashForId(id: string): string {
+  return `#${SHARED_ID}=${encodeURIComponent(id)}`;
+}
+
+// The shareable link for a title: the app URL with the ID in the hash.
+export function shareUrl(origin: string, id: string): string {
+  return `${origin.replace(/\/$/, "")}/${hashForId(id)}`;
 }
 
 export function fullLinkForId(id: string, kind: "movie" | "tv"): string | null {

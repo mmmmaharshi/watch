@@ -1,4 +1,4 @@
-import { VIDFAST, originIfHttps } from "./providers";
+import { originIfHttps } from "./providers";
 import type { ProviderEntry, ProvidersFile } from "./providers";
 
 // Probe rules shared by the Bun script and the Worker cron. A plain HTTP 200
@@ -49,8 +49,8 @@ export function isVidFastAlive(status: number): boolean {
 
 export function buildProvidersJson(
   baseUrls: Array<string>,
-  updatedAt: string = new Date().toISOString(),
-  fallbacks: Array<string> = [VIDFAST.baseUrl],
+  updatedAt: string,
+  fallbacks: Array<string>,
 ): ProvidersFile {
   const seen = new Set<string>();
   const providers: Array<ProviderEntry> = [];

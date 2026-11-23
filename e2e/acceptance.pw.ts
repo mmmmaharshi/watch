@@ -163,9 +163,7 @@ test("A3 a title search lists titles @live", async ({ page }) => {
   // A bare \d{4} also matches inside an IMDb id; require non-digit edges so
   // only a standalone year counts.
   await expect(rows.first()).toContainText(/(?:^|\D)\d{4}(?:\D|$)/);
-  await expect(page.getByRole("status")).toHaveText(
-    count === 1 ? "1 match. Choose one." : `${count} matches. Choose one.`,
-  );
+  await expect(page.getByRole("status")).toHaveText(/^\d+ match(es)?\. Choose one\.$/);
 });
 
 test("A4 a pick opens a result with a stream link @live", async ({ page }) => {

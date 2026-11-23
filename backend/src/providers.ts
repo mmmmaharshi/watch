@@ -1,26 +1,28 @@
 import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
+import { PROBE_TIMEOUT_MS } from "../../src/lib/provider-probes";
+import {
+  DIRECTORY_URL,
+  VIDFAST,
+  VIDLINK,
+  VIDZEE,
+  buildEmbedUrl,
+  originIfHttps,
+  parseActiveDomains,
+} from "../../src/lib/providers";
+import type { Provider, ProviderEntry, ProvidersFile } from "../../src/lib/providers";
+import type { ContentType } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Http, HttpError } from "./http";
 import type { HttpShape } from "./http";
 import { ProviderList } from "./provider-list";
 
-export type ContentType = "movie" | "tv";
-
-export interface Provider {
-  readonly name: string;
-  readonly baseUrl: string;
-  // Defaults to /embed/{type}/{id}; override for a provider with another shape.
-  readonly path?: (type: ContentType, id: string) => string;
-}
-
+// The provider facts (hosts, URL shapes, the directory parser) live in
+// src/lib/providers, because the refresh script needs them without Effect.
+// This module adds the layer that talks HTTP through the Effect runtime.
 export interface Stream {
   readonly url: string;
   readonly provider: string;
 }
-
-// VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
-// still answer 200 and get picked ahead of the live one.
-export const DIRECTORY_URL = "https://vidsrc.domains/";
 
 // A fresh refresh file answers alone. Older than this, the file still serves
 // when the directory is down, but a live directory wins.
@@ -30,78 +32,14 @@ export const PROVIDERS_STALE_MS = 48 * 60 * 60 * 1000;
 const STREAM_TTL_MS = 5 * 60 * 1000;
 
 const LOAD_TIMEOUT_MS = 5000;
-const PROBE_TIMEOUT_MS = 8000;
-
-// Static fallbacks, tried after every directory domain fails. TV needs
-// season/episode, default to 1/1.
-export const VIDLINK: Provider = {
-  name: "vidlink.pro",
-  baseUrl: "https://vidlink.pro",
-  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
-};
-
-export const VIDZEE: Provider = {
-  name: "player.vidzee.wtf",
-  baseUrl: "https://player.vidzee.wtf",
-};
-
-export const VIDFAST: Provider = {
-  name: "vidfast.vc",
-  baseUrl: "https://vidfast.vc",
-  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
-};
-
-// Trust comes from provenance, not names: entries are accepted only from our
-// cron-written file or the curator's active directory section (both TLS), and
-// every candidate faces a live probe before the user is sent anywhere.
-export function originIfHttps(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" ? parsed.origin : null;
-  } catch {
-    return null;
-  }
-}
-
-// Active domains sit in the #domains section, each row carrying its URL in a
-// data-val copy button; the #old section lists retired hosts.
-export function parseActiveDomains(html: string): Array<string> {
-  const start = html.indexOf('id="domains"');
-  if (start === -1) {
-    return [];
-  }
-  const end = html.indexOf('id="old"', start);
-  const section = html.slice(start, end === -1 ? undefined : end);
-  const urls = [...section.matchAll(/data-val="([^"]+)"/g)].flatMap((match) => {
-    const origin = originIfHttps(match[1] ?? "");
-    return origin ? [origin] : [];
-  });
-  return [...new Set(urls)];
-}
 
 function toProviders(baseUrls: ReadonlyArray<string>): Array<Provider> {
   return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
 
-export function buildEmbedUrl(provider: Provider, type: ContentType, id: string): string {
-  return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
-}
-
 interface RefreshFile {
   readonly domains: ReadonlyArray<string>;
   readonly updatedAt: number;
-}
-
-// The refresh list as stored: the committed file today, the KV namespace after
-// cutover. The cron writer and the app reader share this shape.
-export interface ProviderEntry {
-  readonly name: string;
-  readonly baseUrl: string;
-}
-
-export interface ProvidersFile {
-  readonly updatedAt: string;
-  readonly providers: ReadonlyArray<ProviderEntry>;
 }
 
 export const PROVIDER_LIST_KEY = "providers";
@@ -212,8 +150,8 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
             return toProviders(cached.value.split("\n"));
           }
 
-          // Shared storage first; the committed file is the pre-cutover home
-          // and stays as a fallback until it is deleted.
+          // Shared storage first; the committed file is the current home and
+          // stays as a fallback until KV holds the list.
           const stored = yield* providerList.load;
           const file = Option.isSome(stored)
             ? Option.some(toRefreshFile(stored.value))

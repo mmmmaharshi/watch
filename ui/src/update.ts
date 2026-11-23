@@ -2,8 +2,7 @@ import { Option } from "effect";
 import { Update } from "foldkit";
 import { Dialog } from "@foldkit/ui";
 import { modifyFields } from "foldkit/struct";
-import { fullLinkForId } from "../../src/lib/parse-input";
-import { parseSharedId } from "../../src/lib/watch-view";
+import { fullLinkForId, parseSharedId } from "../../src/lib/parse-input";
 import {
   AdvanceLookup,
   AwaitLookupSettle,

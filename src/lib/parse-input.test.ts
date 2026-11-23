@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { fullLinkForId, imdbUrl, isLinkLike, parseTitleInput } from "./parse-input";
+import {
+  fullLinkForId,
+  hashForId,
+  imdbUrl,
+  isLinkLike,
+  parseSharedId,
+  parseTitleInput,
+  shareUrl,
+} from "./parse-input";
 
 test("parses an IMDb id or link", () => {
   expect(parseTitleInput("tt0133093")).toEqual({ kind: "imdb", id: "tt0133093" });
@@ -57,4 +65,27 @@ test("a link is link-like whatever its case, a title is not", () => {
   expect(isLinkLike("tt0133093")).toBe(false);
   expect(isLinkLike("The Matrix")).toBe(false);
   expect(imdbUrl("tt0133093")).toBe("https://www.imdb.com/title/tt0133093/");
+});
+
+test("reads the shared id from the query first, then the hash", () => {
+  expect(parseSharedId("?id=tt0133093", "#id=tt0241527")).toBe("tt0133093");
+  expect(parseSharedId("", "#id=tt0241527")).toBe("tt0241527");
+  expect(parseSharedId("", "")).toBe(null);
+  expect(parseSharedId("?x=1", "#id=tt0241527")).toBe(null);
+});
+
+test("builds the share link for a title", () => {
+  expect(hashForId("tt0133093")).toBe("#id=tt0133093");
+  expect(shareUrl("https://watch.maharshi.work", "tt0133093")).toBe(
+    "https://watch.maharshi.work/#id=tt0133093",
+  );
+});
+
+test("trims a trailing slash and encodes the id", () => {
+  expect(shareUrl("https://watch.maharshi.work/", "tt0133093")).toBe(
+    "https://watch.maharshi.work/#id=tt0133093",
+  );
+  expect(shareUrl("https://watch.maharshi.work", "a b&c")).toBe(
+    "https://watch.maharshi.work/#id=a%20b%26c",
+  );
 });

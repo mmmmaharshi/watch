@@ -1,9 +1,19 @@
 ---
 import { SITE_URL } from "../consts";
+import { COPY } from "../../ui/src/copy";
 import { render } from "../../ui/src/render";
 import "../styles/global.css";
 
 export const prerender = true;
+
+// The page title is the client title, so the tab and the rendered page cannot
+// disagree.
+const title = COPY.title;
+const description =
+  "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.";
+// Share cards cut the copy short, so they get the same promise in one line.
+const shareDescription =
+  "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.";
 
 const html = render();
 ---
@@ -14,22 +24,22 @@ const html = render();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="text-scale" content="scale">
-<title>watch — find a stream link by title, IMDb, or TMDB</title>
+<title>{title}</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
 <link rel="canonical" href={SITE_URL + "/"}>
-<meta name="description" content="Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.">
+<meta name="description" content={description}>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watch">
-<meta property="og:title" content="watch — find a stream link by title, IMDb, or TMDB">
-<meta property="og:description" content="Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.">
+<meta property="og:title" content={title}>
+<meta property="og:description" content={shareDescription}>
 <meta property="og:url" content={SITE_URL + "/"}>
 <meta property="og:image" content={SITE_URL + "/og.png"}>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="watch — search a title or paste an IMDb or TMDB ID to get a stream link.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="watch — find a stream link by title, IMDb, or TMDB">
-<meta name="twitter:description" content="Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.">
+<meta name="twitter:title" content={title}>
+<meta name="twitter:description" content={shareDescription}>
 </head>
 <body class="min-h-dvh bg-white px-6 text-black antialiased">
   <div id="app" set:html={html}></div>

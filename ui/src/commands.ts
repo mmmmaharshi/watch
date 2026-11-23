@@ -4,12 +4,12 @@ import { Command } from "foldkit";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../../backend/src/lookup-machine";
 import type { LookupDeps } from "../../backend/src/lookup-machine";
-import { shareUrl } from "../../src/lib/share";
+import { hashForId, shareUrl } from "../../src/lib/parse-input";
 import { LookupEvent } from "./lookup";
 import type { LookupState, Phase } from "./lookup";
+import { COPY } from "./copy";
 import { Message } from "./messages";
-
-const FIELD_ID = "search-field";
+import { SEARCH_FIELD_ID } from "./view";
 
 type Machine = ReturnType<typeof createLookupMachine>;
 type Snapshot = SnapshotFrom<Machine>;
@@ -89,7 +89,7 @@ export const AwaitLookupSettle = Command.define("AwaitLookupSettle", {
 export const FocusSearchField = Command.define("FocusSearchField", {
   messages: [Message.CompletedFocusSearch],
   execute: Effect.sync(() => {
-    document.getElementById(FIELD_ID)?.focus();
+    document.getElementById(SEARCH_FIELD_ID)?.focus();
     return Message.CompletedFocusSearch();
   }),
 });
@@ -99,7 +99,7 @@ export const WriteHistoryHash = Command.define("WriteHistoryHash", {
   messages: [Message.CompletedWriteHash],
   execute: ({ id }) =>
     Effect.sync(() => {
-      const hash = `#id=${id}`;
+      const hash = hashForId(id);
       if (location.hash !== hash) {
         history.pushState(null, "", hash);
       }
@@ -116,10 +116,7 @@ export const CopyShareLink = Command.define("CopyShareLink", {
       Effect.catch((error) =>
         Effect.succeed(
           Message.CopyFailed({
-            message:
-              error instanceof Error && error.message
-                ? error.message
-                : "Copy failed. Select the link text to copy it manually.",
+            message: error instanceof Error && error.message ? error.message : COPY.copyFailed,
           }),
         ),
       ),

@@ -1,22 +1,13 @@
 import { createEffectLogic, setupEffect } from "@xstate/effect";
 import { Schema } from "effect";
 import type { Effect } from "effect";
-import { SEARCH_FAILED } from "../../src/lib/messages";
+import { LOOKUP_FAILED, SEARCH_FAILED } from "../../src/lib/messages";
 import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
+import { Candidate, FAILURE_REASONS, Kind, Result, SearchOutcome } from "../../src/lib/types";
 import type { ContentType } from "../../src/lib/types";
 
-// src/lib/search.ts does not typecheck under this package's
-// exactOptionalPropertyTypes, so the candidate shape is declared here.
-export interface TitleCandidate {
-  readonly imdbId: string;
-  readonly name: string;
-  readonly year?: string;
-  readonly kind: ContentType;
-  readonly poster?: string;
-}
-
-// Current behavior lives in src/components/watch/use-watch.ts. These strings
-// are the port contract, so they are copied literally.
+// The status copy the machine emits. The tests pin these strings, because they
+// are what a person reads while a lookup runs.
 const MESSAGES = {
   empty: "Enter an IMDb or TMDB ID, link, or title.",
   badLink: "Use an IMDb title link or a TMDB movie or TV link.",
@@ -24,49 +15,14 @@ const MESSAGES = {
   looking: "Finding a working stream...",
   retrying: "Finding another stream...",
   noTitle: "No title found. Try an ID or the full link.",
-  lookupFailed: "Something went wrong. Try again.",
+  lookupFailed: LOOKUP_FAILED,
   noProviders: "No other providers available.",
 } as const;
 
 const matchLabel = (count: number): string =>
   `${count} ${count === 1 ? "match" : "matches"}. Choose one.`;
 
-const Kind = Schema.Literals(["movie", "tv"]);
-
-const Candidate = Schema.Struct({
-  imdbId: Schema.String,
-  name: Schema.String,
-  year: Schema.optionalKey(Schema.String),
-  kind: Kind,
-  poster: Schema.optionalKey(Schema.String),
-});
-
-const Result = Schema.Struct({
-  id: Schema.String,
-  url: Schema.String,
-  provider: Schema.String,
-  type: Kind,
-  name: Schema.String,
-  year: Schema.optionalKey(Schema.String),
-  rating: Schema.optionalKey(Schema.String),
-  description: Schema.optionalKey(Schema.String),
-});
-export type WatchResult = typeof Result.Type;
-
-const FailureReason = Schema.Literals([
-  "invalid_input",
-  "tmdb_ambiguous",
-  "tmdb_not_found",
-  "metadata_missing",
-  "no_providers",
-]);
-export type WatchFailureReason = typeof FailureReason.Type;
-
-const SearchOutcome = Schema.Union([
-  Schema.Struct({ ok: Schema.Literal(true), candidates: Schema.Array(Candidate) }),
-  Schema.Struct({ ok: Schema.Literal(false), error: Schema.String }),
-]);
-export type SearchOutcome = typeof SearchOutcome.Type;
+const FailureReason = Schema.Literals(FAILURE_REASONS);
 
 const LookupOutcome = Schema.Union([
   Schema.Struct({ ok: Schema.Literal(true), result: Result }),
@@ -78,7 +34,7 @@ const LookupOutcome = Schema.Union([
 ]);
 export type LookupOutcome = typeof LookupOutcome.Type;
 
-const Status = Schema.Union([
+export const Status = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("idle") }),
   Schema.Struct({ kind: Schema.Literal("info"), text: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("loading"), text: Schema.String }),
@@ -109,7 +65,7 @@ export type LookupInput = typeof LookupInput.Type;
 
 export type LookupEvent =
   | { readonly type: "submit"; readonly input: string }
-  | { readonly type: "pick"; readonly candidate: TitleCandidate }
+  | { readonly type: "pick"; readonly candidate: Candidate }
   | { readonly type: "retry" }
   | { readonly type: "searchDone"; readonly output: SearchOutcome }
   | { readonly type: "lookupDone"; readonly output: LookupOutcome }
@@ -147,7 +103,7 @@ const errorStatus = (text: string): Status => ({ kind: "error", text });
 const fieldStatus = (text: string): Status => ({ kind: "field", text });
 
 // The status a successful lookup leaves behind: an open list keeps its count.
-const afterLookup = (candidates: ReadonlyArray<TitleCandidate>): Status =>
+const afterLookup = (candidates: ReadonlyArray<Candidate>): Status =>
   candidates.length > 0 ? infoStatus(matchLabel(candidates.length)) : idleStatus();
 
 type Move =

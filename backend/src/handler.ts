@@ -1,11 +1,11 @@
 import { Context, Effect, Layer, Option, Result } from "effect";
 import { TMDB_NOT_FOUND } from "../../src/lib/messages";
 import { parseTitleInput } from "../../src/lib/parse-input";
-import type { WatchOutcome, WatchResult } from "../../src/lib/types";
+import type { Mutable, WatchOutcome, WatchResult } from "../../src/lib/types";
 import { Mapping } from "./mapping";
 import { Metadata } from "./metadata";
-import type { ContentType } from "./metadata";
 import { Providers } from "./providers";
+import type { ContentType } from "../../src/lib/types";
 
 export type HandlerOutcome = WatchOutcome;
 
@@ -95,7 +95,7 @@ export class Handler extends Context.Service<Handler, HandlerShape>()("watch/bac
 
         const { url, provider } = stream.value;
         const meta = resolved.success;
-        const result: WatchResult = {
+        const result: Mutable<WatchResult> = {
           id,
           url,
           provider,

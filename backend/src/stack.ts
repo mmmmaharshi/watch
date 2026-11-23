@@ -6,9 +6,8 @@ import RefreshWorker from "./refresh-worker";
 import { SITE_DOMAIN, SITE_WORKER, STACK_NAME } from "./resources";
 
 // One program declares the site, the refresh cron, and both KV namespaces.
-// The Astro resource injects its own Cloudflare adapter, so astro.config.ts
-// must stop declaring one before the first deploy: that swap is part of the
-// cutover (docs/agents/cutover.md), not of this declaration.
+// This is the Alchemy alternative to the Wrangler path in docs/agents/deploy.md.
+// It has never been deployed.
 const Site = Website.Astro(
   SITE_WORKER,
   Effect.gen(function* () {

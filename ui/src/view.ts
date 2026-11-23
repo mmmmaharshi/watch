@@ -8,10 +8,17 @@ import { Message } from "./messages";
 import type { Model } from "./model";
 import { ReadSearchField } from "./mounts";
 
+// The search field's DOM contract: the view writes these, and the mount, the
+// entry script, and the focus command read them.
+export const SEARCH_FIELD_ID = "search-field";
+export const SEARCH_FIELD_NAME = "id";
+
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
 const FIELD_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-black";
+const DISABLED = "disabled:cursor-not-allowed disabled:opacity-50";
+const ICON_BUTTON = `flex size-12 items-center justify-center rounded-lg border border-black/10 bg-white sm:size-10 ${FOCUS_RING} ${DISABLED}`;
 
 function Spinner({ h }: { h: HtmlBuilder<Message> }) {
   return h.span([
@@ -275,7 +282,7 @@ function ResultDialog({
                                 ...closeButton,
                                 h.Disabled(disabled),
                                 h.Class(
-                                  `min-h-12 rounded-lg bg-black/5 px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`,
+                                  `min-h-12 rounded-lg bg-black/5 px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
                                 ),
                               ],
                               [COPY.cancel],
@@ -286,9 +293,7 @@ function ResultDialog({
                                 h.AriaLabel(COPY.retry),
                                 h.OnClick(Message.ClickedRetry()),
                                 h.Disabled(disabled),
-                                h.Class(
-                                  `flex size-12 items-center justify-center rounded-lg border border-black/10 bg-white sm:size-10 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`,
-                                ),
+                                h.Class(ICON_BUTTON),
                               ],
                               [retrying ? Spinner({ h }) : RefreshIcon({ h })],
                             ),
@@ -298,9 +303,7 @@ function ResultDialog({
                                 h.AriaLabel(COPY.copy),
                                 h.OnClick(Message.ClickedCopy()),
                                 h.Disabled(disabled),
-                                h.Class(
-                                  `flex size-12 items-center justify-center rounded-lg border border-black/10 bg-white sm:size-10 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`,
-                                ),
+                                h.Class(ICON_BUTTON),
                               ],
                               [CopyIcon({ h })],
                             ),
@@ -311,7 +314,7 @@ function ResultDialog({
                                 h.OnClick(Message.ClickedWatch()),
                                 h.Disabled(disabled),
                                 h.Class(
-                                  `min-h-12 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80 sm:min-h-10 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`,
+                                  `min-h-12 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80 sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
                                 ),
                               ],
                               [COPY.watch],
@@ -419,8 +422,8 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
                       [
                         Input.view(
                           {
-                            id: "search-field",
-                            name: "id",
+                            id: SEARCH_FIELD_ID,
+                            name: SEARCH_FIELD_NAME,
                             value: model.query,
                             isDisabled: loading,
                             isInvalid: invalid,
@@ -446,7 +449,7 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
                             h.Type("submit"),
                             h.Disabled(loading),
                             h.Class(
-                              `flex min-h-12 items-center justify-center gap-2 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80 ${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`,
+                              `flex min-h-12 items-center justify-center gap-2 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80 ${FOCUS_RING} ${DISABLED}`,
                             ),
                           ],
                           [...(loading ? [Spinner({ h })] : []), COPY.submit],

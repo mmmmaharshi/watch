@@ -1,5 +1,7 @@
 import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect";
 import { CINEMETA_HOST, TVMAZE_HOST } from "../../src/consts";
+import type { ContentType, Mutable } from "../../src/lib/types";
+import { yearOf } from "../../src/lib/year";
 import { Cache } from "./cache";
 import { Http } from "./http";
 
@@ -7,8 +9,6 @@ import { Http } from "./http";
 export class MetadataMissing extends Schema.TaggedError<MetadataMissing>()("MetadataMissing", {
   id: Schema.String,
 }) {}
-
-export type ContentType = "movie" | "tv";
 
 const TitleMeta = Schema.Struct({
   type: Schema.Literals(["movie", "tv"]),
@@ -18,9 +18,6 @@ const TitleMeta = Schema.Struct({
   description: Schema.optional(Schema.String),
 });
 export type TitleMeta = typeof TitleMeta.Type;
-
-// Built field by field, so the optional keys only appear when present.
-type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
 const CachedMeta = Schema.fromJsonString(TitleMeta);
 
@@ -52,11 +49,6 @@ export interface MetadataShape {
 
 const REQUEST_TIMEOUT_MS = 5000;
 const CACHE_TTL_MS = 60_000;
-
-// Dates arrive in mixed shapes: a bare year, a full date, or a range. The
-// first four digits are the year in every shape seen so far.
-const yearOf = (value: unknown): string | undefined =>
-  typeof value === "string" ? value.match(/^\d{4}/)?.[0] : undefined;
 
 type Kind = "movie" | "series";
 

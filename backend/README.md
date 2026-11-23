@@ -20,7 +20,9 @@ root installs it, and the Astro app stays untouched.
 - `src/provider-list.ts` — `ProviderList` service: the shared provider list,
   read and written through KV.
 - `src/providers.ts` — `Providers` service: shared-list, directory, and
-  refresh-file loading plus tiered probing with cancellation.
+  refresh-file loading plus tiered probing with cancellation. The provider facts
+  (hosts, URL shapes, the directory parser) live in `src/lib/providers.ts`,
+  because the refresh script uses them without Effect.
 - `src/refresh.ts` — the provider refresh core: probe the directory, keep the
   hosts that answer, save the list. Shared by the Bun script and the cron.
 - `src/resources.ts` — resource names, the cron expression, and the domain.
@@ -45,8 +47,8 @@ root installs it, and the Astro app stays untouched.
 - `bun run --cwd backend check` — typecheck, lint, test.
 - `bun run --cwd backend format` — format with oxfmt.
 - `bun run check` from the repo root — the full gate, backend included.
-- `bun alchemy plan --stage preview` — show what the stack would create. See
-  `docs/agents/cutover.md` before any deploy.
+- `bun alchemy plan --stage preview` — show what the stack would create. The
+  Wrangler path in `docs/agents/deploy.md` is the one that runs.
 
 ## Pinned versions
 

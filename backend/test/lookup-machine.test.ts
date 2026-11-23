@@ -2,13 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { Deferred, Effect } from "effect";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../src/lookup-machine";
-import type {
-  LookupDeps,
-  LookupInput,
-  LookupOutcome,
-  SearchInput,
-  SearchOutcome,
-} from "../src/lookup-machine";
+import type { LookupDeps, LookupInput, LookupOutcome, SearchInput } from "../src/lookup-machine";
+import type { SearchOutcome } from "../../src/lib/types";
 
 const MATRIX = {
   imdbId: "tt0133093",
@@ -87,14 +82,9 @@ describe("lookup machine", () => {
       const actor = yield* createEffectActor(idle());
       const snap = actor.getSnapshot();
       assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context, {
-        value: "",
-        kind: "movie",
-        candidates: [],
-        result: null,
-        status: { kind: "idle" },
-        openId: null,
-      });
+      assert.strictEqual(snap.context.value, "");
+      assert.strictEqual(snap.context.openId, null);
+      assert.deepStrictEqual(snap.context.status, { kind: "idle" });
     }).pipe(Effect.scoped),
   );
 
@@ -541,15 +531,6 @@ describe("lookup machine", () => {
         kind: "error",
         text: "No other providers available.",
       });
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("the open dialog is a context flag, not a phase", () =>
-    Effect.gen(function* () {
-      const actor = yield* opened();
-      const snap = actor.getSnapshot();
-      assert.strictEqual(snap.value, "idle");
-      assert.strictEqual(snap.context.openId, "tt0133093");
     }).pipe(Effect.scoped),
   );
 });

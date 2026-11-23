@@ -2,13 +2,13 @@ import { Effect, Option } from "effect";
 import { PROBE_TIMEOUT_MS } from "../src/lib/provider-probes";
 import { PROVIDERS_FILENAME } from "../src/lib/providers";
 import { parseProvidersFile } from "../backend/src/providers";
-import type { ProvidersFile } from "../backend/src/providers";
+import type { ProvidersFile } from "../src/lib/providers";
 import { fetchProbe, runRefresh } from "../backend/src/refresh";
 
-// Twice-weekly probe, run by hand or by the GitHub workflow until cutover.
-// Reads the live directory, keeps only hosts that pass a real check, and
-// writes public/providers.json. The probe rules live in
-// src/lib/provider-probes; the same refresh core writes KV in the Worker cron.
+// Twice-weekly probe, run by hand or by the GitHub workflow. Reads the live
+// directory, keeps only hosts that pass a real check, and writes
+// public/providers.json. The probe rules live in src/lib/provider-probes; the
+// same refresh core writes KV in the Worker cron.
 export * from "../src/lib/provider-probes";
 
 const FILE_PATH = new URL(`../public/${PROVIDERS_FILENAME}`, import.meta.url);

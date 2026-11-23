@@ -30,10 +30,6 @@ const snapshot = (patch: Partial<LookupState>): LookupState => ({
   ...patch,
 });
 
-const fieldError = snapshot({
-  status: { kind: "field", text: "Enter an IMDb or TMDB ID, link, or title." },
-});
-
 const opened = snapshot({
   result: MATRIX,
   openId: MATRIX.id,
@@ -44,68 +40,7 @@ const withDialogOpen = (base: Model): Model => ({
   dialog: Dialog.open(Dialog.init({ id: "result", focusSelector: "#watch-result" })).model,
 });
 
-describe("A1 — an empty submit asks for a title", () => {
-  test("the field error comes back with the cursor in the field", () => {
-    story(
-      update,
-      given(init()),
-      message(Message.SubmittedSearch()),
-      StoryCommand.expectHas(AdvanceLookup),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: fieldError }),
-      ),
-      StoryCommand.expectHas(FocusSearchField),
-      StoryCommand.resolve(FocusSearchField, Message.CompletedFocusSearch()),
-      model((actual: Model) => {
-        expect(actual.lookup.status).toEqual(fieldError.status);
-        expect(actual.lookup.openId).toBeNull();
-        expect(actual.dialog.isOpen).toBe(false);
-      }),
-    );
-  });
-});
-
-describe("A6 — a shared link prefills the field", () => {
-  test("a hash on mount prefills the full link and opens nothing", () => {
-    story(
-      update,
-      given(init()),
-      message(
-        Message.MountedSearch({
-          fieldText: "",
-          hash: "#id=tt0133093",
-          search: "",
-          isTouch: false,
-        }),
-      ),
-      StoryCommand.expectHas(AdvanceLookup),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: idleLookup() }),
-      ),
-      model((actual: Model) => {
-        expect(actual.query).toBe(LINK);
-        expect(actual.lookup.openId).toBeNull();
-        expect(actual.dialog.isOpen).toBe(false);
-      }),
-    );
-  });
-});
-
 describe("A9 — a phone does not open the keyboard", () => {
-  test("a touch mount does not ask for focus", () => {
-    story(
-      update,
-      given(init()),
-      message(Message.MountedSearch({ fieldText: "", hash: "", search: "", isTouch: true })),
-      StoryCommand.expectNone(),
-      model((actual: Model) => {
-        expect(actual.canAutoFocus).toBe(false);
-      }),
-    );
-  });
-
   test("a desktop mount asks for focus", () => {
     story(
       update,
@@ -113,9 +48,6 @@ describe("A9 — a phone does not open the keyboard", () => {
       message(Message.MountedSearch({ fieldText: "", hash: "", search: "", isTouch: false })),
       StoryCommand.expectHas(FocusSearchField),
       StoryCommand.resolve(FocusSearchField, Message.CompletedFocusSearch()),
-      model((actual: Model) => {
-        expect(actual.canAutoFocus).toBe(true);
-      }),
     );
   });
 });

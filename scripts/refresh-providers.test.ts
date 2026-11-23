@@ -54,11 +54,13 @@ test("output keeps one entry per origin, skips bad entries, ends with vidfast", 
   const at = "2026-11-21T00:00:00Z";
   const vidsrc = { name: "vidsrc.sh", baseUrl: "https://vidsrc.sh" };
   const vidfast = { name: "vidfast.vc", baseUrl: "https://vidfast.vc" };
-  expect(buildProvidersJson(["https://vidsrc.sh", "https://vidsrc.sh/"], at)).toEqual({
+  expect(
+    buildProvidersJson(["https://vidsrc.sh", "https://vidsrc.sh/"], at, [vidfast.baseUrl]),
+  ).toEqual({
     updatedAt: at,
     providers: [vidsrc, vidfast],
   });
-  expect(buildProvidersJson(["https://vidsrc.sh", "not a url"], at)).toEqual({
+  expect(buildProvidersJson(["https://vidsrc.sh", "not a url"], at, [vidfast.baseUrl])).toEqual({
     updatedAt: at,
     providers: [vidsrc, vidfast],
   });

@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Option } from "effect";
-import type { ProvidersFile } from "../src/providers";
-import { DIRECTORY_URL, VIDFAST, VIDLINK, VIDZEE, buildEmbedUrl } from "../src/providers";
+import type { ProvidersFile } from "../../src/lib/providers";
+import { DIRECTORY_URL, VIDFAST, VIDLINK, VIDZEE, buildEmbedUrl } from "../../src/lib/providers";
 import { ROT_ALARM_MS } from "../../src/lib/provider-probes";
 import { runRefresh } from "../src/refresh";
 import type { ProbeResponse, RefreshDeps } from "../src/refresh";
