@@ -6,18 +6,26 @@ export class HttpError extends Schema.TaggedError<HttpError>()("HttpError", {
 }) {}
 
 export interface HttpShape {
-  readonly getText: (url: string) => Effect.Effect<string, HttpError>;
+  readonly getText: (
+    url: string,
+    headers?: Record<string, string>,
+  ) => Effect.Effect<string, HttpError>;
   readonly getJson: <A>(
     url: string,
     schema: Schema.ConstraintDecoder<A>,
+    headers?: Record<string, string>,
   ) => Effect.Effect<A, HttpError>;
 }
 
 const make = (getText: HttpShape["getText"]): HttpShape => ({
   getText,
   // Bodies are untrusted, so the caller's Schema validates them.
-  getJson: <A>(url: string, schema: Schema.ConstraintDecoder<A>) =>
-    getText(url).pipe(
+  getJson: <A>(
+    url: string,
+    schema: Schema.ConstraintDecoder<A>,
+    headers?: Record<string, string>,
+  ) =>
+    getText(url, headers).pipe(
       Effect.flatMap((text) =>
         Effect.try({
           try: () => Schema.decodeUnknownSync(schema)(JSON.parse(text) as unknown),
@@ -33,10 +41,10 @@ export class Http extends Context.Service<Http, HttpShape>()("watch/backend/Http
 
   static readonly fetchLayer = Layer.succeed(
     Http,
-    make((url) =>
+    make((url, headers) =>
       Effect.gen(function* () {
         const response = yield* Effect.tryPromise({
-          try: () => fetch(url),
+          try: () => fetch(url, headers === undefined ? undefined : { headers }),
           catch: () => new HttpError({ url }),
         });
         if (!response.ok) {

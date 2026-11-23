@@ -14,6 +14,8 @@ root installs it, and the Astro app stays untouched.
   count.
 - `src/metadata.ts` — `Metadata` service: Cinemeta lookup with a TVMaze
   fallback and a negative cache.
+- `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
+  through Wikidata.
 - `test/` — behavior tests through the service interfaces, plus property tests
   for the cache rules.
 
