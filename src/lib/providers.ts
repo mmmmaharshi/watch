@@ -86,7 +86,7 @@ export function parseActiveDomains(html: string): Array<string> {
   const end = html.indexOf('id="old"', start);
   const section = html.slice(start, end === -1 ? undefined : end);
   const urls = [...section.matchAll(/data-val="([^"]+)"/g)].flatMap((m) => {
-    const origin = originIfHttps(m[1]);
+    const origin = originIfHttps(m[1] ?? "");
     return origin ? [origin] : [];
   });
   return [...new Set(urls)];

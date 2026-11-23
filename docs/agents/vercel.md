@@ -29,3 +29,8 @@ GITHUB_REPOSITORY=mmmmaharshi/watch GITHUB_SHA=$(git rev-parse HEAD) \
 
 The token needs `deployments: read` on the repository. The workflow uses the
 default `GITHUB_TOKEN` with that one permission. No Vercel token is needed.
+
+## Leaving Vercel
+
+The Alchemy stack is declared but not deployed. The step-by-step move, and how
+to roll back to Vercel, is in `docs/agents/cutover.md`.

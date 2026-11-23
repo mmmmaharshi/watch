@@ -2,7 +2,8 @@
 
 The Effect backend for the CAFE port. Nothing here serves traffic yet; this
 package holds the shared layers that the provider, metadata, and mapping
-services will use.
+services will use, plus the Alchemy stack that will deploy the site and the
+provider-refresh cron.
 
 ## Layout
 
@@ -11,9 +12,20 @@ root installs it, and the Astro app stays untouched.
 
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry
-  count.
-- `src/providers.ts` — `Providers` service: directory and refresh-file loading
-  plus tiered probing with cancellation.
+  count, plus a KV-backed Layer for shared storage.
+- `src/kv.ts` — the KV binding port both KV-backed Layers build on.
+- `src/provider-list.ts` — `ProviderList` service: the shared provider list,
+  read and written through KV.
+- `src/providers.ts` — `Providers` service: shared-list, directory, and
+  refresh-file loading plus tiered probing with cancellation.
+- `src/refresh.ts` — the provider refresh core: probe the directory, keep the
+  hosts that answer, save the list. Shared by the Bun script and the cron.
+- `src/resources.ts` — resource names, the cron expression, and the domain.
+- `src/cloudflare.ts` — the KV namespace declarations.
+- `src/refresh-worker.ts` — the cron Worker: runs the refresh core and writes
+  KV on the Tuesday/Saturday schedule.
+- `src/stack.ts` — the Alchemy stack: site Worker, cron Worker, KV, domain by
+  stage.
 - `src/metadata.ts` — `Metadata` service: Cinemeta lookup with a TVMaze
   fallback and a negative cache.
 - `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
@@ -30,6 +42,8 @@ root installs it, and the Astro app stays untouched.
 - `bun run --cwd backend check` — typecheck, lint, test.
 - `bun run --cwd backend format` — format with oxfmt.
 - `bun run check` from the repo root — the full gate, backend included.
+- `bun alchemy plan --stage preview` — show what the stack would create. See
+  `docs/agents/cutover.md` before any deploy.
 
 ## Pinned versions
 
@@ -47,6 +61,18 @@ move under us.
 | `oxlint`         | 1.94.0       |
 | `oxfmt`          | 0.79.0       |
 | `@types/node`    | 26.6.6       |
+
+The stack also pins, at the repo root:
+
+| Package                            | Version       |
+| ---------------------------------- | ------------- |
+| `alchemy`                          | 2.0.0-beta.87 |
+| `@alchemy.run/cloudflare`          | 2.0.0-beta.87 |
+| `@alchemy.run/frontend-frameworks` | 2.0.0-beta.87 |
+
+`effect` is also a root devDependency at 4.1.5: `scripts/refresh-providers.ts`
+runs the shared refresh core, which lives in this package. Both pins must
+match.
 
 `@effect/vitest` 4.1.5 accepts `vitest >=5.0.0 <6.0.0`; 5.1.1 is the newest
 release in that range. The service patterns follow rat-stack's Effect 4.1.4

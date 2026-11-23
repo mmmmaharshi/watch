@@ -1,4 +1,8 @@
 import { Clock, Context, Effect, Layer, Option } from "effect";
+import type { KvNamespace } from "./kv";
+
+// KV expiry is whole seconds with a 60s floor.
+const KV_MIN_TTL_SECONDS = 60;
 
 interface Entry {
   readonly value: string;
@@ -52,6 +56,29 @@ export class Cache extends Context.Service<
         });
 
         return Cache.of({ get, set });
+      }),
+    );
+
+  // Isolates are evicted at will, so a shared store is the only cache that
+  // survives. A KV failure is a miss: the cache is an optimisation, never a
+  // dependency.
+  // shortcut: KV expiry floors at 60s, so a shorter TTL can outlive itself by
+  // under a minute; upgrade to a store with second precision if that matters.
+  static readonly layerKv = (kv: KvNamespace): Layer.Layer<Cache> =>
+    Layer.succeed(
+      Cache,
+      Cache.of({
+        get: (key) =>
+          Effect.tryPromise(() => kv.get(key)).pipe(
+            Effect.orElseSucceed(() => null),
+            Effect.map((value) => (value === null ? Option.none<string>() : Option.some(value))),
+          ),
+        set: (key, value, ttlMillis) =>
+          Effect.tryPromise(() =>
+            kv.put(key, value, {
+              expirationTtl: Math.max(KV_MIN_TTL_SECONDS, Math.ceil(ttlMillis / 1000)),
+            }),
+          ).pipe(Effect.ignore),
       }),
     );
 }

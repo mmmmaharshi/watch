@@ -10,5 +10,13 @@
     "jsxImportSource": "react",
     "skipLibCheck": true
   },
-  "include": ["src", "scripts", "e2e", "ui", "astro.config.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "scripts",
+    "e2e",
+    "ui",
+    "astro.config.ts",
+    "playwright.config.ts",
+    "alchemy.run.ts"
+  ]
 }
