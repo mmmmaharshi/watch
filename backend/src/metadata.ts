@@ -177,34 +177,33 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             : Option.none<TitleMeta>();
         });
 
-      const resolve: MetadataShape["resolve"] = (id, preferred) =>
-        Effect.gen(function* () {
-          const cached = yield* recall(id);
-          if (Option.isSome(cached)) {
-            return cached.value;
-          }
-          if (Option.isSome(yield* cache.get(`miss:${id}`))) {
-            return yield* Effect.fail(new MetadataMissing({ id }));
-          }
+      const resolve = Effect.fnUntraced(function* (id: string, preferred?: ContentType) {
+        const cached = yield* recall(id);
+        if (Option.isSome(cached)) {
+          return cached.value;
+        }
+        if (Option.isSome(yield* cache.get(`miss:${id}`))) {
+          return yield* new MetadataMissing({ id });
+        }
 
-          const fetched =
-            preferred === undefined ? yield* raceKinds(id) : yield* preferKind(id, preferred);
-          if (fetched.meta !== null) {
-            yield* remember(id, fetched.meta);
-            return fetched.meta;
-          }
+        const fetched =
+          preferred === undefined ? yield* raceKinds(id) : yield* preferKind(id, preferred);
+        if (fetched.meta !== null) {
+          yield* remember(id, fetched.meta);
+          return fetched.meta;
+        }
 
-          const fallback = yield* fetchTVMaze(id);
-          if (fallback !== null) {
-            yield* remember(id, fallback);
-            return fallback;
-          }
+        const fallback = yield* fetchTVMaze(id);
+        if (fallback !== null) {
+          yield* remember(id, fallback);
+          return fallback;
+        }
 
-          if (!fetched.transient) {
-            yield* cache.set(`miss:${id}`, "1", CACHE_TTL_MS);
-          }
-          return yield* Effect.fail(new MetadataMissing({ id }));
-        });
+        if (!fetched.transient) {
+          yield* cache.set(`miss:${id}`, "1", CACHE_TTL_MS);
+        }
+        return yield* new MetadataMissing({ id });
+      });
 
       return Metadata.of({ resolve });
     }),

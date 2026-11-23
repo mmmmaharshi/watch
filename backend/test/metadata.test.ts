@@ -35,8 +35,8 @@ describe("Metadata", () => {
     return Effect.gen(function* () {
       const metadata = yield* Metadata;
       const meta = yield* metadata.resolve("tt0903747", "tv");
-      assert.deepEqual(meta, { type: "tv", name: "Breaking Bad", year: "2008" });
-      assert.deepEqual(asked, [`${CINEMETA}/meta/series/tt0903747.json`]);
+      assert.deepStrictEqual(meta, { type: "tv", name: "Breaking Bad", year: "2008" });
+      assert.deepStrictEqual(asked, [`${CINEMETA}/meta/series/tt0903747.json`]);
     }).pipe(Effect.provide(withStub(getText)));
   });
 
@@ -81,7 +81,7 @@ describe("Metadata", () => {
     return Effect.gen(function* () {
       const metadata = yield* Metadata;
       const meta = yield* metadata.resolve("tt0000001");
-      assert.deepEqual(meta, { type: "tv", name: "X", year: "2020", description: "Y" });
+      assert.deepStrictEqual(meta, { type: "tv", name: "X", year: "2020", description: "Y" });
     }).pipe(Effect.provide(withStub(getText)));
   });
 
@@ -110,7 +110,7 @@ describe("Metadata", () => {
       const metadata = yield* Metadata;
       const first = yield* metadata.resolve("tt0133093");
       const second = yield* metadata.resolve("tt0133093");
-      assert.deepEqual(second, first);
+      assert.deepStrictEqual(second, first);
       // One call per kind on the first resolve, none on the cached one.
       assert.strictEqual(cinemetaCalls, 2);
     }).pipe(Effect.provide(withStub(getText)));
