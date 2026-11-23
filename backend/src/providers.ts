@@ -2,6 +2,7 @@ import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 import { Cache } from "./cache";
 import { Http, HttpError } from "./http";
 import type { HttpShape } from "./http";
+import { ProviderList } from "./provider-list";
 
 export type ContentType = "movie" | "tv";
 
@@ -91,35 +92,59 @@ interface RefreshFile {
   readonly updatedAt: number;
 }
 
+// The refresh list as stored: the committed file today, the KV namespace after
+// cutover. The cron writer and the app reader share this shape.
+export interface ProviderEntry {
+  readonly name: string;
+  readonly baseUrl: string;
+}
+
+export interface ProvidersFile {
+  readonly updatedAt: string;
+  readonly providers: ReadonlyArray<ProviderEntry>;
+}
+
+export const PROVIDER_LIST_KEY = "providers";
+
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
 // Entries are taken as listed (https-parse only, no name gate): a bad entry
 // costs one failed probe. Malformed or non-https entries are dropped.
-const parseRefreshFile = (value: unknown): Option.Option<RefreshFile> => {
+export const parseProvidersFile = (value: unknown): Option.Option<ProvidersFile> => {
   if (!isObject(value) || !("providers" in value) || !Array.isArray(value.providers)) {
     return Option.none();
   }
-  const domains: Array<string> = [];
+  const providers: Array<ProviderEntry> = [];
+  const seen = new Set<string>();
   for (const entry of value.providers) {
     if (!isObject(entry) || !("baseUrl" in entry) || typeof entry.baseUrl !== "string") {
       continue;
     }
-    const origin = originIfHttps(entry.baseUrl);
-    if (origin !== null) {
-      domains.push(origin);
+    const baseUrl = originIfHttps(entry.baseUrl);
+    if (baseUrl === null || seen.has(baseUrl)) {
+      continue;
     }
+    seen.add(baseUrl);
+    const name =
+      "name" in entry && typeof entry.name === "string" && entry.name !== ""
+        ? entry.name
+        : new URL(baseUrl).host;
+    providers.push({ name, baseUrl });
   }
-  if (!domains.length) {
+  if (!providers.length) {
     return Option.none();
   }
-  // An unparseable updatedAt means stale, not missing: the file still serves
+  // An unparseable updatedAt means stale, not missing: the list still serves
   // when the directory is down.
   const updatedAt =
-    "updatedAt" in value && typeof value.updatedAt === "string"
-      ? Date.parse(value.updatedAt)
-      : Number.NaN;
-  return Option.some({ domains: [...new Set(domains)], updatedAt });
+    "updatedAt" in value && typeof value.updatedAt === "string" ? value.updatedAt : "";
+  return Option.some({ updatedAt, providers });
 };
+
+const toRefreshFile = (file: ProvidersFile): RefreshFile => ({
+  domains: file.providers.map((entry) => entry.baseUrl),
+  updatedAt: Date.parse(file.updatedAt),
+});
 
 const loadRefreshFile = (http: HttpShape, fileUrl: string) =>
   http.getJson(fileUrl, Schema.Unknown).pipe(
@@ -127,7 +152,10 @@ const loadRefreshFile = (http: HttpShape, fileUrl: string) =>
       duration: LOAD_TIMEOUT_MS,
       orElse: () => Effect.fail(new HttpError({ url: fileUrl })),
     }),
-    Effect.map(parseRefreshFile),
+    Effect.map((value): Option.Option<RefreshFile> => {
+      const parsed = parseProvidersFile(value);
+      return Option.isSome(parsed) ? Option.some(toRefreshFile(parsed.value)) : Option.none();
+    }),
     Effect.orElseSucceed(() => Option.none<RefreshFile>()),
   );
 
@@ -168,12 +196,15 @@ const streamKey = (type: ContentType, id: string) => `providers:stream:${type}:$
 export class Providers extends Context.Service<Providers, ProvidersShape>()(
   "watch/backend/Providers",
 ) {
-  static readonly layer = (fileUrl: string): Layer.Layer<Providers, never, Http | Cache> =>
+  static readonly layer = (
+    fileUrl: string,
+  ): Layer.Layer<Providers, never, Http | Cache | ProviderList> =>
     Layer.effect(
       Providers,
       Effect.gen(function* () {
         const http = yield* Http;
         const cache = yield* Cache;
+        const providerList = yield* ProviderList;
 
         const loadProviders = Effect.fnUntraced(function* () {
           const cached = yield* cache.get(DOMAINS_KEY);
@@ -181,7 +212,12 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
             return toProviders(cached.value.split("\n"));
           }
 
-          const file = yield* loadRefreshFile(http, fileUrl);
+          // Shared storage first; the committed file is the pre-cutover home
+          // and stays as a fallback until it is deleted.
+          const stored = yield* providerList.load;
+          const file = Option.isSome(stored)
+            ? Option.some(toRefreshFile(stored.value))
+            : yield* loadRefreshFile(http, fileUrl);
           if (Option.isSome(file)) {
             const age = (yield* Clock.currentTimeMillis) - file.value.updatedAt;
             if (age <= PROVIDERS_STALE_MS) {

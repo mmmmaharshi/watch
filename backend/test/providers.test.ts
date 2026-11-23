@@ -3,6 +3,7 @@ import { Clock, Deferred, Effect, Layer, Option, Ref, Schema } from "effect";
 import { Cache } from "../src/cache";
 import { Http, HttpError } from "../src/http";
 import type { HttpShape } from "../src/http";
+import { ProviderList } from "../src/provider-list";
 import {
   DIRECTORY_URL,
   PROVIDERS_STALE_MS,
@@ -13,7 +14,7 @@ import {
   buildEmbedUrl,
   parseActiveDomains,
 } from "../src/providers";
-import type { ContentType, Provider, ProvidersShape } from "../src/providers";
+import type { ContentType, Provider, ProvidersFile, ProvidersShape } from "../src/providers";
 
 const FILE_URL = "https://file.test/providers.json";
 const embeds = (base: string, type: ContentType = "movie", id = "tt1") =>
@@ -28,21 +29,35 @@ const refreshFile = (domains: ReadonlyArray<string>, updatedAt: number) =>
     updatedAt: new Date(updatedAt).toISOString(),
     providers: domains.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl })),
   });
+const storedFile = (domains: ReadonlyArray<string>, updatedAt: number): ProvidersFile => ({
+  updatedAt: new Date(updatedAt).toISOString(),
+  providers: domains.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl })),
+});
 
-const providersLayer = (getText: HttpShape["getText"]) =>
+const providersLayer = (
+  getText: HttpShape["getText"],
+  stored: Option.Option<ProvidersFile> = Option.none(),
+) =>
   Providers.layer(FILE_URL).pipe(
     Layer.provide(Http.stubLayer(getText)),
     Layer.provide(Cache.layer(10)),
+    Layer.provide(
+      Layer.succeed(
+        ProviderList,
+        ProviderList.of({ load: Effect.succeed(stored), save: () => Effect.void }),
+      ),
+    ),
   );
 
 const withProviders = <A>(
   getText: HttpShape["getText"],
   body: (providers: ProvidersShape) => Effect.Effect<A>,
+  stored: Option.Option<ProvidersFile> = Option.none(),
 ) =>
   Effect.gen(function* () {
     const providers = yield* Providers;
     return yield* body(providers);
-  }).pipe(Effect.provide(providersLayer(getText)));
+  }).pipe(Effect.provide(providersLayer(getText, stored)));
 
 const makeHarness = Effect.gen(function* () {
   const requests = yield* Ref.make<Array<string>>([]);
@@ -120,6 +135,65 @@ describe("Providers", () => {
       const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
 
       assert.strictEqual(stream.provider, "live.test");
+    }),
+  );
+
+  it.effect("a stored provider list answers before the legacy file", () =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis;
+      const h = yield* makeHarness;
+      h.routes.set(embeds("https://stored.test"), "<html>");
+
+      const stream = Option.getOrThrow(
+        yield* withProviders(
+          h.getText,
+          select,
+          Option.some(storedFile(["https://stored.test"], now)),
+        ),
+      );
+
+      assert.strictEqual(stream.provider, "stored.test");
+      assert.ok(!(yield* Ref.get(h.requests)).includes(FILE_URL));
+    }),
+  );
+
+  it.effect("a stale stored list yields to the live directory", () =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis;
+      const h = yield* makeHarness;
+      h.routes.set(DIRECTORY_URL, directoryPage(["https://live.test"]));
+      h.routes.set(embeds("https://live.test"), "<html>");
+      h.routes.set(embeds("https://stored.test"), "<html>");
+
+      const stream = Option.getOrThrow(
+        yield* withProviders(
+          h.getText,
+          select,
+          Option.some(storedFile(["https://stored.test"], now - PROVIDERS_STALE_MS - 1)),
+        ),
+      );
+
+      assert.strictEqual(stream.provider, "live.test");
+      assert.ok(!(yield* Ref.get(h.requests)).includes(embeds("https://stored.test")));
+    }),
+  );
+
+  it.effect("a stale stored list answers when the directory is down", () =>
+    Effect.gen(function* () {
+      const now = yield* Clock.currentTimeMillis;
+      const h = yield* makeHarness;
+      h.routes.set(embeds("https://stored.test"), "<html>");
+
+      const stream = Option.getOrThrow(
+        yield* withProviders(
+          h.getText,
+          select,
+          Option.some(storedFile(["https://stored.test"], now - PROVIDERS_STALE_MS - 1)),
+        ),
+      );
+
+      assert.strictEqual(stream.provider, "stored.test");
+      assert.ok((yield* Ref.get(h.requests)).includes(DIRECTORY_URL));
     }),
   );
 

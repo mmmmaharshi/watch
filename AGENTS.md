@@ -29,3 +29,8 @@ Single-context: one `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/a
 Never grade your own change. The criteria live in `docs/agents/acceptance.md`.
 The verifier runs `$verify`, with fresh context and another provider. See
 `docs/agents/qa.md`.
+
+### Cutover
+
+The move from Vercel to the Alchemy stack, including deploy, verify, domain,
+and rollback steps, is in `docs/agents/cutover.md`. The owner runs it.
