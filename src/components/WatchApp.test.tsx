@@ -21,6 +21,14 @@ const OTHER: WatchResult = {
   type: "movie",
 };
 
+const OFFICE_TV: WatchResult = {
+  id: "tt0386676",
+  name: "The Office",
+  url: "https://vidsrc.sh/embed/tv/tt0386676",
+  provider: "vidsrc.sh",
+  type: "tv",
+};
+
 const lookup = mock(
   async (_input: { id: string; exclude?: string }): Promise<{ data: WatchOutcome }> => ({
     data: { ok: true, result: MATRIX },
@@ -215,6 +223,60 @@ test("switching the selector to TV sends kind tv to the search", async () => {
 
   await waitFor(() => expect(search).toHaveBeenCalled());
   expect(search).toHaveBeenCalledWith({ query: "The Office", kind: "tv" });
+});
+
+test("a pasted IMDb link sets the selector to the fetched type", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+  const select = screen.getByLabelText(/movie or tv show/i);
+
+  fireEvent.change(select, { target: { value: "tv" } });
+  fireEvent.change(input, { target: { value: "https://www.imdb.com/title/tt0133093/" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(select).toHaveProperty("value", "movie");
+});
+
+test("a pasted TMDB TV link sets the selector to TV", async () => {
+  lookup.mockResolvedValueOnce({ data: { ok: true, result: OFFICE_TV } });
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+  const select = screen.getByLabelText(/movie or tv show/i);
+
+  fireEvent.change(select, { target: { value: "movie" } });
+  fireEvent.change(input, { target: { value: "https://www.themoviedb.org/tv/1396-the-office" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("dialog", { name: "The Office" })).toBeTruthy();
+  expect(select).toHaveProperty("value", "tv");
+});
+
+test("a bare id leaves the selector alone", async () => {
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+  const select = screen.getByLabelText(/movie or tv show/i);
+
+  fireEvent.change(select, { target: { value: "tv" } });
+  fireEvent.change(input, { target: { value: "tt0133093" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByRole("dialog", { name: "The Matrix" })).toBeTruthy();
+  expect(select).toHaveProperty("value", "tv");
+});
+
+test("a failed lookup leaves the selector alone", async () => {
+  lookup.mockRejectedValueOnce(new Error("No working providers available"));
+  render(<WatchApp />);
+  const input = screen.getByRole("textbox", { name: /imdb or tmdb/i });
+  const select = screen.getByLabelText(/movie or tv show/i);
+
+  fireEvent.change(select, { target: { value: "tv" } });
+  fireEvent.change(input, { target: { value: "https://www.imdb.com/title/tt0133093/" } });
+  fireEvent.submit(input.closest("form")!);
+
+  expect(await screen.findByText("No working providers available")).toBeTruthy();
+  expect(select).toHaveProperty("value", "tv");
 });
 
 test("a search failure shows the error without marking the field invalid", async () => {

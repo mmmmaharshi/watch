@@ -187,6 +187,10 @@ export function useWatch() {
       return;
     }
     // What the person typed stays: a pasted link is not replaced by the ID.
+    // The selector follows a pasted link; bare ids leave it alone.
+    if (/^https?:\/\//i.test(input) || /^www\./i.test(input)) {
+      setKind(data.type);
+    }
     setStatus(
       candidates.length > 0
         ? { kind: "info", text: matchLabel(candidates.length) }
