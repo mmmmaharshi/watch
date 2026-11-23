@@ -2,6 +2,7 @@ import { createEffectLogic, setupEffect } from "@xstate/effect";
 import { Schema } from "effect";
 import type { Effect } from "effect";
 import { SEARCH_FAILED } from "../../src/lib/messages";
+import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
 import type { ContentType } from "../../src/lib/types";
 
 // src/lib/search.ts does not typecheck under this package's
@@ -13,60 +14,6 @@ export interface TitleCandidate {
   readonly kind: ContentType;
   readonly poster?: string;
 }
-
-// The backend package cannot import src/lib/parse-input.ts for the same reason.
-// These helpers mirror it and must move with it if that rule changes.
-const IMDB_ID = /tt\d{7,8}(?!\d)/;
-const TMDB_MOVIE = /themoviedb\.org\/movie\/([1-9]\d{0,7})/i;
-const TMDB_TV = /themoviedb\.org\/tv\/([1-9]\d{0,7})/i;
-const BARE_TMDB = /^[1-9]\d{0,7}$/;
-
-type ParsedInput =
-  | { readonly kind: "imdb"; readonly id: string }
-  | { readonly kind: "tmdb"; readonly type?: ContentType; readonly id: string };
-
-const parseTitleInput = (input: string): ParsedInput | null => {
-  const value = input.trim().toLowerCase();
-  const movie = value.match(TMDB_MOVIE);
-  if (movie?.[1]) {
-    return { kind: "tmdb", type: "movie", id: movie[1] };
-  }
-  const tv = value.match(TMDB_TV);
-  if (tv?.[1]) {
-    return { kind: "tmdb", type: "tv", id: tv[1] };
-  }
-  const imdb = value.match(IMDB_ID);
-  if (imdb?.[0]) {
-    return { kind: "imdb", id: imdb[0] };
-  }
-  if (BARE_TMDB.test(value)) {
-    return { kind: "tmdb", id: value };
-  }
-  return null;
-};
-
-const isLinkLike = (value: string): boolean => {
-  const trimmed = value.trim().toLowerCase();
-  return (
-    trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("www.")
-  );
-};
-
-const imdbUrl = (id: string): string => `https://www.imdb.com/title/${id}/`;
-
-const isImdbId = (value: string): boolean =>
-  value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
-
-const fullLinkForId = (id: string, kind: ContentType): string | null => {
-  const value = id.trim();
-  if (isImdbId(value)) {
-    return imdbUrl(value.toLowerCase());
-  }
-  if (BARE_TMDB.test(value)) {
-    return `https://www.themoviedb.org/${kind === "tv" ? "tv" : "movie"}/${value}`;
-  }
-  return null;
-};
 
 // Current behavior lives in src/components/watch/use-watch.ts. These strings
 // are the port contract, so they are copied literally.
@@ -311,7 +258,9 @@ const onSearchDone = (output: SearchOutcome): Move => {
 const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
   if (!output.ok) {
     // A bare number may be a title ("1917") rather than a TMDB ID.
-    if (BARE_TMDB.test(context.value) && output.reason === "tmdb_not_found") {
+    const parsed = parseTitleInput(context.value);
+    const bareTmdb = parsed?.kind === "tmdb" && parsed.type === undefined;
+    if (bareTmdb && output.reason === "tmdb_not_found") {
       return { target: "searching", context: { status: loadingStatus(MESSAGES.searching) } };
     }
     return { target: "idle", context: { status: errorStatus(output.error) } };
