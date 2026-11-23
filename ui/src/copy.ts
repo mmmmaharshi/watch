@@ -1,0 +1,26 @@
+// Every string the UI shows. Copied word for word from DESIGN.md so the port
+// cannot drift from the old screen.
+export const COPY = {
+  title: "watch — find a stream link by title, IMDb, or TMDB",
+  wordmark: "watch",
+  intro: "Find a movie or TV show. Free, no sign-up.",
+  fieldLabel: "IMDb or TMDB ID, link, or title",
+  placeholder: "Title, IMDb or TMDB ID, or link",
+  kindLabel: "Movie or TV show",
+  hint: "Paste an ID or link, or type a title. Bare numbers try TMDB first.",
+  submit: "Watch now",
+  footer:
+    "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
+    "Prefer an ad blocker for safety.",
+  copied: "Link copied.",
+  copyFailed: "Copy failed. Select the link text to copy it manually.",
+  cancel: "Cancel",
+  watch: "Watch",
+  retry: "Get another stream link",
+  copy: "Copy link",
+  imdb: "IMDb",
+  provider: "Provider",
+  streamUrl: "Stream URL",
+  movie: "Movie",
+  tv: "TV",
+} as const;

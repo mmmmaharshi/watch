@@ -1,4 +1,4 @@
 [test]
 preload = ["./src/test/setup.ts"]
 # The backend package runs its own vitest gate (`bun run check:backend`).
-pathIgnorePatterns = ["backend/**"]
+pathIgnorePatterns = ["backend/**", "ui/**"]
