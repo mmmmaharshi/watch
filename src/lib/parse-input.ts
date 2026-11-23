@@ -42,13 +42,15 @@ export function parseTitleInput(input: string, hint?: "movie" | "tv"): TitleInpu
   const value = input.trim().toLowerCase();
 
   const movieUrl = value.match(TMDB_MOVIE);
-  if (movieUrl) {
-    return { kind: "tmdb", type: "movie", id: movieUrl[1] };
+  const movieId = movieUrl?.[1];
+  if (movieId !== undefined) {
+    return { kind: "tmdb", type: "movie", id: movieId };
   }
 
   const tvUrl = value.match(TMDB_TV);
-  if (tvUrl) {
-    return { kind: "tmdb", type: "tv", id: tvUrl[1] };
+  const tvId = tvUrl?.[1];
+  if (tvId !== undefined) {
+    return { kind: "tmdb", type: "tv", id: tvId };
   }
 
   const imdb = value.match(IMDB_ID);
