@@ -199,6 +199,13 @@ test("A6 a shared link prefills the full link without opening the dialog", async
   await expect(dialog(page)).toHaveCount(0);
 });
 
+test("A6b a shared TMDB id prefills the TMDB link", async ({ page }) => {
+  await open(page, "/#id=27205");
+
+  await expect(field(page)).toHaveValue("https://www.themoviedb.org/movie/27205");
+  await expect(dialog(page)).toHaveCount(0);
+});
+
 test("A7 copy gives the share link @live", async ({ page }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await open(page);
