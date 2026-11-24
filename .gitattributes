@@ -1,0 +1,2 @@
+# One line ending in the index and in the checkout, so Windows and CI agree.
+* text=auto eol=lf
