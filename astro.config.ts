@@ -2,7 +2,6 @@ import { defineConfig } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
-import { qrcode } from "vite-plugin-qrcode";
 import { SITE_URL } from "./src/consts";
 
 // Server-rendered on Cloudflare Workers. The page shell prerenders, the
@@ -15,15 +14,8 @@ export default defineConfig({
   integrations: [sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
-  // No markdown code is rendered anywhere, so highlighting stays off: the
-  // default Shiki highlighter uses inline styles, which CSP forbids.
-  markdown: { syntaxHighlight: false },
   vite: {
-    plugins: [
-      tailwindcss(),
-      // Prints a QR for the LAN URL on dev start. Host is on, so a phone can scan it.
-      qrcode({ filter: (url) => !url.includes("localhost") }),
-    ],
+    plugins: [tailwindcss()],
   },
   // CSP hashes let the inline Astro scripts run without 'unsafe-inline'.
   // Stylesheets stay on style-src-elem ('self' scoped there, not default, so

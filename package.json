@@ -45,7 +45,6 @@
     "oxlint": "^1.94.0",
     "tsrs": "^7.1.0-beta.tsrs3",
     "typescript": "^7.0.2",
-    "vite-plugin-qrcode": "^0.4.1",
     "wrangler": "^4.166.0"
   }
 }
