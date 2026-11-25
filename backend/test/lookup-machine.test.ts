@@ -547,7 +547,7 @@ describe("lookup machine", () => {
       yield* sendAndAwait(actor, { type: "retry" });
       const snap = yield* sendAndAwait(actor, {
         type: "lookupDone",
-        output: { ok: false, reason: "no_providers", error: "No other providers available." },
+        output: { ok: false, reason: "no_providers", error: "No working providers available" },
       });
       assert.strictEqual(snap.value, "idle");
       assert.deepStrictEqual(snap.context.result, MATRIX_RESULT);

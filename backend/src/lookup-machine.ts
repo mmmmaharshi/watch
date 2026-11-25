@@ -271,7 +271,8 @@ const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
 
 const onRetryDone = (output: LookupOutcome): Move => {
   if (!output.ok) {
-    return { target: "idle", context: { status: errorStatus(output.error) } };
+    const text = output.reason === "no_providers" ? MESSAGES.noProviders : output.error;
+    return { target: "idle", context: { status: errorStatus(text) } };
   }
   return { target: "idle", context: { result: output.result, status: idleStatus() } };
 };
