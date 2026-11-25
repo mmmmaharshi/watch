@@ -1,62 +1,46 @@
----
-import { SITE_URL } from "../consts";
-import { COPY } from "../../ui/src/copy";
-import { render } from "../../ui/src/render";
-import "../styles/global.css";
+import { SITE_URL } from "../../src/consts";
+import { COPY } from "./copy";
 
-export const prerender = true;
-
-// The page title is the client title, so the tab and the rendered page cannot
-// disagree.
-const title = COPY.title;
 const description =
   "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.";
 // Share cards cut the copy short, so they get the same promise in one line.
 const shareDescription =
   "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.";
 
-const html = render();
----
-
-<!DOCTYPE html>
+// The static page. The client bundle replaces the rendered view on boot; until
+// then the markup is real, so a paste that lands early has somewhere to go.
+export const pageHtml = (view: string): string => `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="text-scale" content="scale">
-<title>{title}</title>
+<title>${COPY.title}</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
-<link rel="canonical" href={SITE_URL + "/"}>
-<meta name="description" content={description}>
+<link rel="canonical" href="${SITE_URL}/">
+<meta name="description" content="${description}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watch">
-<meta property="og:title" content={title}>
-<meta property="og:description" content={shareDescription}>
-<meta property="og:url" content={SITE_URL + "/"}>
-<meta property="og:image" content={SITE_URL + "/og.png"}>
+<meta property="og:title" content="${COPY.title}">
+<meta property="og:description" content="${shareDescription}">
+<meta property="og:url" content="${SITE_URL}/">
+<meta property="og:image" content="${SITE_URL}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="watch — search a title or paste an IMDb or TMDB ID to get a stream link.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content={title}>
-<meta name="twitter:description" content={shareDescription}>
+<meta name="twitter:title" content="${COPY.title}">
+<meta name="twitter:description" content="${shareDescription}">
+<link rel="stylesheet" href="/assets/app.css">
+<script type="module" src="/assets/app.js"></script>
 </head>
 <body class="min-h-dvh bg-white px-6 text-black antialiased">
-  <div id="app" set:html={html}></div>
+  <div id="app">${view}</div>
   <noscript>
     <p class="mt-4 text-sm leading-relaxed text-black/64">
       This page needs JavaScript to find a stream link.
     </p>
   </noscript>
-  <script>
-    import { start } from "../../ui/src/entry";
-    import { actions } from "astro:actions";
-    import { makeLookupDeps } from "../lib/ui-deps";
-
-    start(
-      makeLookupDeps({ watch: actions.watch, search: actions.search }),
-      document.getElementById("app"),
-    );
-  </script>
 </body>
 </html>
+`;

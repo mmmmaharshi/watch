@@ -1,8 +1,12 @@
 {
-  // Astro generates the Worker entry and assets bindings for this app.
-  // Keep only the settings that must be explicit here.
+  // Local dev and the build check. The production deploy runs through Alchemy
+  // (backend/src/stack.ts); this file only tells Wrangler how to run the Worker.
   "name": "watch",
-  "compatibility_date": "2026-11-23",
+  "main": "backend/src/site-worker.ts",
+  "compatibility_date": "2026-11-25",
+  "assets": {
+    "directory": "./dist/client",
+  },
   "observability": {
     "enabled": true,
   },

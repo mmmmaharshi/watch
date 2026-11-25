@@ -1,17 +1,24 @@
 # Backend
 
-The Effect backend for the CAFE port. `backend/src/compose.ts` builds the
-handler the Astro actions call; the Alchemy stack deploys the site and the
-provider-refresh cron.
+The Effect backend. `backend/src/site-worker.ts` is the Worker entry; it hands
+`/api/*` to `site.ts`, which builds one service graph through `compose.ts`. The
+Alchemy stack deploys the site, its assets, and the provider-refresh cron.
 
 ## Layout
 
 `backend/` is a Bun workspace of the root package. One `bun install` at the repo
-root installs it, and the Astro app stays untouched.
+root installs it.
 
-- `src/compose.ts` — `handlerFor`: one handler over the services, over the
-  fetch transport and the two stores. KV-backed in a Worker, in-memory
-  elsewhere.
+- `src/site.ts` — the HTTP boundary: `/api/watch` and `/api/search`, input
+  validation, the visitor's region.
+- `src/site-worker.ts` — the Worker entry both Wrangler (dev) and Alchemy
+  (deploy) use.
+- `src/compose.ts` — the `Site` service: one graph over the services, the fetch
+  transport, and the two stores. KV-backed in a Worker, in-memory elsewhere.
+- `src/search.ts` — `Search` service: Cinemeta and TVMaze fallback over `Http`
+  and `Cache`, with one ranking rule.
+- `src/tmdb.ts` — `Tmdb` service: language search and official availability. A
+  disabled layer serves when no key is bound.
 
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry
@@ -47,8 +54,9 @@ root installs it, and the Astro app stays untouched.
 - `bun run --cwd backend check` — typecheck, lint, test.
 - `bun run --cwd backend format` — format with oxfmt.
 - `bun run check` from the repo root — the full gate, backend included.
-- `bun alchemy plan --stage preview` — show what the stack would create. The
-  Wrangler path in `docs/agents/deploy.md` is the one that runs.
+- `bun run dev` from the repo root — build the site and run the Worker locally.
+- `bun alchemy plan --stage prod` — show what the stack would create; the
+  deploy path is `bun run deploy` (see `docs/agents/deploy.md`).
 
 ## Pinned versions
 

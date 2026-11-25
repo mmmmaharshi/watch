@@ -1,7 +1,9 @@
 # Deploys
 
-The app runs on Cloudflare Workers. Astro builds the Worker with the
-`@astrojs/cloudflare` adapter, and Wrangler uploads it.
+The app runs on Cloudflare Workers. `bun run build` writes the static site to
+`dist/client`; Alchemy bundles `backend/src/site-worker.ts` and deploys it with
+those assets. The platform serves the page and the assets; the Worker answers
+`/api/*`.
 
 ## Where it runs
 
@@ -18,15 +20,33 @@ The app runs on Cloudflare Workers. Astro builds the Worker with the
 bun run deploy
 ```
 
-That runs `astro build` and then `wrangler deploy`. Astro writes the Worker to
-`dist/server` and the assets to `dist/client`, and Wrangler reads the generated
-config through `.wrangler/deploy/config.json`.
+That runs `bun run build` and then `bun alchemy deploy --stage prod`. The stack
+in `backend/src/stack.ts` declares the site Worker, the refresh Worker, both KV
+namespaces, and the host.
 
-Check the output before uploading:
+## Local
 
 ```sh
-bunx wrangler deploy --dry-run
+bun run dev
 ```
+
+That builds the site and runs `wrangler dev` on port 4321 with the same Worker
+entry and the same `dist/client` assets. `bun run e2e` reuses that server or
+starts its own.
+
+## Secrets
+
+The language filter and the official-services row read `TMDB_API_KEY`, a free
+key from themoviedb.org. The stack binds it as a secret from the environment, so
+put it in `.env` at the repo root (ignored by git) or export it before deploying:
+
+```sh
+TMDB_API_KEY=your-key
+```
+
+A deploy without it fails at the Config step, by design. A local run without it
+still serves the page and the stream link; a language choice reports that the
+filter is not set up.
 
 ## Inspect
 
@@ -36,25 +56,6 @@ Use the `cf` CLI for the zone and the Worker:
 cf workers list
 cf workers get watch
 ```
-
-## Secrets
-
-The search form's language filter and the dialog's official-services row read
-`TMDB_API_KEY`, a free key from themoviedb.org. Set it once for the Worker:
-
-```sh
-bunx wrangler secret put TMDB_API_KEY
-```
-
-For a local run, put it in `.env` at the repo root:
-
-```sh
-TMDB_API_KEY=your-key
-```
-
-`.env` and `.dev.vars` are ignored by git; the dev server reads `.env` and says
-so on start. Without the key, "Any language" and the stream link still work;
-choosing a language reports that the filter is not set up.
 
 ## Security headers
 
@@ -74,7 +75,5 @@ Undo the rule:
 cf rulesets rules delete f8cc7c20464343b7a366869bd724685e --zone maharshi.work
 ```
 
-## Other path
-
-The Alchemy stack in `backend/src/stack.ts` declares the same app. It has never
-been deployed. Keep the Wrangler path above as the one that runs.
+The page's Content-Security-Policy is the app's own: `src/lib/csp.ts` writes it
+into `dist/client/_headers` at build time.

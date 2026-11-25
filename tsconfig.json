@@ -3,18 +3,10 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["bun-types", "astro/client"],
+    "types": ["bun-types"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": [
-    "src",
-    "scripts",
-    "e2e",
-    "ui",
-    "astro.config.ts",
-    "playwright.config.ts",
-    "alchemy.run.ts"
-  ]
+  "include": ["src", "scripts", "e2e", "ui", "playwright.config.ts", "alchemy.run.ts"]
 }

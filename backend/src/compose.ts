@@ -49,13 +49,15 @@ const handlerLayer = (): Layer.Layer<Handler, never, Http | Cache | ProviderList
 
 // The HTTP boundary: a watch lookup plus its official availability, and a
 // search. One graph, so the search and the watch share one cache.
+export interface WatchInput {
+  readonly id: string;
+  readonly kind?: "movie" | "tv";
+  readonly exclude?: string;
+  readonly region: string;
+}
+
 export interface SiteShape {
-  readonly watch: (input: {
-    readonly id: string;
-    readonly kind?: "movie" | "tv";
-    readonly exclude?: string;
-    readonly region: string;
-  }) => Effect.Effect<WatchOutcome>;
+  readonly watch: (input: WatchInput) => Effect.Effect<WatchOutcome>;
   readonly search: (input: SearchInput) => Effect.Effect<SearchOutcome>;
 }
 
@@ -67,12 +69,7 @@ export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site
       const search = yield* Search;
       const tmdb = yield* Tmdb;
 
-      const watch = Effect.fnUntraced(function* (input: {
-        readonly id: string;
-        readonly kind?: "movie" | "tv";
-        readonly exclude?: string;
-        readonly region: string;
-      }) {
+      const watch = Effect.fnUntraced(function* (input: WatchInput) {
         const handlerInput: Mutable<HandlerInput> = { id: input.id };
         if (input.kind !== undefined) {
           handlerInput.kind = input.kind;

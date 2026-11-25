@@ -66,6 +66,13 @@ export const FAILURE_REASONS = [
 ] as const;
 export type WatchFailureReason = (typeof FAILURE_REASONS)[number];
 
-export type WatchOutcome =
-  | { ok: true; result: Result }
-  | { ok: false; status: 400 | 502 | 503; reason: WatchFailureReason; error: string };
+export const WatchOutcome = Schema.Union([
+  Schema.Struct({ ok: Schema.Literal(true), result: Result }),
+  Schema.Struct({
+    ok: Schema.Literal(false),
+    status: Schema.Literals([400, 502, 503]),
+    reason: Schema.Literals(FAILURE_REASONS),
+    error: Schema.String,
+  }),
+]);
+export type WatchOutcome = typeof WatchOutcome.Type;

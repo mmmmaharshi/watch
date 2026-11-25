@@ -1,8 +1,8 @@
 # UI
 
 The Foldkit program for the watch page: one Model, one Message union, one pure
-`update`, and named Commands. The Astro page mounts it with
-`start(deps, container)`.
+`update`, and named Commands. `src/boot.ts` builds the page's deps and mounts it
+with `start(deps, container)`.
 
 ## Layout
 
@@ -16,7 +16,9 @@ The Foldkit program for the watch page: one Model, one Message union, one pure
 - `src/subscriptions.ts` — hashchange and popstate as Messages.
 - `src/update.ts` — the pure transition function.
 - `src/view.ts` — the page, form, candidate list, and result dialog.
-- `src/entry.ts` — `start(deps, container)`, called by the host page.
+- `src/entry.ts` — `start(deps, container)`, called by the boot script.
+- `src/boot.ts` — the browser entry: `start` with the HTTP transport.
+- `src/shell.ts` — the static page HTML, rendered at build time.
 - `src/render.ts` — the page's static markup, rendered at build time.
 - `test/` — story tests over `update` and scene tests through the view.
 

@@ -2,11 +2,10 @@
 - Never push, open a pull request, or merge without explicit user consent. Ask first and wait.
 - For syntax-aware code search, default to `ast-grep --lang <language> -p '<pattern>'` (adjust `--lang` per language); use text-only search only when explicitly requested.
 - Use `git twig new` in place of `git worktree add` when creating a worktree (see the `git-twig` skill).
-- Use Astro as much as possible. Check the Astro docs MCP before editing when an Astro API is missing, renamed, or behaves differently at runtime: the adapter and runtime APIs move between majors.
 - Before trusting browser-measured numbers, curl-verify the dev server serves current code (grep the response for a string from the working tree).
 - On Windows, write multi-line issue, PR, and release bodies to a file and pass `--body-file`. Inline newlines in `--body` break.
 - Shell is Windows PowerShell 5.1: pass quoted or regex patterns to the `grep` tool, because shell `rg` rejects escaped quotes; write files with the file tools, because `Set-Content -NoNewline` does not exist.
-- `astro dev` refuses a second server on the same port. `bun run e2e` starts its own on 4321 and stops it at the end (see `playwright.config.ts`), so start `bunx astro dev` yourself when you want to curl the app.
+- `bun run dev` builds the site and starts `wrangler dev` on 4321; `bun run e2e` reuses a running server or starts its own (see `playwright.config.ts`), so run `bun run dev` yourself when you want to curl the app.
 - `agent-browser` hides scrollbars by default. Pass `--hide-scrollbars false` when a scrollbar is under review.
 - Respond to me with $simple-english and $i-have-adhd.
 - Use $simple-english for every written part in the repo.

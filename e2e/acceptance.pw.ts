@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { POSTER_HOST_NAMES } from "../src/lib/csp";
 
 // The @live tests talk to Cinemeta and the stream providers. They run nightly
 // and against the deployed site, not on every pull request.
@@ -15,25 +15,14 @@ const MATRIX = "tt0133093";
 // if the page logged one or threw. Third-party poster art is the exception:
 // a dead poster image logs a network resource error the app already handles
 // by hiding the thumb, so those do not fail the run. Policy violations
-// ("Refused to load...") still do. The trusted hosts come from the CSP
-// img-src line in astro.config.ts, so the allow-list lives in one place.
+// ("Refused to load...") still do. The trusted hosts come from the CSP module,
+// so the allow-list lives in one place.
 const consoleErrors = new WeakMap<Page, Array<string>>();
-const POSTER_HOSTS: Array<string> = await readFile(
-  new URL("../astro.config.ts", import.meta.url),
-  "utf8",
-).then(
-  (text) =>
-    text
-      .split("\n")
-      .find((line) => line.includes("img-src"))
-      ?.match(/https:\/\/[*\w.-]+/g)
-      ?.map((match) => match.replace("https://", "").replace(/^\*\./, "")) ?? [],
-);
 
 function isPosterHostFailure(text: string, url: string): boolean {
   return (
     text.startsWith("Failed to load resource") &&
-    POSTER_HOSTS.some((host) => text.includes(host) || url.includes(host))
+    POSTER_HOST_NAMES.some((host) => text.includes(host) || url.includes(host))
   );
 }
 

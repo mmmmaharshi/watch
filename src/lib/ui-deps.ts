@@ -3,26 +3,26 @@ import type { LookupDeps, LookupOutcome } from "../../backend/src/lookup-machine
 import { LOOKUP_FAILED, SEARCH_FAILED } from "./messages";
 import type { ContentType, SearchOutcome, WatchOutcome } from "./types";
 
-// The Astro action result, structurally. A call that reaches the edge answers
+// The API response, structurally. A call that reaches the Worker answers
 // with data; a call that fails answers with an error, or rejects.
-interface ActionResponse<A> {
+interface ApiResponse<A> {
   readonly data?: A;
   readonly error?: { readonly message?: string };
 }
 
-// The two server actions the page exposes. Passed in, so the deps are tested
+// The two endpoints the page exposes. Passed in, so the deps are tested
 // without a server.
 export interface LookupTransport {
   readonly watch: (input: {
     readonly id: string;
     readonly kind?: ContentType;
     readonly exclude?: string;
-  }) => Promise<ActionResponse<WatchOutcome>>;
+  }) => Promise<ApiResponse<WatchOutcome>>;
   readonly search: (input: {
     readonly query: string;
     readonly kind: ContentType;
     readonly language?: string;
-  }) => Promise<ActionResponse<SearchOutcome>>;
+  }) => Promise<ApiResponse<SearchOutcome>>;
 }
 
 const resolve = async <A>(task: () => Promise<A>, fallback: A): Promise<A> => {

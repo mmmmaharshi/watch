@@ -34,9 +34,9 @@ export default defineConfig({
   webServer: live
     ? undefined
     : {
-        command: `bunx astro dev --port ${port}`,
+        command: `bun run dev`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 180_000,
       },
 });

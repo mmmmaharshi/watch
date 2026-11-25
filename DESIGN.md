@@ -216,7 +216,7 @@ Both are variable fonts from 100 to 900. There is no serif. There is no styled c
 
 ## Layout
 
-`src/pages/index.astro` sets a top-aligned page. The `body` classes are `min-h-dvh bg-white px-6 text-black antialiased`. The `main` column is `mx-auto flex min-h-dvh w-full max-w-[42rem] flex-col py-14 sm:py-20`, which is 42rem or 672px. The content group is `w-full sm:my-auto`, so it centres on tall screens and starts at the top on a phone. The page opts into OS text scaling with `<meta name="text-scale" content="scale">`.
+`ui/src/shell.ts` sets a top-aligned page. The `body` classes are `min-h-dvh bg-white px-6 text-black antialiased`. The `main` column is `mx-auto flex min-h-dvh w-full max-w-[42rem] flex-col py-14 sm:py-20`, which is 42rem or 672px. The content group is `w-full sm:my-auto`, so it centres on tall screens and starts at the top on a phone. The page opts into OS text scaling with `<meta name="text-scale" content="scale">`.
 
 The header opens the column with `border-b border-black/10 pb-6`. The wordmark and the intro sit left aligned.
 
