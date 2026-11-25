@@ -4,6 +4,7 @@ import { Dialog } from "@foldkit/ui";
 import {
   AdvanceLookup,
   AwaitLookupSettle,
+  ClearHistoryHash,
   FocusSearchField,
   WriteHistoryHash,
 } from "../src/commands";
@@ -212,6 +213,7 @@ describe("the result dialog", () => {
         AdvanceLookup,
         Message.GotLookupState({ generation: 2, snapshot: idleLookup() }),
       ),
+      Command.resolve(ClearHistoryHash, Message.CompletedClearHash()),
       Mount.expectEnded(Dialog.AcquireResources),
       expect(role("dialog", { name: "The Matrix" })).toBeAbsent(),
       expect(textbox).toHaveValue("tt0133093"),

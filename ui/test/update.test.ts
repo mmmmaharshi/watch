@@ -4,6 +4,7 @@ import { Dialog } from "@foldkit/ui";
 import {
   AdvanceLookup,
   AwaitLookupSettle,
+  ClearHistoryHash,
   FocusSearchField,
   WriteHistoryHash,
 } from "../src/commands";
@@ -229,6 +230,7 @@ describe("Escape and the dialog", () => {
         AdvanceLookup,
         Message.GotLookupState({ generation: 2, snapshot: idleLookup() }),
       ),
+      StoryCommand.resolve(ClearHistoryHash, Message.CompletedClearHash()),
       model((actual: Model) => {
         expect(actual.dialog.isOpen).toBe(false);
         expect(actual.lookup.openId).toBeNull();

@@ -6,6 +6,7 @@ import { fullLinkForId, parseSharedId } from "../../src/lib/parse-input";
 import {
   AdvanceLookup,
   AwaitLookupSettle,
+  ClearHistoryHash,
   CopyShareLink,
   DismissNotice,
   FocusSearchField,
@@ -107,7 +108,7 @@ const applySnapshot = (
   } else if (previous !== null && lookup.openId === null) {
     const closed = closeDialog(next);
     next = closed.model;
-    extra.push(...(closed.commands ?? []));
+    extra.push(...(closed.commands ?? []), ClearHistoryHash());
   }
 
   // An empty submit is a field error, and the field takes the cursor back.
@@ -255,4 +256,6 @@ export const update = (
     OpenedStream: () => ({ model }),
     CompletedFocusSearch: () => ({ model }),
     CompletedWriteHash: () => ({ model }),
+
+    CompletedClearHash: () => ({ model }),
   });

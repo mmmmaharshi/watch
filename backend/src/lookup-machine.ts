@@ -152,6 +152,9 @@ const onHashNav = (context: LookupContext, id: string): Move => {
   if (id === context.openId) {
     return { context: {} };
   }
+  if (context.result?.id === id) {
+    return { context: { openId: id } };
+  }
   const link = fullLinkForId(id, context.kind) ?? id;
   if (context.value === link) {
     return { context: {} };
