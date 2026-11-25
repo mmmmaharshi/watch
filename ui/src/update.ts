@@ -168,12 +168,14 @@ export const update = (
       ),
 
     SubmittedSearch: () =>
-      model.generation > model.applied
+      isBusy(model.lookup) || model.generation > model.applied
         ? { model }
         : send(model, { type: "submit", input: model.query }),
 
     PickedCandidate: ({ candidate }) =>
-      model.generation > model.applied ? { model } : send(model, { type: "pick", candidate }),
+      isBusy(model.lookup) || model.generation > model.applied
+        ? { model }
+        : send(model, { type: "pick", candidate }),
 
     FailedPoster: ({ imdbId }) => ({
       model: modifyFields(model, {
@@ -182,7 +184,9 @@ export const update = (
     }),
 
     ClickedRetry: () =>
-      model.generation > model.applied ? { model } : send(model, { type: "retry" }),
+      isBusy(model.lookup) || model.generation > model.applied
+        ? { model }
+        : send(model, { type: "retry" }),
 
     NavigatedToHash: ({ hash, search }) => {
       const id = parseSharedId(search, hash);

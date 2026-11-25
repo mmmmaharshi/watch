@@ -266,6 +266,17 @@ describe("double press", () => {
     expect(result.model.generation).toBe(1);
   });
 
+  test("a submit is ignored while a lookup is running", () => {
+    const searching: Model = {
+      ...init(),
+      lookup: snapshot({ phase: "searching" }),
+    };
+    const result = update(searching, Message.SubmittedSearch());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.lookup.phase).toBe("searching");
+  });
+
   test("a retry is ignored while a snapshot is pending", () => {
     const pending: Model = {
       ...withDialogOpen(init()),
