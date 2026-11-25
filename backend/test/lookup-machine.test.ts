@@ -255,7 +255,7 @@ describe("lookup machine", () => {
       yield* sendAndAwait(actor, { type: "pick", candidate: MATRIX });
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
-        [{ id: "tt0133093", kind: "movie" }],
+        [{ id: "tt0133093", kind: "movie", strictKind: true, name: "The Matrix", year: "1999" }],
       );
       const snap = yield* sendAndAwait(actor, {
         type: "lookupDone",
@@ -263,6 +263,18 @@ describe("lookup machine", () => {
       });
       assert.strictEqual(snap.context.openId, "tt0133093");
       assert.deepStrictEqual(snap.context.status, { kind: "idle" });
+    }).pipe(Effect.scoped);
+  });
+
+  it.effect("a TV pick sends the candidate kind as strict", () => {
+    const { deps, lookups } = controlled();
+    return Effect.gen(function* () {
+      const actor = yield* createEffectActor(createLookupMachine(deps));
+      yield* sendAndAwait(actor, { type: "pick", candidate: BREAKING_BAD });
+      assert.deepStrictEqual(
+        lookups.map((call) => call.input),
+        [{ id: "tt0903747", kind: "tv", strictKind: true, name: "Breaking Bad", year: "2008" }],
+      );
     }).pipe(Effect.scoped);
   });
 
@@ -276,7 +288,7 @@ describe("lookup machine", () => {
       assert.strictEqual(searches.length, 1);
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
-        [{ id: "tt0133093", kind: "movie" }],
+        [{ id: "tt0133093", kind: "movie", strictKind: true, name: "The Matrix", year: "1999" }],
       );
     }).pipe(Effect.scoped);
   });
@@ -295,6 +307,8 @@ describe("lookup machine", () => {
       assert.deepStrictEqual(lookups.at(-1)?.input, {
         id: "tt0133093",
         kind: "movie",
+        strictKind: true,
+        name: "The Matrix",
         exclude: "vidlink.pro",
       });
       const done = yield* sendAndAwait(actor, {

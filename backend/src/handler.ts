@@ -4,6 +4,7 @@ import { parseTitleInput } from "../../src/lib/parse-input";
 import type { Mutable, WatchOutcome, WatchResult } from "../../src/lib/types";
 import { Mapping } from "./mapping";
 import { Metadata } from "./metadata";
+import type { TitleMeta } from "./metadata";
 import { Providers } from "./providers";
 import type { ContentType } from "../../src/lib/types";
 
@@ -12,6 +13,9 @@ export type HandlerOutcome = WatchOutcome;
 export interface HandlerInput {
   readonly id: string;
   readonly kind?: ContentType;
+  readonly strictKind?: boolean;
+  readonly name?: string;
+  readonly year?: string;
   readonly exclude?: string;
 }
 
@@ -80,12 +84,27 @@ export class Handler extends Context.Service<Handler, HandlerShape>()("watch/bac
           preferred = mapped.success.type;
         }
 
-        const resolved = yield* metadata.resolve(id, preferred).pipe(Effect.result);
+        const resolved = yield* metadata
+          .resolve(id, preferred ?? input.kind, input.strictKind === true)
+          .pipe(Effect.result);
+        let meta: TitleMeta;
         if (Result.isFailure(resolved)) {
-          return NO_METADATA;
+          if (input.name === undefined) {
+            return NO_METADATA;
+          }
+          const fallback: Mutable<TitleMeta> = {
+            type: input.kind ?? "movie",
+            name: input.name,
+          };
+          if (input.year !== undefined) {
+            fallback.year = input.year;
+          }
+          meta = fallback;
+        } else {
+          meta = resolved.success;
         }
 
-        const { type } = resolved.success;
+        const { type } = meta;
         const stream = yield* providers.selectStream(
           input.exclude === undefined ? { type, id } : { type, id, exclude: input.exclude },
         );
@@ -94,7 +113,6 @@ export class Handler extends Context.Service<Handler, HandlerShape>()("watch/bac
         }
 
         const { url, provider } = stream.value;
-        const meta = resolved.success;
         const result: Mutable<WatchResult> = {
           id,
           url,
