@@ -5,10 +5,10 @@ import { expect, test } from "@playwright/test";
 // before any upstream fetch: the watch id fails validation, and the empty
 // search fails input validation. Both still build the handler and read the
 // bindings.
-test("the watch route answers with a product outcome", async ({ request }) => {
+test("the watch route answers a failed lookup with its status", async ({ request }) => {
   const response = await request.post("/api/watch", { data: { id: "not-an-id" } });
 
-  expect(response.status()).toBe(200);
+  expect(response.status()).toBe(400);
   expect(await response.json()).toMatchObject({ ok: false, reason: "invalid_input" });
 });
 

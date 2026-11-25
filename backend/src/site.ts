@@ -108,7 +108,7 @@ export const handleSiteRequest = async (
       watchInput.exclude = input.exclude;
     }
     const outcome: WatchOutcome = await Effect.runPromise(site.watch(watchInput));
-    return json(outcome);
+    return json(outcome, outcome.ok ? 200 : outcome.status);
   }
 
   if (url.pathname === "/api/search") {
