@@ -13,6 +13,7 @@ export type Phase = typeof Phase.Type;
 export const LookupState = Schema.Struct({
   phase: Phase,
   kind: Kind,
+  language: Schema.String,
   candidates: Schema.Array(Candidate),
   result: Schema.NullOr(Result),
   status: Status,
@@ -23,6 +24,7 @@ export type LookupState = typeof LookupState.Type;
 export const idleLookup = (): LookupState => ({
   phase: "idle",
   kind: "movie",
+  language: "",
   candidates: [],
   result: null,
   status: { kind: "idle" },
@@ -38,6 +40,7 @@ export const LookupEvent = Schema.Union([
   Schema.Struct({ type: Schema.Literal("close") }),
   Schema.Struct({ type: Schema.Literal("hashNav"), id: Schema.String }),
   Schema.Struct({ type: Schema.Literal("kindChange"), kind: Kind }),
+  Schema.Struct({ type: Schema.Literal("languageChange"), language: Schema.String }),
 ]);
 export type LookupEvent = typeof LookupEvent.Type;
 

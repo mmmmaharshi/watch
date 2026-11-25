@@ -37,6 +37,24 @@ cf workers list
 cf workers get watch
 ```
 
+## Secrets
+
+The search form's language filter and the dialog's official-services row read
+`TMDB_API_KEY`, a free key from themoviedb.org. Set it once for the Worker:
+
+```sh
+bunx wrangler secret put TMDB_API_KEY
+```
+
+For a local run, put it in `.dev.vars` at the repo root:
+
+```sh
+TMDB_API_KEY=your-key
+```
+
+`.dev.vars` is ignored by git. Without the key, "Any language" and the stream
+link still work; choosing a language reports that the filter is not set up.
+
 ## Security headers
 
 Four headers do not come from the app. They come from a zone rule named

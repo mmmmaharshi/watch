@@ -101,7 +101,7 @@ describe("lookup machine", () => {
       });
       assert.deepStrictEqual(
         searches.map((call) => call.input),
-        [{ query: "the matrix", kind: "movie" }],
+        [{ query: "the matrix", kind: "movie", language: "" }],
       );
     }).pipe(Effect.scoped);
   });
@@ -241,7 +241,7 @@ describe("lookup machine", () => {
       assert.strictEqual(degraded.value, "searching");
       assert.deepStrictEqual(
         searches.map((call) => call.input),
-        [{ query: "1917", kind: "movie" }],
+        [{ query: "1917", kind: "movie", language: "" }],
       );
       assert.strictEqual(lookups.length, 1);
     }).pipe(Effect.scoped);

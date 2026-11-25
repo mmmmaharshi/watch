@@ -7,6 +7,7 @@ export const COPY = {
   fieldLabel: "IMDb or TMDB ID, link, or title",
   placeholder: "Title, IMDb or TMDB ID, or link",
   kindLabel: "Movie or TV show",
+  languageLabel: "Language",
   hint: "Paste an ID or link, or type a title. Bare numbers try TMDB first.",
   submit: "Watch now",
   footer:
@@ -20,6 +21,7 @@ export const COPY = {
   copy: "Copy link",
   imdb: "IMDb",
   provider: "Provider",
+  official: "Official",
   streamUrl: "Stream URL",
   movie: "Movie",
   tv: "TV",

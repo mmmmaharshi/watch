@@ -14,6 +14,7 @@ export const Message = defineMessageUnion({
   },
   ChangedQuery: { value: Schema.String },
   ChangedKind: { kind: Kind },
+  ChangedLanguage: { language: Schema.String },
   SubmittedSearch: {},
   PickedCandidate: { candidate: Candidate },
   FailedPoster: { imdbId: Schema.String },

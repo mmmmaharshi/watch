@@ -159,6 +159,14 @@ export const update = (
         { type: "kindChange", kind },
       ),
 
+    ChangedLanguage: ({ language }) =>
+      send(
+        modifyFields(model, {
+          lookup: () => ({ ...model.lookup, language, candidates: [] }),
+        }),
+        { type: "languageChange", language },
+      ),
+
     SubmittedSearch: () => send(model, { type: "submit", input: model.query }),
 
     PickedCandidate: ({ candidate }) => send(model, { type: "pick", candidate }),

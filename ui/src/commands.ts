@@ -19,6 +19,7 @@ type Snapshot = SnapshotFrom<Machine>;
 const toLookupState = (snapshot: Snapshot): LookupState => ({
   phase: Schema.is(Phase)(snapshot.value) ? snapshot.value : "idle",
   kind: snapshot.context.kind,
+  language: snapshot.context.language,
   candidates: snapshot.context.candidates,
   result: snapshot.context.result,
   status: snapshot.context.status,

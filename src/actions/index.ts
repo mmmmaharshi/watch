@@ -5,8 +5,11 @@ import { z } from "astro/zod";
 import { handlerFor } from "../../backend/src/compose";
 import type { Bindings } from "../../backend/src/compose";
 import type { KvNamespace } from "../../backend/src/kv";
+import { isLanguage } from "../lib/languages";
+import { LANGUAGE_NEEDS_KEY } from "../lib/messages";
 import { KINDS } from "../lib/types";
 import type { Mutable } from "../lib/types";
+import { officialFor, searchByLanguage, tmdbDeps } from "../lib/tmdb";
 import { searchDeps, searchTitles } from "../lib/search";
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
@@ -37,6 +40,16 @@ const bindingsOf = (source: unknown): Bindings => {
   return picked;
 };
 
+// A secret, so it is absent in a local run without a .dev.vars file. Every
+// feature that needs it degrades to the plain path instead of failing.
+const tmdbKeyOf = (source: unknown): string | undefined => {
+  if (!isObject(source) || !("TMDB_API_KEY" in source)) {
+    return undefined;
+  }
+  const value = source.TMDB_API_KEY;
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
 const kindSchema = z.enum(KINDS);
 
 export const server = {
@@ -48,14 +61,37 @@ export const server = {
     }),
     handler: async ({ id, exclude, kind }) => {
       const handler = handlerFor(bindingsOf(env));
-      return Effect.runPromise(handler.handle({ id, exclude, kind }));
+      const outcome = await Effect.runPromise(handler.handle({ id, exclude, kind }));
+      const key = tmdbKeyOf(env);
+      if (!outcome.ok || key === undefined) {
+        return outcome;
+      }
+      // Official availability is extra: a TMDB miss leaves the result unchanged.
+      const official = await officialFor(tmdbDeps(key), outcome.result.id, outcome.result.type);
+      return official === null
+        ? outcome
+        : { ok: true as const, result: { ...outcome.result, official } };
     },
   }),
   search: defineAction({
     input: z.object({
       query: z.string().trim().min(1).max(200),
       kind: kindSchema.default("movie"),
+      language: z.string().max(8).optional(),
     }),
-    handler: async ({ query, kind }) => searchTitles(searchDeps, query, kind),
+    handler: async ({ query, kind, language }) => {
+      const chosen = language !== undefined && isLanguage(language) ? language : "";
+      if (chosen === "") {
+        return searchTitles(searchDeps, query, kind);
+      }
+      const key = tmdbKeyOf(env);
+      if (key === undefined) {
+        return { ok: false as const, error: LANGUAGE_NEEDS_KEY };
+      }
+      return {
+        ok: true as const,
+        candidates: await searchByLanguage(tmdbDeps(key), query, kind, chosen),
+      };
+    },
   }),
 };

@@ -33,3 +33,5 @@ playwright-report/
 # env
 .env
 .env.local
+.dev.vars
+.dev.vars.*

@@ -46,6 +46,7 @@ export type Status = typeof Status.Type;
 const LookupContext = Schema.Struct({
   value: Schema.String,
   kind: Kind,
+  language: Schema.String,
   candidates: Schema.Array(Candidate),
   result: Schema.NullOr(Result),
   status: Status,
@@ -53,7 +54,7 @@ const LookupContext = Schema.Struct({
 });
 export type LookupContext = typeof LookupContext.Type;
 
-const SearchInput = Schema.Struct({ query: Schema.String, kind: Kind });
+const SearchInput = Schema.Struct({ query: Schema.String, kind: Kind, language: Schema.String });
 export type SearchInput = typeof SearchInput.Type;
 
 const LookupInput = Schema.Struct({
@@ -73,6 +74,7 @@ export type LookupEvent =
   | { readonly type: "close" }
   | { readonly type: "hashNav"; readonly id: string }
   | { readonly type: "kindChange"; readonly kind: ContentType }
+  | { readonly type: "languageChange"; readonly language: string }
   | { readonly type: "change"; readonly value: string };
 
 const Events = {
@@ -85,6 +87,7 @@ const Events = {
   close: Schema.Struct({}),
   hashNav: Schema.Struct({ id: Schema.String }),
   kindChange: Schema.Struct({ kind: Kind }),
+  languageChange: Schema.Struct({ language: Schema.String }),
   change: Schema.Struct({ value: Schema.String }),
 };
 
@@ -116,6 +119,10 @@ type Move =
 
 const onKindChange = (kind: ContentType): Move => ({
   context: { kind, candidates: [] },
+});
+
+const onLanguageChange = (language: string): Move => ({
+  context: { language, candidates: [] },
 });
 
 const onClose = (): Move => ({ context: { openId: null } });
@@ -276,6 +283,7 @@ export function createLookupMachine(deps: LookupDeps) {
     context: {
       value: "",
       kind: "movie",
+      language: "",
       candidates: [],
       result: null,
       status: idleStatus(),
@@ -287,6 +295,7 @@ export function createLookupMachine(deps: LookupDeps) {
       close: onClose,
       hashNav: (args) => onHashNav(args.context, args.event.id),
       kindChange: (args) => onKindChange(args.event.kind),
+      languageChange: (args) => onLanguageChange(args.event.language),
       change: (args) => onChange(args.context, args.event.value),
     },
     states: {
@@ -300,7 +309,11 @@ export function createLookupMachine(deps: LookupDeps) {
       searching: {
         invoke: {
           src: "search",
-          input: ({ context }) => ({ query: context.value, kind: context.kind }),
+          input: ({ context }) => ({
+            query: context.value,
+            kind: context.kind,
+            language: context.language,
+          }),
           onDone: (args, enq) => {
             enq.raise({ type: "searchDone", output: args.event.output });
           },

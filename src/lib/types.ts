@@ -20,6 +20,14 @@ export const Candidate = Schema.Struct({
 });
 export type Candidate = typeof Candidate.Type;
 
+// What the official services row shows: names plus the TMDB page that holds
+// the per-country availability.
+export const Official = Schema.Struct({
+  services: Schema.Array(Schema.String),
+  link: Schema.String,
+});
+export type Official = typeof Official.Type;
+
 export const Result = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
@@ -29,6 +37,7 @@ export const Result = Schema.Struct({
   year: Schema.optionalKey(Schema.String),
   rating: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
+  official: Schema.optionalKey(Official),
 });
 export type Result = typeof Result.Type;
 export type WatchResult = Result;

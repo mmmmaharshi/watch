@@ -21,6 +21,7 @@ export interface LookupTransport {
   readonly search: (input: {
     readonly query: string;
     readonly kind: ContentType;
+    readonly language?: string;
   }) => Promise<ActionResponse<SearchOutcome>>;
 }
 
