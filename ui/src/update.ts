@@ -181,7 +181,10 @@ export const update = (
 
     NavigatedToHash: ({ hash, search }) => {
       const id = parseSharedId(search, hash);
-      if (id === null || id === model.lookup.openId) {
+      if (id === null) {
+        return model.lookup.openId === null ? { model } : send(model, { type: "close" });
+      }
+      if (id === model.lookup.openId) {
         return { model };
       }
       const link = fullLinkForId(id, model.lookup.kind) ?? id;
