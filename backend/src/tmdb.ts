@@ -122,7 +122,10 @@ export class Tmdb extends Context.Service<Tmdb, TmdbShape>()("watch/backend/Tmdb
           const cacheKey = `tmdb:search:${input.kind}:${input.language}:${cleaned.toLowerCase()}`;
           const cached = yield* cache.get(cacheKey);
           if (Option.isSome(cached)) {
-            return Option.some(Schema.decodeUnknownSync(CachedCandidates)(cached.value));
+            const decoded = Schema.decodeUnknownOption(CachedCandidates)(cached.value);
+            if (Option.isSome(decoded)) {
+              return Option.some(decoded.value);
+            }
           }
 
           const matching: Array<unknown> = [];
@@ -161,9 +164,13 @@ export class Tmdb extends Context.Service<Tmdb, TmdbShape>()("watch/backend/Tmdb
           const cacheKey = `tmdb:official:${input.region}:${input.kind}:${input.imdbId}`;
           const cached = yield* cache.get(cacheKey);
           if (Option.isSome(cached)) {
-            return cached.value === "none"
-              ? Option.none<Official>()
-              : Option.some(Schema.decodeUnknownSync(CachedOfficial)(cached.value));
+            if (cached.value === "none") {
+              return Option.none<Official>();
+            }
+            const decoded = Schema.decodeUnknownOption(CachedOfficial)(cached.value);
+            if (Option.isSome(decoded)) {
+              return Option.some(decoded.value);
+            }
           }
 
           const found = yield* getJson(

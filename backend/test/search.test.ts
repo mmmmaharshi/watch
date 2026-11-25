@@ -14,6 +14,21 @@ const withStub = (getText: HttpShape["getText"], tmdb: Layer.Layer<Tmdb> = Tmdb.
     Layer.provide(tmdb),
   );
 
+const withSharedCache = (
+  getText: HttpShape["getText"],
+  tmdb: Layer.Layer<Tmdb> = Tmdb.disabledLayer,
+) => {
+  const cache = Cache.layer(10);
+  return Layer.mergeAll(
+    Search.layer.pipe(
+      Layer.provide(cache),
+      Layer.provide(Http.stubLayer(getText)),
+      Layer.provide(tmdb),
+    ),
+    cache,
+  );
+};
+
 const json = (body: unknown) => Effect.succeed(JSON.stringify(body));
 const notFound = (url: string) => Effect.fail(new HttpError({ url, status: 404 }));
 
@@ -131,6 +146,31 @@ describe("Search", () => {
     }).pipe(
       Effect.provide(
         withStub((url) => {
+          calls += 1;
+          return json(movieCatalog);
+        }),
+      ),
+    );
+  });
+
+  it.effect("a corrupt cached answer is a miss, not a crash", () => {
+    let calls = 0;
+    return Effect.gen(function* () {
+      const cache = yield* Cache;
+      yield* cache.set("search:movie::the matrix", "{not a candidate list", 60_000);
+      const search = yield* Search;
+      const outcome = yield* search.search({ query: "The Matrix", kind: "movie", language: "" });
+      assert.deepStrictEqual(outcome, {
+        ok: true,
+        candidates: [
+          { imdbId: "tt0273148", name: "The Officer's Ward", year: "2001", kind: "movie" },
+          { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" },
+        ],
+      });
+      assert.strictEqual(calls, 1);
+    }).pipe(
+      Effect.provide(
+        withSharedCache((url) => {
           calls += 1;
           return json(movieCatalog);
         }),
