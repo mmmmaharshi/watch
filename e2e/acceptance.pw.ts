@@ -225,7 +225,7 @@ test("A8 another stream uses another provider @live", async ({ page }) => {
 
   // The open dialog inerts the page, so its status live region is outside the
   // accessibility tree. Read it anyway; the message is still what it holds.
-  const status = page.getByRole("status", { includeHidden: true });
+  const status = page.locator("#status");
   // Retry replies asynchronously, so poll for the settled outcome: either a
   // different provider or the exhausted message. A single read can race it.
   await expect
