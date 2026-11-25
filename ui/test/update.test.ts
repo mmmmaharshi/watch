@@ -214,6 +214,28 @@ describe("Escape and the dialog", () => {
     );
   });
 
+  test("removing the hash closes an open dialog", () => {
+    story(
+      update,
+      given({ ...withDialogOpen(init()), lookup: opened }),
+      message(Message.NavigatedToHash({ hash: "", search: "" })),
+      StoryCommand.expectHas(AdvanceLookup),
+      StoryCommand.resolve(
+        AdvanceLookup,
+        Message.GotLookupState({ generation: 1, snapshot: idleLookup() }),
+      ),
+      StoryCommand.resolve(Dialog.CloseDialog, Dialog.Message.CompletedCloseDialog()),
+      StoryCommand.resolve(
+        AdvanceLookup,
+        Message.GotLookupState({ generation: 2, snapshot: idleLookup() }),
+      ),
+      model((actual: Model) => {
+        expect(actual.dialog.isOpen).toBe(false);
+        expect(actual.lookup.openId).toBeNull();
+      }),
+    );
+  });
+
   test("Escape is ignored while the next stream loads", () => {
     const retrying: Model = {
       ...withDialogOpen(init()),
