@@ -128,7 +128,12 @@ function CandidateList({ model, h }: { model: Model; h: HtmlBuilder<Message> }) 
                       h.Class("h-[60px] w-10 shrink-0 rounded-lg bg-black/5 object-cover"),
                     ]),
                   ]
-                : []),
+                : [
+                    h.span([
+                      h.AriaHidden(true),
+                      h.Class("h-[60px] w-10 shrink-0 rounded-lg bg-black/5"),
+                    ]),
+                  ]),
               h.span(
                 [h.Class("flex min-w-0 flex-col gap-0.5")],
                 [
