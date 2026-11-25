@@ -338,6 +338,20 @@ function ResultDialog({
                             ),
                           ],
                         ),
+                        ...(model.notice === null
+                          ? []
+                          : [
+                              h.p(
+                                [
+                                  h.Role("status"),
+                                  h.AriaLive("polite"),
+                                  h.Class(
+                                    "fixed bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-white px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
+                                  ),
+                                ],
+                                [model.notice],
+                              ),
+                            ]),
                       ],
                     ),
                   ],
@@ -525,19 +539,6 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
           [h.Class("mt-14 w-full border-t border-black/10 pt-5")],
           [h.p([h.Class("text-xs leading-relaxed text-black/64")], [COPY.footer])],
         ),
-        ...(model.notice
-          ? [
-              h.div(
-                [
-                  h.Role("status"),
-                  h.Class(
-                    "fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-white px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
-                  ),
-                ],
-                [model.notice],
-              ),
-            ]
-          : []),
         ResultDialog({ model, result: model.lookup.result, h }),
       ],
     ),
