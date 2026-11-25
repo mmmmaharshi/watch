@@ -4,22 +4,34 @@ export type TitleInput =
   | { kind: "imdb"; id: string }
   | { kind: "tmdb"; type?: ContentType; id: string };
 
-const IMDB_ID = /tt\d{7,8}(?!\d)/;
-const TMDB_MOVIE = /themoviedb\.org\/movie\/([1-9]\d{0,7})/i;
-const TMDB_TV = /themoviedb\.org\/tv\/([1-9]\d{0,7})/i;
+const IMDB_ID = /^tt\d{7,8}$/i;
+const IMDB_PATH = /^\/title\/(tt\d{7,8})(?:\/|$)/i;
+const TMDB_MOVIE = /^\/movie\/([1-9]\d{0,7})(?:-|\/|$)/;
+const TMDB_TV = /^\/tv\/([1-9]\d{0,7})(?:-|\/|$)/;
 const BARE_TMDB = /^[1-9]\d{0,7}$/;
+const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
+const IMDB_HOSTS = new Set(["imdb.com", "www.imdb.com", "m.imdb.com"]);
+const TMDB_HOSTS = new Set(["themoviedb.org", "www.themoviedb.org"]);
 const SHARED_ID = "id";
 
 export function isImdbId(value: string): boolean {
-  return value.toLowerCase().match(IMDB_ID)?.[0] === value.toLowerCase();
+  return IMDB_ID.test(value.trim());
 }
 
 export function isLinkLike(value: string): boolean {
-  const trimmed = value.trim().toLowerCase();
-  return (
-    trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("www.")
-  );
+  const trimmed = value.trim();
+  return SCHEME.test(trimmed) || trimmed.toLowerCase().startsWith("www.");
 }
+
+const asUrl = (value: string): URL | null => {
+  const candidate = value.toLowerCase().startsWith("www.") ? `https://${value}` : value;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+};
 
 // The canonical title URL for an IMDb id. The dialog and the shared-link
 // prefill both point here, so the shape lives in one place.
@@ -59,27 +71,37 @@ export function fullLinkForId(id: string, kind: ContentType): string | null {
 // TMDB URLs carry their own type; a bare TMDB number takes the selected
 // type, so it is never ambiguous.
 export function parseTitleInput(input: string, hint?: ContentType): TitleInput | null {
-  const value = input.trim().toLowerCase();
+  const value = input.trim();
+  const url = asUrl(value);
 
-  const movieUrl = value.match(TMDB_MOVIE);
-  const movieId = movieUrl?.[1];
-  if (movieId !== undefined) {
-    return { kind: "tmdb", type: "movie", id: movieId };
+  if (url !== null) {
+    if (TMDB_HOSTS.has(url.hostname)) {
+      const movieId = url.pathname.match(TMDB_MOVIE)?.[1];
+      if (movieId !== undefined) {
+        return { kind: "tmdb", type: "movie", id: movieId };
+      }
+      const tvId = url.pathname.match(TMDB_TV)?.[1];
+      if (tvId !== undefined) {
+        return { kind: "tmdb", type: "tv", id: tvId };
+      }
+      return null;
+    }
+
+    if (IMDB_HOSTS.has(url.hostname)) {
+      const imdbId = url.pathname.match(IMDB_PATH)?.[1];
+      return imdbId === undefined ? null : { kind: "imdb", id: imdbId.toLowerCase() };
+    }
+
+    return null;
   }
 
-  const tvUrl = value.match(TMDB_TV);
-  const tvId = tvUrl?.[1];
-  if (tvId !== undefined) {
-    return { kind: "tmdb", type: "tv", id: tvId };
+  const lower = value.toLowerCase();
+  if (IMDB_ID.test(lower)) {
+    return { kind: "imdb", id: lower };
   }
 
-  const imdb = value.match(IMDB_ID);
-  if (imdb) {
-    return { kind: "imdb", id: imdb[0] };
-  }
-
-  if (BARE_TMDB.test(value)) {
-    return hint ? { kind: "tmdb", type: hint, id: value } : { kind: "tmdb", id: value };
+  if (BARE_TMDB.test(lower)) {
+    return hint ? { kind: "tmdb", type: hint, id: lower } : { kind: "tmdb", id: lower };
   }
 
   return null;
