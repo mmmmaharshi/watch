@@ -9,13 +9,15 @@
   "scripts": {
     "dev": "bun run build && wrangler dev --port 4321",
     "build": "bun scripts/build-site.ts",
+    "format": "oxfmt",
+    "check:format": "oxfmt --check",
     "lint": "oxlint --type-aware --type-check",
     "test": "bun test",
     "check:backend": "bun run --filter @watch/backend check",
     "check:ui": "bun run --filter @watch/ui check",
     "e2e": "playwright test --project=ci",
     "e2e:live": "playwright test --project=live --project=live-mobile --retries=2",
-    "check": "bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build",
+    "check": "bun run check:format && bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build",
     "deploy": "bun run build && bun alchemy deploy --stage prod",
     "prepare": "husky"
   },
