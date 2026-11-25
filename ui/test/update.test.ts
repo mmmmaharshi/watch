@@ -4,6 +4,7 @@ import { Dialog } from "@foldkit/ui";
 import {
   AdvanceLookup,
   AwaitLookupSettle,
+  ClearHistoryHash,
   FocusSearchField,
   WriteHistoryHash,
 } from "../src/commands";
@@ -229,6 +230,7 @@ describe("Escape and the dialog", () => {
         AdvanceLookup,
         Message.GotLookupState({ generation: 2, snapshot: idleLookup() }),
       ),
+      StoryCommand.resolve(ClearHistoryHash, Message.CompletedClearHash()),
       model((actual: Model) => {
         expect(actual.dialog.isOpen).toBe(false);
         expect(actual.lookup.openId).toBeNull();
@@ -288,5 +290,26 @@ describe("double press", () => {
 
     expect(result.commands ?? []).toEqual([]);
     expect(result.model.generation).toBe(1);
+  });
+});
+
+describe("history", () => {
+  test("a forward to the open result keeps the field and list", () => {
+    const model: Model = {
+      ...withDialogOpen(init()),
+      query: "The Matrix",
+      lookup: snapshot({
+        candidates: [
+          { imdbId: MATRIX.id, name: MATRIX.name, year: "1999", kind: "movie" as const },
+        ],
+        result: MATRIX,
+        openId: null,
+      }),
+    };
+    const result = update(model, Message.NavigatedToHash({ hash: `#id=${MATRIX.id}`, search: "" }));
+
+    expect(result.model.query).toBe("The Matrix");
+    expect(result.model.lookup.candidates).toHaveLength(1);
+    expect(result.commands ?? []).toHaveLength(1);
   });
 });

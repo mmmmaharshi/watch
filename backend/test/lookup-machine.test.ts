@@ -404,6 +404,16 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
+  it.effect("hash navigation back to the open result reopens the dialog", () =>
+    Effect.gen(function* () {
+      const actor = yield* opened();
+      yield* sendAndAwait(actor, { type: "close" });
+      const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
+      assert.strictEqual(snap.context.openId, "tt0133093");
+      assert.deepStrictEqual(snap.context.result, MATRIX_RESULT);
+    }).pipe(Effect.scoped),
+  );
+
   it.effect("hash navigation to another id closes the open dialog", () =>
     Effect.gen(function* () {
       const actor = yield* opened();

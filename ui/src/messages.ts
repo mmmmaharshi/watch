@@ -29,6 +29,7 @@ export const Message = defineMessageUnion({
   OpenedStream: {},
   CompletedFocusSearch: {},
   CompletedWriteHash: {},
+  CompletedClearHash: {},
   DismissedNotice: {},
 });
 export type Message = typeof Message.Type;

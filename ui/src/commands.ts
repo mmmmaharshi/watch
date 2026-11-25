@@ -105,6 +105,16 @@ export const WriteHistoryHash = Command.define("WriteHistoryHash", {
     }),
 });
 
+export const ClearHistoryHash = Command.define("ClearHistoryHash", {
+  messages: [Message.CompletedClearHash],
+  execute: Effect.sync(() => {
+    if (location.hash !== "") {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
+    return Message.CompletedClearHash();
+  }),
+});
+
 export const CopyShareLink = Command.define("CopyShareLink", {
   args: { id: Schema.String },
   messages: [Message.CopiedLink, Message.CopyFailed],
