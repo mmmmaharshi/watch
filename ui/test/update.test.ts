@@ -256,3 +256,26 @@ describe("Escape and the dialog", () => {
     );
   });
 });
+
+describe("double press", () => {
+  test("a submit is ignored while a snapshot is pending", () => {
+    const pending: Model = { ...init(), generation: 1, applied: 0 };
+    const result = update(pending, Message.SubmittedSearch());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.generation).toBe(1);
+  });
+
+  test("a retry is ignored while a snapshot is pending", () => {
+    const pending: Model = {
+      ...withDialogOpen(init()),
+      lookup: opened,
+      generation: 1,
+      applied: 0,
+    };
+    const result = update(pending, Message.ClickedRetry());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.generation).toBe(1);
+  });
+});
