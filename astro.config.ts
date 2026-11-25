@@ -14,6 +14,10 @@ export default defineConfig({
   integrations: [sitemap()],
   server: { host: true },
   devToolbar: { enabled: false },
+  // Markdown highlighting stays off: Shiki writes inline styles, which this
+  // policy blocks, and Astro warns about the pair on every start. No content
+  // page uses markdown today.
+  markdown: { syntaxHighlight: false },
   vite: {
     plugins: [tailwindcss()],
   },
@@ -24,14 +28,16 @@ export default defineConfig({
   // style hash is pinned for a runtime-injected style element, which no
   // build-time hash can cover; the e2e console guard fails when a library
   // update changes that text.
-  // Poster art loads from two metadata hosts: the Cinemeta CDN
-  // (images.metahub.space) and TVMaze images (static.tvmaze.com).
-  // Everything else stays locked down.
+  // Poster art loads from three metadata hosts: the Cinemeta CDN
+  // (images.metahub.space), TVMaze images (static.tvmaze.com), and TMDB
+  // posters (image.tmdb.org). Everything else stays locked down.
+  // Markdown is off; if a content page is added, disable Shiki first, because
+  // its inline styles are blocked by this policy.
   security: {
     csp: {
       directives: [
         "default-src 'self'",
-        "img-src 'self' data: https://*.metahub.space https://static.tvmaze.com",
+        "img-src 'self' data: https://*.metahub.space https://static.tvmaze.com https://image.tmdb.org",
         "font-src 'self'",
         "connect-src 'self'",
         "object-src 'none'",

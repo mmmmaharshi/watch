@@ -121,9 +121,15 @@ const onKindChange = (kind: ContentType): Move => ({
   context: { kind, candidates: [] },
 });
 
-const onLanguageChange = (language: string): Move => ({
-  context: { language, candidates: [] },
-});
+const onLanguageChange = (context: LookupContext, language: string): Move => {
+  // A message about the old choice is stale after the change.
+  const stale = context.status.kind === "error" || context.status.kind === "field";
+  return {
+    context: stale
+      ? { language, candidates: [], status: idleStatus() }
+      : { language, candidates: [] },
+  };
+};
 
 const onClose = (): Move => ({ context: { openId: null } });
 
@@ -295,7 +301,7 @@ export function createLookupMachine(deps: LookupDeps) {
       close: onClose,
       hashNav: (args) => onHashNav(args.context, args.event.id),
       kindChange: (args) => onKindChange(args.event.kind),
-      languageChange: (args) => onLanguageChange(args.event.language),
+      languageChange: (args) => onLanguageChange(args.context, args.event.language),
       change: (args) => onChange(args.context, args.event.value),
     },
     states: {

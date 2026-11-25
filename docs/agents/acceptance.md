@@ -88,3 +88,19 @@ person taps the field.
 2. Press **Watch now** after load.
 
 The field still holds the link. A lookup starts.
+
+## A11 — A language choice narrows the list
+
+1. Pick **Telugu** in the language selector.
+2. Search `Pushpa`.
+
+The page lists at most 6 matches. When the site has a TMDB key, they are Telugu
+titles. Without the key, the page says the filter is not set up.
+
+## A12 — The dialog names the official services
+
+1. Open a result for The Matrix.
+
+The dialog shows an "Also on" row linked to the title's watch page on TMDB. When
+the site has a TMDB key, the row names the services that carry it in the
+visitor's country. Without the key, the row is absent.

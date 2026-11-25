@@ -8,7 +8,9 @@ export const COPY = {
   placeholder: "Title, IMDb or TMDB ID, or link",
   kindLabel: "Movie or TV show",
   languageLabel: "Language",
-  hint: "Paste an ID or link, or type a title. Bare numbers try TMDB first.",
+  hint:
+    "Paste an ID or link, or type a title. Bare numbers try TMDB first. " +
+    "The language filter applies to title searches.",
   submit: "Watch now",
   footer:
     "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
@@ -21,7 +23,7 @@ export const COPY = {
   copy: "Copy link",
   imdb: "IMDb",
   provider: "Provider",
-  official: "Official",
+  official: "Also on",
   streamUrl: "Stream URL",
   movie: "Movie",
   tv: "TV",

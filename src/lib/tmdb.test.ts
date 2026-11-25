@@ -35,12 +35,11 @@ const PUSHPA = {
 };
 
 test("keeps only rows in the chosen language and gives them IMDb ids", async () => {
-  const { http, calls } = fakeHttp({
+  const { http } = fakeHttp({
     "/search/movie": {
       results: [PUSHPA, { id: 2, title: "Other", original_language: "en" }],
     },
     "/movie/1/external_ids": { imdb_id: "tt1757263" },
-    "/movie/2/external_ids": { imdb_id: "tt0000002" },
   });
 
   const candidates = await searchByLanguage(deps(http), "Pushpa", "movie", "te");
@@ -54,8 +53,18 @@ test("keeps only rows in the chosen language and gives them IMDb ids", async () 
       poster: "https://image.tmdb.org/t/p/w342/pushpa.jpg",
     },
   ]);
-  // Only the matching row paid for its external ids.
-  expect(calls()).toBe(2);
+});
+
+test("finds a matching row on the second page", async () => {
+  const { http } = fakeHttp({
+    "page=1": { results: [{ id: 9, title: "Other", original_language: "en" }], total_pages: 2 },
+    "page=2": { results: [PUSHPA], total_pages: 2 },
+    "/movie/1/external_ids": { imdb_id: "tt1757263" },
+  });
+
+  expect(
+    (await searchByLanguage(deps(http), "Pushpa", "movie", "te"))?.map((row) => row.imdbId),
+  ).toEqual(["tt1757263"]);
 });
 
 test("drops a row whose TMDB entry has no IMDb id", async () => {
@@ -67,6 +76,12 @@ test("drops a row whose TMDB entry has no IMDb id", async () => {
   expect(await searchByLanguage(deps(http), "Pushpa", "movie", "te")).toEqual([]);
 });
 
+test("an upstream failure is a failure, not an empty list", async () => {
+  const { http } = fakeHttp({});
+
+  expect(await searchByLanguage(deps(http), "Pushpa", "movie", "te")).toBeNull();
+});
+
 test("names the official services in the region", async () => {
   const { http } = fakeHttp({
     "/find/tt1757263": { movie_results: [{ id: 1 }] },
@@ -76,13 +91,15 @@ test("names the official services in the region", async () => {
           link: "https://www.themoviedb.org/movie/1/watch",
           flatrate: [{ provider_name: "Netflix" }, { provider_name: "Aha" }],
           free: [{ provider_name: "MX Player" }],
+          ads: [{ provider_name: "JioHotstar" }],
+          rent: [{ provider_name: "Apple TV" }],
         },
       },
     },
   });
 
   expect(await officialFor(deps(http), "tt1757263", "movie")).toEqual({
-    services: ["Netflix", "Aha", "MX Player"],
+    services: ["Netflix", "Aha", "MX Player", "JioHotstar"],
     link: "https://www.themoviedb.org/movie/1/watch",
   });
 });

@@ -46,14 +46,15 @@ The search form's language filter and the dialog's official-services row read
 bunx wrangler secret put TMDB_API_KEY
 ```
 
-For a local run, put it in `.dev.vars` at the repo root:
+For a local run, put it in `.env` at the repo root:
 
 ```sh
 TMDB_API_KEY=your-key
 ```
 
-`.dev.vars` is ignored by git. Without the key, "Any language" and the stream
-link still work; choosing a language reports that the filter is not set up.
+`.env` and `.dev.vars` are ignored by git; the dev server reads `.env` and says
+so on start. Without the key, "Any language" and the stream link still work;
+choosing a language reports that the filter is not set up.
 
 ## Security headers
 

@@ -1,5 +1,6 @@
 import { Cache, defaultHttpClient, isLooseJson } from "./http";
 import type { HttpClient, LooseJson } from "./http";
+import { sortResults } from "./search";
 import type { Candidate, Kind, Mutable, Official } from "./types";
 import { yearOf } from "./year";
 
@@ -7,9 +8,13 @@ import { yearOf } from "./year";
 // in, so nothing in this module owns configuration.
 const API = "https://api.themoviedb.org/3";
 const IMAGE_BASE = "https://image.tmdb.org/t/p/w342";
-// TMDB regions are ISO 3166-1 alpha-2, uppercase. The site is India-first.
-const WATCH_REGION = "IN";
+const DEFAULT_REGION = "IN";
 const MAX_RESULTS = 6;
+// TMDB returns 20 rows a page, so two pages cover a language's matching rows
+// for most title searches.
+// shortcut: pages 3+ are not searched; fetch more when a real title comes back
+// empty for a language it is in.
+const MAX_PAGES = 2;
 const TIMEOUT_MS = 8000;
 
 export interface TmdbDeps {
@@ -75,12 +80,14 @@ const toCandidate = async (
   return candidate;
 };
 
+// Null means the search itself failed: the caller reports a failure instead of
+// an empty list, so a TMDB outage cannot look like "no such title".
 export async function searchByLanguage(
   deps: TmdbDeps,
   query: string,
   kind: Kind,
   language: string,
-): Promise<Array<Candidate>> {
+): Promise<Array<Candidate> | null> {
   const cleaned = query.trim();
   const key = `${kind}:${language}:${cleaned.toLowerCase()}`;
   const cached = deps.searchCache.get(key);
@@ -88,18 +95,33 @@ export async function searchByLanguage(
     return cached;
   }
 
-  const body = await getJson(
-    deps,
-    `/search/${media(kind)}?query=${encodeURIComponent(cleaned)}&page=1`,
+  const matching: Array<LooseJson> = [];
+  for (let page = 1; page <= MAX_PAGES && matching.length < MAX_RESULTS; page += 1) {
+    const body = await getJson(
+      deps,
+      `/search/${media(kind)}?query=${encodeURIComponent(cleaned)}&page=${page}`,
+    );
+    if (body === null || !Array.isArray(body.results)) {
+      return null;
+    }
+    for (const row of body.results) {
+      if (isLooseJson(row) && row.original_language === language) {
+        matching.push(row);
+        if (matching.length === MAX_RESULTS) {
+          break;
+        }
+      }
+    }
+    const totalPages = typeof body.total_pages === "number" ? body.total_pages : page;
+    if (body.results.length === 0 || page >= totalPages) {
+      break;
+    }
+  }
+
+  const resolved = await Promise.all(matching.map((row) => toCandidate(deps, row, kind)));
+  const candidates = sortResults(
+    resolved.filter((candidate): candidate is Candidate => candidate !== null),
   );
-  const rows = body !== null && Array.isArray(body.results) ? body.results : [];
-  const matching = rows
-    .filter((row) => isLooseJson(row) && row.original_language === language)
-    .filter(isLooseJson)
-    .slice(0, MAX_RESULTS);
-  const candidates = (
-    await Promise.all(matching.map((row) => toCandidate(deps, row, kind)))
-  ).filter((candidate): candidate is Candidate => candidate !== null);
   deps.searchCache.set(key, candidates);
   return candidates;
 }
@@ -108,6 +130,7 @@ const lookUpOfficial = async (
   deps: TmdbDeps,
   imdbId: string,
   kind: Kind,
+  region: string,
 ): Promise<Official | null> => {
   const found = await getJson(deps, `/find/${encodeURIComponent(imdbId)}?external_source=imdb_id`);
   if (found === null) {
@@ -124,14 +147,16 @@ const lookUpOfficial = async (
   if (providers === null || !isLooseJson(providers.results)) {
     return null;
   }
-  const region = providers.results[WATCH_REGION];
-  if (!isLooseJson(region)) {
+  const country = providers.results[region];
+  if (!isLooseJson(country)) {
     return null;
   }
 
+  // Included with a subscription or free with ads. Rent and buy are left out
+  // because they are not what a visitor means by "it is on Netflix".
   const services = new Set<string>();
-  for (const bucket of ["flatrate", "free"]) {
-    const entries = region[bucket];
+  for (const bucket of ["flatrate", "free", "ads"]) {
+    const entries = country[bucket];
     if (!Array.isArray(entries)) {
       continue;
     }
@@ -142,7 +167,7 @@ const lookUpOfficial = async (
       }
     }
   }
-  const link = str(region.link);
+  const link = str(country.link);
   if (services.size === 0 || link === undefined) {
     return null;
   }
@@ -154,13 +179,14 @@ export async function officialFor(
   deps: TmdbDeps,
   imdbId: string,
   kind: Kind,
+  region: string = DEFAULT_REGION,
 ): Promise<Official | null> {
-  const key = `${kind}:${imdbId}`;
+  const key = `${region}:${kind}:${imdbId}`;
   const cached = deps.officialCache.get(key);
   if (cached !== undefined) {
     return cached;
   }
-  const official = await lookUpOfficial(deps, imdbId, kind);
+  const official = await lookUpOfficial(deps, imdbId, kind, region);
   deps.officialCache.set(key, official);
   return official;
 }

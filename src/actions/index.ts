@@ -6,7 +6,7 @@ import { handlerFor } from "../../backend/src/compose";
 import type { Bindings } from "../../backend/src/compose";
 import type { KvNamespace } from "../../backend/src/kv";
 import { isLanguage } from "../lib/languages";
-import { LANGUAGE_NEEDS_KEY } from "../lib/messages";
+import { LANGUAGE_NEEDS_KEY, SEARCH_FAILED } from "../lib/messages";
 import { KINDS } from "../lib/types";
 import type { Mutable } from "../lib/types";
 import { officialFor, searchByLanguage, tmdbDeps } from "../lib/tmdb";
@@ -51,6 +51,17 @@ const tmdbKeyOf = (source: unknown): string | undefined => {
 };
 
 const kindSchema = z.enum(KINDS);
+const languageSchema = z.string().refine(isLanguage, "Choose a listed language");
+
+const DEFAULT_REGION = "IN";
+
+// Cloudflare puts the visitor's country on the request. A local run has no `cf`,
+// so the site's own region is the fallback.
+const regionOf = (request: Request): string => {
+  const cf = (request as Request & { readonly cf?: { readonly country?: unknown } }).cf;
+  const country = cf?.country;
+  return typeof country === "string" && /^[A-Z]{2}$/.test(country) ? country : DEFAULT_REGION;
+};
 
 export const server = {
   watch: defineAction({
@@ -59,7 +70,7 @@ export const server = {
       exclude: z.string().optional(),
       kind: kindSchema.optional(),
     }),
-    handler: async ({ id, exclude, kind }) => {
+    handler: async ({ id, exclude, kind }, context) => {
       const handler = handlerFor(bindingsOf(env));
       const outcome = await Effect.runPromise(handler.handle({ id, exclude, kind }));
       const key = tmdbKeyOf(env);
@@ -67,7 +78,12 @@ export const server = {
         return outcome;
       }
       // Official availability is extra: a TMDB miss leaves the result unchanged.
-      const official = await officialFor(tmdbDeps(key), outcome.result.id, outcome.result.type);
+      const official = await officialFor(
+        tmdbDeps(key),
+        outcome.result.id,
+        outcome.result.type,
+        regionOf(context.request),
+      );
       return official === null
         ? outcome
         : { ok: true as const, result: { ...outcome.result, official } };
@@ -77,10 +93,10 @@ export const server = {
     input: z.object({
       query: z.string().trim().min(1).max(200),
       kind: kindSchema.default("movie"),
-      language: z.string().max(8).optional(),
+      language: languageSchema.optional(),
     }),
     handler: async ({ query, kind, language }) => {
-      const chosen = language !== undefined && isLanguage(language) ? language : "";
+      const chosen = language ?? "";
       if (chosen === "") {
         return searchTitles(searchDeps, query, kind);
       }
@@ -88,10 +104,11 @@ export const server = {
       if (key === undefined) {
         return { ok: false as const, error: LANGUAGE_NEEDS_KEY };
       }
-      return {
-        ok: true as const,
-        candidates: await searchByLanguage(tmdbDeps(key), query, kind, chosen),
-      };
+      const candidates = await searchByLanguage(tmdbDeps(key), query, kind, chosen);
+      // A failed search must not look like "no such title".
+      return candidates === null
+        ? { ok: false as const, error: SEARCH_FAILED }
+        : { ok: true as const, candidates };
     },
   }),
 };

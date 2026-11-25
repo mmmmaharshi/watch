@@ -2,12 +2,12 @@
 
 Four folders, one owner each. Find the owner before adding logic.
 
-| Folder         | Owns                                                                                                                                                             | Used by                    |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `src/lib/`     | The plain contract: wire types (`types.ts`), link shapes (`parse-input.ts`), provider facts (`providers.ts`), search (`search.ts`), server copy (`messages.ts`). | The browser and the Worker |
-| `backend/src/` | Effect services and the lookup machine: handler, metadata, mapping, the providers layer, cache, refresh core, Alchemy stack.                                     | The actions, the cron      |
-| `ui/src/`      | Foldkit view, update, commands, model, messages, DOM mounts.                                                                                                     | The page                   |
-| `scripts/`     | Bun entry points run by hand or by CI (`refresh-providers.ts`).                                                                                                  | Your terminal              |
+| Folder         | Owns                                                                                                                                                                                                                                                                                                   | Used by                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------- |
+| `src/lib/`     | The plain contract and helpers: wire types (`types.ts`), link shapes (`parse-input.ts`), provider facts (`providers.ts`), search (`search.ts`), the TMDB client (`tmdb.ts`), the language list (`languages.ts`), HTTP and cache (`http.ts`), the year helper (`year.ts`), server copy (`messages.ts`). | The browser and the Worker |
+| `backend/src/` | Effect services and the lookup machine: handler, metadata, mapping, the providers layer, cache, refresh core, Alchemy stack.                                                                                                                                                                           | The actions, the cron      |
+| `ui/src/`      | Foldkit view, update, commands, model, messages, DOM mounts.                                                                                                                                                                                                                                           | The page                   |
+| `scripts/`     | Bun entry points run by hand or by CI (`refresh-providers.ts`).                                                                                                                                                                                                                                        | Your terminal              |
 
 Three rules follow from the split:
 
