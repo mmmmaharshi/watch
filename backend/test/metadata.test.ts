@@ -25,6 +25,16 @@ const cinemetaMisses =
   (url) =>
     url.includes("cinemeta") ? notFound(url) : json(show);
 
+const strictCacheText: HttpShape["getText"] = (url) => {
+  if (url.includes("/meta/movie/")) {
+    return json(MATRIX);
+  }
+  if (url.includes("/meta/series/")) {
+    return notFound(url);
+  }
+  return json({ name: "The Approval Matrix", premiered: "2014-01-01" });
+};
+
 describe("Metadata", () => {
   it.effect("a preferred kind answers without asking the other kind", () => {
     const asked: Array<string> = [];
@@ -54,6 +64,51 @@ describe("Metadata", () => {
       assert.strictEqual(meta.rating, "8.7");
       assert.strictEqual(asked.length, 2);
     }).pipe(Effect.provide(withStub(getText)));
+  });
+
+  it.effect("a strict TV pick asks TVMaze before the movie catalog", () => {
+    const asked: Array<string> = [];
+    const getText: HttpShape["getText"] = (url) => {
+      asked.push(url);
+      if (url.includes("/meta/series/")) {
+        return notFound(url);
+      }
+      if (url.includes("/meta/movie/")) {
+        return json({ meta: { name: "After Work", year: "2015" } });
+      }
+      return json({ name: "The Approval Matrix", premiered: "2014-01-01" });
+    };
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt3959436", "tv", true);
+      assert.deepStrictEqual(meta, { type: "tv", name: "The Approval Matrix", year: "2014" });
+      assert.isFalse(asked.some((url) => url.includes("/meta/movie/")));
+    }).pipe(Effect.provide(withStub(getText)));
+  });
+
+  it.effect("a strict kind does not fall back to the other catalog", () => {
+    const asked: Array<string> = [];
+    const getText: HttpShape["getText"] = (url) => {
+      asked.push(url);
+      return url.includes("/meta/movie/") ? json(MATRIX) : notFound(url);
+    };
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const failure = yield* metadata.resolve("tt0133093", "tv", true).pipe(Effect.flip);
+      assertInstanceOf(failure, MetadataMissing);
+      assert.isFalse(asked.some((url) => url.includes("/meta/movie/")));
+    }).pipe(Effect.provide(withStub(getText)));
+  });
+
+  it.effect("a strict kind does not read the auto cache", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const auto = yield* metadata.resolve("tt0133093");
+      assert.strictEqual(auto.type, "movie");
+      const strict = yield* metadata.resolve("tt0133093", "tv", true);
+      assert.strictEqual(strict.type, "tv");
+      assert.strictEqual(strict.name, "The Approval Matrix");
+    }).pipe(Effect.provide(withStub(strictCacheText)));
   });
 
   it.effect("with no preferred kind the first answer wins and the loser is interrupted", () => {

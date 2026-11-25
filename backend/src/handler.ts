@@ -12,6 +12,7 @@ export type HandlerOutcome = WatchOutcome;
 export interface HandlerInput {
   readonly id: string;
   readonly kind?: ContentType;
+  readonly strictKind?: boolean;
   readonly exclude?: string;
 }
 
@@ -80,7 +81,9 @@ export class Handler extends Context.Service<Handler, HandlerShape>()("watch/bac
           preferred = mapped.success.type;
         }
 
-        const resolved = yield* metadata.resolve(id, preferred).pipe(Effect.result);
+        const resolved = yield* metadata
+          .resolve(id, preferred ?? input.kind, input.strictKind === true)
+          .pipe(Effect.result);
         if (Result.isFailure(resolved)) {
           return NO_METADATA;
         }

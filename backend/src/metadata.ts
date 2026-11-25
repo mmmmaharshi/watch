@@ -45,6 +45,7 @@ export interface MetadataShape {
   readonly resolve: (
     id: string,
     preferred?: ContentType,
+    strict?: boolean,
   ) => Effect.Effect<TitleMeta, MetadataMissing>;
 }
 
@@ -158,42 +159,51 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
           return meta;
         });
 
-      const remember = (id: string, meta: TitleMeta) =>
-        cache.set(`meta:${id}`, Schema.encodeSync(CachedMeta)(meta), CACHE_TTL_MS);
+      const remember = (cacheKind: ContentType | "any", id: string, meta: TitleMeta) =>
+        cache.set(`meta:${cacheKind}:${id}`, Schema.encodeSync(CachedMeta)(meta), CACHE_TTL_MS);
 
       // A cache entry is our own JSON; a decode failure reads as a miss.
-      const recall = (id: string) =>
+      const recall = (cacheKind: ContentType | "any", id: string) =>
         Effect.gen(function* () {
-          const value = yield* cache.get(`meta:${id}`);
+          const value = yield* cache.get(`meta:${cacheKind}:${id}`);
           return Option.isSome(value)
             ? Schema.decodeUnknownOption(CachedMeta)(value.value)
             : Option.none<TitleMeta>();
         });
 
-      const resolve = Effect.fnUntraced(function* (id: string, preferred?: ContentType) {
-        const cached = yield* recall(id);
+      const resolve = Effect.fnUntraced(function* (
+        id: string,
+        preferred?: ContentType,
+        strict = false,
+      ) {
+        const cacheKind = preferred ?? "any";
+        const cached = yield* recall(cacheKind, id);
         if (Option.isSome(cached)) {
           return cached.value;
         }
-        if (Option.isSome(yield* cache.get(`miss:${id}`))) {
+        if (Option.isSome(yield* cache.get(`miss:${cacheKind}:${id}`))) {
           return yield* new MetadataMissing({ id });
         }
 
         const fetched =
-          preferred === undefined ? yield* raceKinds(id) : yield* preferKind(id, preferred);
+          preferred === undefined
+            ? yield* raceKinds(id)
+            : strict
+              ? yield* fetchKind(preferred === "tv" ? "series" : "movie", id)
+              : yield* preferKind(id, preferred);
         if (fetched.meta !== null) {
-          yield* remember(id, fetched.meta);
+          yield* remember(cacheKind, id, fetched.meta);
           return fetched.meta;
         }
 
-        const fallback = yield* fetchTVMaze(id);
+        const fallback = strict && preferred === "movie" ? null : yield* fetchTVMaze(id);
         if (fallback !== null) {
-          yield* remember(id, fallback);
+          yield* remember(cacheKind, id, fallback);
           return fallback;
         }
 
         if (!fetched.transient) {
-          yield* cache.set(`miss:${id}`, "1", CACHE_TTL_MS);
+          yield* cache.set(`miss:${cacheKind}:${id}`, "1", CACHE_TTL_MS);
         }
         return yield* new MetadataMissing({ id });
       });

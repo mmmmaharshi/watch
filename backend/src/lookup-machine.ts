@@ -63,6 +63,7 @@ export type LookupContext = typeof LookupContext.Type;
 const LookupInput = Schema.Struct({
   id: Schema.String,
   kind: Kind,
+  strictKind: Schema.optionalKey(Schema.Boolean),
   exclude: Schema.optionalKey(Schema.String),
 });
 export type LookupInput = typeof LookupInput.Type;
@@ -167,7 +168,7 @@ const isSubmitEvent = (event: {
 
 const onLookupInput = (context: LookupContext, event: { readonly type: string }): LookupInput => {
   if (isPickEvent(event)) {
-    return { id: event.candidate.imdbId, kind: context.kind };
+    return { id: event.candidate.imdbId, kind: event.candidate.kind, strictKind: true };
   }
   if (isSubmitEvent(event)) {
     const parsed = parseTitleInput(event.input);
@@ -268,7 +269,7 @@ const onRetryInput = (context: LookupContext): LookupInput => {
   if (!result) {
     return { id: context.value, kind: context.kind };
   }
-  return { id: result.id, kind: result.type, exclude: result.provider };
+  return { id: result.id, kind: result.type, strictKind: true, exclude: result.provider };
 };
 
 export type LookupMachine = ReturnType<typeof createLookupMachine>;

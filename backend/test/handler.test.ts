@@ -117,6 +117,33 @@ describe("Handler", () => {
     }),
   );
 
+  it.effect("a strict pick passes the kind to metadata", () => {
+    const calls: Array<{
+      id: string;
+      preferred?: "movie" | "tv" | undefined;
+      strict?: boolean | undefined;
+    }> = [];
+    return Effect.gen(function* () {
+      const outcome = yield* handle(
+        { id: "tt0903747", kind: "tv", strictKind: true },
+        {
+          metadata: (id, preferred, strict) => {
+            calls.push({ id, preferred, strict });
+            return Effect.fail(new MetadataMissing({ id }));
+          },
+        },
+      );
+
+      assert.deepStrictEqual(calls, [{ id: "tt0903747", preferred: "tv", strict: true }]);
+      assert.deepStrictEqual(outcome, {
+        ok: false,
+        status: 502,
+        reason: "metadata_missing",
+        error: "Failed to detect content type",
+      });
+    });
+  });
+
   it.effect("a resolved title returns the stream and its metadata", () => {
     const mappingCalls: Array<{ id: string; type?: "movie" | "tv" }> = [];
     const providerCalls: Array<{ type: string; id: string; exclude?: string }> = [];

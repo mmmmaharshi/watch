@@ -14,6 +14,7 @@ const DEFAULT_REGION = "IN";
 const WatchBody = Schema.Struct({
   id: Schema.String,
   kind: Schema.optionalKey(Kind),
+  strictKind: Schema.optionalKey(Schema.Boolean),
   exclude: Schema.optionalKey(Schema.String),
 });
 
@@ -103,6 +104,9 @@ export const handleSiteRequest = async (
     const watchInput: Mutable<WatchInput> = { id: input.id, region: regionOf(request) };
     if (input.kind !== undefined) {
       watchInput.kind = input.kind;
+    }
+    if (input.strictKind !== undefined) {
+      watchInput.strictKind = input.strictKind;
     }
     if (input.exclude !== undefined) {
       watchInput.exclude = input.exclude;
