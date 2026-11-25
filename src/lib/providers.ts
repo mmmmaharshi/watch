@@ -28,9 +28,8 @@ export interface ProvidersFile {
 }
 
 // Static fallbacks, tried after every directory domain fails. VidFast goes
-// last. TV needs season/episode, default to 1/1. VidZee keeps the default
-// /embed/{type}/{id} path: probe-26 fetched /embed/movie/tt0133093 and got the
-// Vidzee Movie Player shell, so the default shape is verified.
+// last. TV needs season/episode, default to 1/1. VidZee uses /embed/movie/{id}
+// for movies and /embed/tv/{id}/1/1 for TV; the bare TV path is 404.
 export const VIDLINK: Provider = {
   name: "vidlink.pro",
   baseUrl: "https://vidlink.pro",
@@ -40,6 +39,7 @@ export const VIDLINK: Provider = {
 export const VIDZEE: Provider = {
   name: "player.vidzee.wtf",
   baseUrl: "https://player.vidzee.wtf",
+  path: (type, id) => (type === "movie" ? `/embed/movie/${id}` : `/embed/tv/${id}/1/1`),
 };
 
 export const VIDFAST: Provider = {

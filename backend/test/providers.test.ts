@@ -385,4 +385,15 @@ describe("Providers rules", () => {
 
     assert.strictEqual(buildEmbedUrl(provider, type, id), `https://x.test/custom/${type}/${id}`);
   });
+
+  it("VidZee uses the season path for TV", () => {
+    assert.strictEqual(
+      buildEmbedUrl(VIDZEE, "tv", "tt0903747"),
+      "https://player.vidzee.wtf/embed/tv/tt0903747/1/1",
+    );
+    assert.strictEqual(
+      buildEmbedUrl(VIDZEE, "movie", "tt0133093"),
+      "https://player.vidzee.wtf/embed/movie/tt0133093",
+    );
+  });
 });
