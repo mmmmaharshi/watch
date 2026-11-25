@@ -48,6 +48,13 @@ export const SearchOutcome = Schema.Union([
 ]);
 export type SearchOutcome = typeof SearchOutcome.Type;
 
+export const SearchInput = Schema.Struct({
+  query: Schema.String,
+  kind: Kind,
+  language: Schema.String,
+});
+export type SearchInput = typeof SearchInput.Type;
+
 // One shape for every transport. The client branches on `reason`, never on the
 // message text.
 export const FAILURE_REASONS = [

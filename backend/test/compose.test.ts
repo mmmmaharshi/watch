@@ -2,7 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 import { assertNone, assertSome } from "@effect/vitest/utils";
 import { Effect } from "effect";
 import { Cache } from "../src/cache";
-import { cacheLayer, handlerFor, providerListLayer } from "../src/compose";
+import { cacheLayer, providerListLayer, siteFor } from "../src/compose";
 import type { KvNamespace } from "../src/kv";
 import { ProviderList } from "../src/provider-list";
 import { PROVIDER_LIST_KEY } from "../src/providers";
@@ -64,8 +64,8 @@ describe("the edge composition", () => {
     );
   });
 
-  it("handlerFor keeps one in-memory handler and builds one per binding", () => {
-    assert.strictEqual(handlerFor(), handlerFor());
-    assert.notStrictEqual(handlerFor({ CACHE: stubKv() }), handlerFor());
+  it("siteFor keeps one in-memory site and builds one per binding", () => {
+    assert.strictEqual(siteFor(), siteFor());
+    assert.notStrictEqual(siteFor({ CACHE: stubKv() }), siteFor());
   });
 });

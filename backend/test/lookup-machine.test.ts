@@ -2,7 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { Deferred, Effect } from "effect";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../src/lookup-machine";
-import type { LookupDeps, LookupInput, LookupOutcome, SearchInput } from "../src/lookup-machine";
+import type { LookupDeps, LookupInput, LookupOutcome } from "../src/lookup-machine";
+import type { SearchInput } from "../../src/lib/types";
 import type { SearchOutcome } from "../../src/lib/types";
 
 const MATRIX = {

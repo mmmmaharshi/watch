@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
-import type { LookupInput, SearchInput } from "../../backend/src/lookup-machine";
+import type { LookupInput } from "../../backend/src/lookup-machine";
+import type { SearchInput } from "./types";
 import { LOOKUP_FAILED, SEARCH_FAILED } from "./messages";
 import { makeLookupDeps } from "./ui-deps";
 import type { LookupTransport } from "./ui-deps";

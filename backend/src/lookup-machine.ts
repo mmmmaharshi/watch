@@ -3,9 +3,15 @@ import { Schema } from "effect";
 import type { Effect } from "effect";
 import { LOOKUP_FAILED, SEARCH_FAILED } from "../../src/lib/messages";
 import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
-import { Candidate, FAILURE_REASONS, Kind, Result, SearchOutcome } from "../../src/lib/types";
+import {
+  Candidate,
+  FAILURE_REASONS,
+  Kind,
+  Result,
+  SearchInput,
+  SearchOutcome,
+} from "../../src/lib/types";
 import type { ContentType } from "../../src/lib/types";
-
 // The status copy the machine emits. The tests pin these strings, because they
 // are what a person reads while a lookup runs.
 const MESSAGES = {
@@ -53,9 +59,6 @@ const LookupContext = Schema.Struct({
   openId: Schema.NullOr(Schema.String),
 });
 export type LookupContext = typeof LookupContext.Type;
-
-const SearchInput = Schema.Struct({ query: Schema.String, kind: Kind, language: Schema.String });
-export type SearchInput = typeof SearchInput.Type;
 
 const LookupInput = Schema.Struct({
   id: Schema.String,

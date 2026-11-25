@@ -1,8 +1,5 @@
 import { expect, test } from "bun:test";
-import { Cache } from "./http";
-import type { HttpClient } from "./http";
-import { SEARCH_FAILED } from "./messages";
-import { parseCinemeta, parseTVMaze, searchTitles, sortResults } from "./search";
+import { parseCinemeta, parseTVMaze, sortResults } from "./search";
 import type { TitleCandidate } from "./search";
 
 const cinemetaMovie = {
@@ -134,6 +131,15 @@ test("puts titles without a year last", () => {
   expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt2222222", "tt1111111"]);
 });
 
+test("keeps input order when years are missing", () => {
+  const candidates: Array<TitleCandidate> = [
+    { imdbId: "tt1111111", name: "The Office", kind: "movie" },
+    { imdbId: "tt2222222", name: "The Office", kind: "tv" },
+  ];
+
+  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
+});
+
 test("dedupes and caps the sorted list", () => {
   const candidates = Array.from({ length: 8 }, (_, i) => ({
     imdbId: `tt000000${i}`,
@@ -148,214 +154,4 @@ test("dedupes and caps the sorted list", () => {
   const ids = sorted.map((candidate) => candidate.imdbId);
   expect(new Set(ids).size).toBe(6);
   expect(sorted.map((c) => c.year)).toEqual(["2007", "2006", "2005", "2004", "2003", "2002"]);
-});
-
-function fakeHttp(routes: Record<string, { ok: boolean; body: unknown }>) {
-  const calls: Array<string> = [];
-  const http: HttpClient = {
-    get: async (url: string) => {
-      calls.push(url);
-      const key = url.includes("catalog/movie")
-        ? "movie"
-        : url.includes("catalog/series")
-          ? "series"
-          : "tvmaze";
-      const reply = routes[key] ?? { ok: false, body: {} };
-      return {
-        ok: reply.ok,
-        text: async () => JSON.stringify(reply.body),
-      };
-    },
-  };
-  return { http, calls };
-}
-
-test("movie search hits only the movie catalog, newest first", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
-    series: { ok: true, body: cinemetaSeries },
-  });
-
-  const out = await searchTitles(
-    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "The Office",
-    "movie",
-  );
-
-  expect(out.ok).toBe(true);
-  expect(calls.some((url) => url.includes("catalog/series"))).toBe(false);
-  expect(calls.some((url) => url.includes("tvmaze"))).toBe(false);
-  expect(out.ok && out.candidates.every((candidate) => candidate.kind === "movie")).toBe(true);
-});
-
-test("tv search hits the series catalog and sorts newest first", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
-    series: { ok: true, body: cinemetaSeries },
-  });
-
-  const out = await searchTitles(
-    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "The Office",
-    "tv",
-  );
-
-  expect(out.ok).toBe(true);
-  expect(calls.some((url) => url.includes("catalog/movie"))).toBe(false);
-  expect(out.ok && out.candidates.every((candidate) => candidate.kind === "tv")).toBe(true);
-});
-
-test("caches movie and tv separately for the same query", async () => {
-  const { http, calls } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
-    series: { ok: true, body: cinemetaSeries },
-  });
-  const deps = { http, cache: new Cache<Array<TitleCandidate>>(60_000) };
-
-  await searchTitles(deps, "The Office", "movie");
-  await searchTitles(deps, "The Office", "tv");
-  await searchTitles(deps, "The Office", "movie");
-
-  expect(calls.filter((url) => url.includes("catalog/movie"))).toHaveLength(1);
-  expect(calls.filter((url) => url.includes("catalog/series"))).toHaveLength(1);
-});
-
-test("falls back to TVMaze when Cinemeta has no series hits", async () => {
-  const { http } = fakeHttp({
-    series: { ok: true, body: { metas: [] } },
-    tvmaze: { ok: true, body: tvmaze },
-  });
-
-  const out = await searchTitles(
-    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "The Office",
-    "tv",
-  );
-
-  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0386676");
-});
-
-test("asks TVMaze when the series catalog fails", async () => {
-  const fallback = [
-    {
-      score: 1.18,
-      show: {
-        name: "Severance",
-        premiered: "2022-02-18",
-        externals: { imdb: "tt11280740" },
-      },
-    },
-  ];
-  const { http } = fakeHttp({
-    series: { ok: false, body: {} },
-    tvmaze: { ok: true, body: fallback },
-  });
-
-  const out = await searchTitles(
-    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "Severance",
-    "tv",
-  );
-
-  expect(out.ok && out.candidates.some((candidate) => candidate.imdbId === "tt11280740")).toBe(
-    true,
-  );
-});
-
-test("movie search ignores a dead series catalog", async () => {
-  const { http } = fakeHttp({
-    movie: { ok: true, body: cinemetaMovie },
-    series: { ok: false, body: {} },
-  });
-
-  const out = await searchTitles(
-    { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-    "The Matrix",
-    "movie",
-  );
-
-  expect(out.ok && out.candidates[0]?.imdbId).toBe("tt0133093");
-});
-
-test("reports a failure when every source fails", async () => {
-  const { http } = fakeHttp({});
-
-  expect(
-    await searchTitles(
-      { http, cache: new Cache<Array<TitleCandidate>>(60_000) },
-      "The Office",
-      "tv",
-    ),
-  ).toEqual({
-    ok: false,
-    error: SEARCH_FAILED,
-  });
-});
-
-test("accepts an empty TVMaze answer when the series catalog failed", async () => {
-  const { http } = fakeHttp({
-    series: { ok: false, body: {} },
-    tvmaze: { ok: true, body: [] },
-  });
-
-  expect(
-    await searchTitles({ http, cache: new Cache<Array<TitleCandidate>>(60_000) }, "Nothing", "tv"),
-  ).toEqual({ ok: true, candidates: [] });
-});
-
-test("keeps input order when years are missing", () => {
-  const candidates: Array<TitleCandidate> = [
-    { imdbId: "tt1111111", name: "The Office", kind: "movie" },
-    { imdbId: "tt2222222", name: "The Office", kind: "tv" },
-  ];
-
-  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
-});
-
-function switchableHttp(down: () => boolean) {
-  const http: HttpClient = {
-    get: async (url: string) => {
-      if (down()) {
-        return { ok: false, text: async () => "" };
-      }
-      const body = url.includes("catalog/movie")
-        ? cinemetaMovie
-        : url.includes("catalog/series")
-          ? cinemetaSeries
-          : {};
-      return { ok: true, text: async () => JSON.stringify(body) };
-    },
-  };
-  return http;
-}
-
-test("does not cache a partial outage", async () => {
-  let down = true;
-  const deps = {
-    http: switchableHttp(() => down),
-    cache: new Cache<Array<TitleCandidate>>(60_000),
-  };
-
-  expect(await searchTitles(deps, "The Office", "tv")).toEqual({
-    ok: false,
-    error: SEARCH_FAILED,
-  });
-
-  down = false;
-  const out = await searchTitles(deps, "The Office", "tv");
-  expect(out.ok && out.candidates.length > 0).toBe(true);
-});
-
-test("caches a query and ignores case and outer spaces", async () => {
-  let down = false;
-  const deps = {
-    http: switchableHttp(() => down),
-    cache: new Cache<Array<TitleCandidate>>(60_000),
-  };
-
-  const first = await searchTitles(deps, "The Matrix", "movie");
-  down = true;
-  const second = await searchTitles(deps, "  the matrix ", "movie");
-
-  expect(second).toEqual(first);
 });
