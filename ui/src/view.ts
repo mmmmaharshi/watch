@@ -279,6 +279,24 @@ function ResultDialog({
                               : []),
                           ],
                         ),
+                        ...(model.lookup.status.kind === "idle"
+                          ? []
+                          : [
+                              h.p(
+                                [
+                                  h.Role("status"),
+                                  h.AriaLive("polite"),
+                                  h.Class(
+                                    `mt-4 text-sm leading-relaxed ${
+                                      model.lookup.status.kind === "error"
+                                        ? "font-medium text-black"
+                                        : "text-black/64"
+                                    }`,
+                                  ),
+                                ],
+                                [model.lookup.status.text],
+                              ),
+                            ]),
                       ],
                     ),
                     h.div(
