@@ -197,6 +197,9 @@ export const update = (
       if (id === model.lookup.openId) {
         return { model };
       }
+      if (model.lookup.result?.id === id) {
+        return send(model, { type: "hashNav", id });
+      }
       const link = fullLinkForId(id, model.lookup.kind) ?? id;
       if (model.query === link) {
         return { model };
