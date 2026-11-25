@@ -35,3 +35,6 @@ playwright-report/
 .env.local
 .dev.vars
 .dev.vars.*
+
+# alchemy local state
+.alchemy/

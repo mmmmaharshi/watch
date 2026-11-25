@@ -16,13 +16,22 @@ those assets. The platform serves the page and the assets; the Worker answers
 
 ## Deploy
 
+The Alchemy CLI needs Cloudflare credentials once. Either run the profile
+editor:
+
 ```sh
-bun run deploy
+bun alchemy profile edit --profile default --add Cloudflare
 ```
 
-That runs `bun run build` and then `bun alchemy deploy --stage prod`. The stack
-in `backend/src/stack.ts` declares the site Worker, the refresh Worker, both KV
-namespaces, and the host.
+or export a token and the account id (`4f801ddf4e6b98e65b16dd31cfe0551f`):
+
+```sh
+CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... bun run deploy
+```
+
+`bun run deploy` runs `bun run build` and then `bun alchemy deploy --stage prod`.
+The stack in `backend/src/stack.ts` declares the site Worker, the refresh
+Worker, both KV namespaces, and the host.
 
 ## Local
 
