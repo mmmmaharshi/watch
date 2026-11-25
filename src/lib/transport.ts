@@ -27,15 +27,12 @@ const post = async <A>(
       body: JSON.stringify(body),
     });
     const payload: unknown = await response.json();
-    if (!response.ok) {
-      return { error: { message: errorMessage(payload, response.status) } };
-    }
     // The wire contract is decoded, not asserted: a server change that breaks
     // the shape reads as a transport failure, not as a bad result on screen.
     const decoded = Schema.decodeUnknownOption(schema)(payload);
     return Option.isSome(decoded)
       ? { data: decoded.value }
-      : { error: { message: "The server sent an unexpected answer." } };
+      : { error: { message: errorMessage(payload, response.status) } };
   } catch (error) {
     return { error: { message: error instanceof Error ? error.message : "Network error" } };
   }
