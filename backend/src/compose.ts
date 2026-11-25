@@ -53,6 +53,8 @@ export interface WatchInput {
   readonly id: string;
   readonly kind?: "movie" | "tv";
   readonly strictKind?: boolean;
+  readonly name?: string;
+  readonly year?: string;
   readonly exclude?: string;
   readonly region: string;
 }
@@ -77,6 +79,12 @@ export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site
         }
         if (input.strictKind !== undefined) {
           handlerInput.strictKind = input.strictKind;
+        }
+        if (input.name !== undefined) {
+          handlerInput.name = input.name;
+        }
+        if (input.year !== undefined) {
+          handlerInput.year = input.year;
         }
         if (input.exclude !== undefined) {
           handlerInput.exclude = input.exclude;

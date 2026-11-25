@@ -64,6 +64,8 @@ const LookupInput = Schema.Struct({
   id: Schema.String,
   kind: Kind,
   strictKind: Schema.optionalKey(Schema.Boolean),
+  name: Schema.optionalKey(Schema.String),
+  year: Schema.optionalKey(Schema.String),
   exclude: Schema.optionalKey(Schema.String),
 });
 export type LookupInput = typeof LookupInput.Type;
@@ -168,7 +170,20 @@ const isSubmitEvent = (event: {
 
 const onLookupInput = (context: LookupContext, event: { readonly type: string }): LookupInput => {
   if (isPickEvent(event)) {
-    return { id: event.candidate.imdbId, kind: event.candidate.kind, strictKind: true };
+    return event.candidate.year === undefined
+      ? {
+          id: event.candidate.imdbId,
+          kind: event.candidate.kind,
+          strictKind: true,
+          name: event.candidate.name,
+        }
+      : {
+          id: event.candidate.imdbId,
+          kind: event.candidate.kind,
+          strictKind: true,
+          name: event.candidate.name,
+          year: event.candidate.year,
+        };
   }
   if (isSubmitEvent(event)) {
     const parsed = parseTitleInput(event.input);
@@ -269,7 +284,22 @@ const onRetryInput = (context: LookupContext): LookupInput => {
   if (!result) {
     return { id: context.value, kind: context.kind };
   }
-  return { id: result.id, kind: result.type, strictKind: true, exclude: result.provider };
+  return result.year === undefined
+    ? {
+        id: result.id,
+        kind: result.type,
+        strictKind: true,
+        name: result.name,
+        exclude: result.provider,
+      }
+    : {
+        id: result.id,
+        kind: result.type,
+        strictKind: true,
+        name: result.name,
+        year: result.year,
+        exclude: result.provider,
+      };
 };
 
 export type LookupMachine = ReturnType<typeof createLookupMachine>;

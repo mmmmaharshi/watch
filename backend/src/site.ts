@@ -15,6 +15,8 @@ const WatchBody = Schema.Struct({
   id: Schema.String,
   kind: Schema.optionalKey(Kind),
   strictKind: Schema.optionalKey(Schema.Boolean),
+  name: Schema.optionalKey(Schema.String),
+  year: Schema.optionalKey(Schema.String),
   exclude: Schema.optionalKey(Schema.String),
 });
 
@@ -107,6 +109,12 @@ export const handleSiteRequest = async (
     }
     if (input.strictKind !== undefined) {
       watchInput.strictKind = input.strictKind;
+    }
+    if (input.name !== undefined) {
+      watchInput.name = input.name;
+    }
+    if (input.year !== undefined) {
+      watchInput.year = input.year;
     }
     if (input.exclude !== undefined) {
       watchInput.exclude = input.exclude;
