@@ -159,7 +159,7 @@ function ResultDialog({
   const retrying = model.lookup.phase === "retrying";
   const title = result === null ? "" : resultTitle(result);
   const meta = result === null ? "" : resultMeta(result);
-  const disabled = retrying || busy(model.lookup.phase);
+  const disabled = retrying || busy(model.lookup.phase) || model.generation > model.applied;
   const link = (href: string, text: string, extra: string) =>
     h.a(
       [
@@ -376,7 +376,7 @@ function ResultDialog({
 }
 
 export function view(model: Model, h: HtmlBuilder<Message>): Document {
-  const loading = busy(model.lookup.phase);
+  const loading = busy(model.lookup.phase) || model.generation > model.applied;
   const invalid = model.lookup.status.kind === "field";
   const statusText = model.lookup.status.kind === "idle" ? "" : model.lookup.status.text;
   const strong = model.lookup.status.kind === "error" || model.lookup.status.kind === "field";

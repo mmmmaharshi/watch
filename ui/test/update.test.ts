@@ -256,3 +256,37 @@ describe("Escape and the dialog", () => {
     );
   });
 });
+
+describe("double press", () => {
+  test("a submit is ignored while a snapshot is pending", () => {
+    const pending: Model = { ...init(), generation: 1, applied: 0 };
+    const result = update(pending, Message.SubmittedSearch());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.generation).toBe(1);
+  });
+
+  test("a submit is ignored while a lookup is running", () => {
+    const searching: Model = {
+      ...init(),
+      lookup: snapshot({ phase: "searching" }),
+    };
+    const result = update(searching, Message.SubmittedSearch());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.lookup.phase).toBe("searching");
+  });
+
+  test("a retry is ignored while a snapshot is pending", () => {
+    const pending: Model = {
+      ...withDialogOpen(init()),
+      lookup: opened,
+      generation: 1,
+      applied: 0,
+    };
+    const result = update(pending, Message.ClickedRetry());
+
+    expect(result.commands ?? []).toEqual([]);
+    expect(result.model.generation).toBe(1);
+  });
+});

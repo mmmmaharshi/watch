@@ -78,8 +78,8 @@ const mergeCommands = (
 
 const isBusy = (lookup: LookupState): boolean => lookup.phase !== "idle";
 
-const appliedLookup = (model: Model, lookup: LookupState): Model =>
-  modifyFields(model, { lookup: () => lookup });
+const appliedLookup = (model: Model, lookup: LookupState, generation: number): Model =>
+  modifyFields(model, { lookup: () => lookup, applied: () => generation });
 
 // A successful lookup is the only thing that opens the dialog. The same
 // snapshot also writes the shareable hash, once, from the update.
@@ -93,7 +93,7 @@ const applySnapshot = (
   }
 
   const previous = model.lookup.openId;
-  let next = appliedLookup(model, lookup);
+  let next = appliedLookup(model, lookup, generation);
   const extra: Array<Commands[number]> = [];
 
   if (lookup.phase !== "idle") {
@@ -167,9 +167,15 @@ export const update = (
         { type: "languageChange", language },
       ),
 
-    SubmittedSearch: () => send(model, { type: "submit", input: model.query }),
+    SubmittedSearch: () =>
+      isBusy(model.lookup) || model.generation > model.applied
+        ? { model }
+        : send(model, { type: "submit", input: model.query }),
 
-    PickedCandidate: ({ candidate }) => send(model, { type: "pick", candidate }),
+    PickedCandidate: ({ candidate }) =>
+      isBusy(model.lookup) || model.generation > model.applied
+        ? { model }
+        : send(model, { type: "pick", candidate }),
 
     FailedPoster: ({ imdbId }) => ({
       model: modifyFields(model, {
@@ -177,7 +183,10 @@ export const update = (
       }),
     }),
 
-    ClickedRetry: () => send(model, { type: "retry" }),
+    ClickedRetry: () =>
+      isBusy(model.lookup) || model.generation > model.applied
+        ? { model }
+        : send(model, { type: "retry" }),
 
     NavigatedToHash: ({ hash, search }) => {
       const id = parseSharedId(search, hash);
