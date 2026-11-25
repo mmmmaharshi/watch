@@ -51,10 +51,10 @@ export class Search extends Context.Service<Search, SearchShape>()("watch/backen
         const key = `search:${input.kind}:${input.language}:${cleaned.toLowerCase()}`;
         const cached = yield* cache.get(key);
         if (Option.isSome(cached)) {
-          return {
-            ok: true as const,
-            candidates: Schema.decodeUnknownSync(CachedCandidates)(cached.value),
-          };
+          const decoded = Schema.decodeUnknownOption(CachedCandidates)(cached.value);
+          if (Option.isSome(decoded)) {
+            return { ok: true as const, candidates: decoded.value };
+          }
         }
         if (cleaned === "") {
           return { ok: true as const, candidates: [] };
