@@ -48,7 +48,6 @@
       "name": "@watch/ui",
       "dependencies": {
         "@effect/ui": "https://pkg.pr.new/Effect-TS/ui/@effect/ui@main",
-        "@effect/ui-kit": "https://pkg.pr.new/Effect-TS/ui/@effect/ui-kit@main",
         "@xstate/effect": "1.0.0-beta.3",
         "effect": "4.1.5",
         "xstate": "6.0.0-beta.5",
@@ -124,8 +123,6 @@
     "@effect/sql-d1": ["@effect/sql-d1@4.1.5", "", { "dependencies": { "@cloudflare/workers-types": "^5.20261114.1" }, "peerDependencies": { "effect": "^4.1.5" } }, "sha512-UBGAoDhy26GR2W0KvBtCASJRvYpM4Wadng1MaJbMEvwbasEbQ+KKiZpWICVe0JpSLp3vxbQTD+1l1JYzp30V2g=="],
 
     "@effect/ui": ["@effect/ui@https://pkg.pr.new/Effect-TS/ui/@effect/ui@main", { "peerDependencies": { "effect": "^4.1.4" } }, "sha512-eprvfkEi+LtTengutpFh4A5GdV67I5JmNcmeJ+emSXrpnWeGghoCaSVh2AKvT0V7IRZfByxU6mMIrvFWPczFeA=="],
-
-    "@effect/ui-kit": ["@effect/ui-kit@https://pkg.pr.new/Effect-TS/ui/@effect/ui-kit@main", { "peerDependencies": { "@effect/ui": "^0.0.0", "effect": "^4.1.4" } }, "sha512-2LSkIaGNp8lKn+CELC94A0fg5M5tFjFeGVw1t3yXX2M18xb1lK5Y7p3cVeEfHV0ZBFXWFh/nckYSvsQMVfbNTg=="],
 
     "@effect/vitest": ["@effect/vitest@4.1.5", "", { "peerDependencies": { "effect": "^4.1.5", "vitest": ">=5.0.0 <6.0.0" } }, "sha512-18u1013wkJtSelk1ZYLc/5aUnluTQyDfi2hAemkJW1GQ9qXw4mtPSiSf0AXZPhesmGCvG1Dk2C4JYD2sz+R72w=="],
 

@@ -1,7 +1,6 @@
 import { Component, Head } from "@effect/ui";
 import type { View } from "@effect/ui";
 import { Html, HtmlCommand, HtmlHead } from "@effect/ui/html";
-import { Dialog } from "@effect/ui-kit";
 import { LANGUAGES } from "../../src/lib/languages";
 import { fullLinkForId, imdbUrl, parseSharedId } from "../../src/lib/parse-input";
 import {
@@ -131,152 +130,142 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
       .children(text);
   };
 
-  return Dialog(h, {
-    props: { open: dialogOpen },
-    onEmit: {
-      RequestedOpen: () => undefined,
-      RequestedClose: ({ reason }) => WatchMessage.RequestedCloseResult({ reason }),
-      Settled: () => undefined,
-    },
-    view: (dialog) =>
-      h.div(
-        dialog.portal(h.dialog.class("watch-dialog"))?.children(
-          // The scrim is deliberately plain markup, never a Dialog backdrop
-          // part: this dialog never closes on click.
-          h.div.class("fixed inset-0 bg-black/50"),
-          ...(result === null
-            ? []
-            : [
-                dialog.viewport(h.div).children(
-                  dialog
-                    .popup(
-                      h.div.class(
-                        "relative mx-auto my-8 max-h-[calc(100dvh-4rem)] w-[calc(100%-3rem)] max-w-[42rem] overflow-y-auto overscroll-contain rounded-xl border border-black/10 bg-white p-6 shadow-[var(--overlay-shadow)]",
+  // A native modal dialog: the Model decides when it opens, the host turns
+  // blunt close requests such as Escape into cancel events, and the browser
+  // owns the scrim and the page's inert state.
+  const frame =
+    result === null
+      ? h.dialog.class("watch-dialog")
+      : h.dialog.class("watch-dialog").attrs({
+          "aria-label": title,
+          "aria-describedby": "watch-meta",
+        });
+  return frame
+    .modal(dialogOpen)
+    .on("cancel", WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
+    .children(
+      ...(result === null
+        ? []
+        : [
+            h.div
+              .class(
+                "relative mx-auto my-8 max-h-[calc(100dvh-4rem)] w-[calc(100%-3rem)] max-w-[42rem] overflow-y-auto overscroll-contain rounded-xl border border-black/10 bg-white p-6 shadow-[var(--overlay-shadow)]",
+              )
+              .children(
+                h.div.class("flex flex-col gap-0").children(
+                  h.div.children(
+                    h.h2
+                      .class("text-2xl font-semibold tracking-tight text-balance")
+                      .children(title),
+                    h.p
+                      .attrs({ id: "watch-meta" })
+                      .class("mt-1 text-sm text-black/64 tabular-nums")
+                      .children(meta),
+                  ),
+                  h.div.class("mt-4").children(
+                    ...(result.description
+                      ? [
+                          h.p
+                            .class("text-base leading-relaxed text-black/64 text-pretty")
+                            .children(result.description),
+                        ]
+                      : []),
+                    h.p
+                      .class("mt-4 text-sm font-medium text-black/64")
+                      .children(resultType(result.type)),
+                    h.div
+                      .class("mt-5 border-t border-black/10")
+                      .children(
+                        Row(h, COPY.imdb, [link(imdbUrl(result.id), result.id, "")]),
+                        Separator(h),
+                        Row(h, COPY.provider, [result.provider]),
+                        Separator(h),
+                        Row(h, COPY.streamUrl, [link(result.url, result.url, "break-all")]),
+                        ...(result.official
+                          ? [
+                              Separator(h),
+                              Row(h, COPY.official, [
+                                link(result.official.link, result.official.services.join(", "), ""),
+                              ]),
+                            ]
+                          : []),
                       ),
+                    ...(model.lookup.status.kind === "idle"
+                      ? []
+                      : [
+                          h.p
+                            .attr("role", "status")
+                            .attr("aria-live", "polite")
+                            .class(
+                              `mt-4 text-sm leading-relaxed ${
+                                model.lookup.status.kind === "error"
+                                  ? "font-medium text-black"
+                                  : "text-black/64"
+                              }`,
+                            )
+                            .children(model.lookup.status.text),
+                        ]),
+                  ),
+                  h.div
+                    .class(
+                      "mt-5 flex flex-col gap-4 border-t border-black/10 pt-5 sm:flex-row sm:items-center sm:justify-between",
                     )
                     .children(
-                      h.div.class("flex flex-col gap-0").children(
-                        h.div.children(
-                          dialog
-                            .title(h.h2.class("text-2xl font-semibold tracking-tight text-balance"))
-                            .children(title),
-                          dialog
-                            .description(h.p.class("mt-1 text-sm text-black/64 tabular-nums"))
-                            .children(meta),
+                      h.p
+                        .class("text-sm leading-relaxed text-black/64 text-pretty")
+                        .children(
+                          "You'll leave this site and play on ",
+                          h.strong.class("font-medium text-black").children(result.provider),
+                          ". We don't control external sites.",
                         ),
-                        h.div.class("mt-4").children(
-                          ...(result.description
-                            ? [
-                                h.p
-                                  .class("text-base leading-relaxed text-black/64 text-pretty")
-                                  .children(result.description),
-                              ]
-                            : []),
-                          h.p
-                            .class("mt-4 text-sm font-medium text-black/64")
-                            .children(resultType(result.type)),
-                          h.div
-                            .class("mt-5 border-t border-black/10")
-                            .children(
-                              Row(h, COPY.imdb, [link(imdbUrl(result.id), result.id, "")]),
-                              Separator(h),
-                              Row(h, COPY.provider, [result.provider]),
-                              Separator(h),
-                              Row(h, COPY.streamUrl, [link(result.url, result.url, "break-all")]),
-                              ...(result.official
-                                ? [
-                                    Separator(h),
-                                    Row(h, COPY.official, [
-                                      link(
-                                        result.official.link,
-                                        result.official.services.join(", "),
-                                        "",
-                                      ),
-                                    ]),
-                                  ]
-                                : []),
-                            ),
-                          ...(model.lookup.status.kind === "idle"
-                            ? []
-                            : [
-                                h.p
-                                  .attr("role", "status")
-                                  .attr("aria-live", "polite")
-                                  .class(
-                                    `mt-4 text-sm leading-relaxed ${
-                                      model.lookup.status.kind === "error"
-                                        ? "font-medium text-black"
-                                        : "text-black/64"
-                                    }`,
-                                  )
-                                  .children(model.lookup.status.text),
-                              ]),
-                        ),
-                        h.div
+                      h.div.class("flex shrink-0 flex-wrap justify-end gap-2").children(
+                        h.button
+                          .attrs({ type: "button" })
+                          .on("click", WatchMessage.RequestedCloseResult({ reason: "close-press" }))
+                          .disabled(disabled)
                           .class(
-                            "mt-5 flex flex-col gap-4 border-t border-black/10 pt-5 sm:flex-row sm:items-center sm:justify-between",
+                            `min-h-12 rounded-lg bg-black/5 px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
                           )
-                          .children(
-                            h.p
-                              .class("text-sm leading-relaxed text-black/64 text-pretty")
-                              .children(
-                                "You'll leave this site and play on ",
-                                h.strong.class("font-medium text-black").children(result.provider),
-                                ". We don't control external sites.",
-                              ),
-                            h.div.class("flex shrink-0 flex-wrap justify-end gap-2").children(
-                              dialog
-                                .close(
-                                  h.button
-                                    .attrs({ type: "button" })
-                                    .disabled(disabled)
-                                    .class(
-                                      `min-h-12 rounded-lg bg-black/5 px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
-                                    ),
-                                )
-                                .children(COPY.cancel),
-                              h.button
-                                .attrs({ type: "button" })
-                                .attr("aria-label", COPY.retry)
-                                .on("click", WatchMessage.ClickedRetry())
-                                .disabled(disabled)
-                                .class(ICON_BUTTON)
-                                .children(retrying ? Spinner(h) : RefreshGlyph(h)),
-                              h.button
-                                .attrs({ type: "button" })
-                                .attr("aria-label", COPY.copy)
-                                .on("click", WatchMessage.ClickedCopy())
-                                .disabled(disabled)
-                                .class(ICON_BUTTON)
-                                .children(CopyGlyph(h)),
-                              h.button
-                                .attrs({ type: "button", id: "watch-result" })
-                                .on("click", WatchMessage.ClickedWatch())
-                                .disabled(disabled)
-                                .class(
-                                  `min-h-12 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80 sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
-                                )
-                                .children(COPY.watch),
-                            ),
-                            ...(model.notice === null
-                              ? []
-                              : [
-                                  h.p
-                                    .attr("role", "status")
-                                    .attr("aria-live", "polite")
-                                    .class(
-                                      "fixed bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-white px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
-                                    )
-                                    .children(model.notice),
-                                ]),
-                          ),
+                          .children(COPY.cancel),
+                        h.button
+                          .attrs({ type: "button" })
+                          .attr("aria-label", COPY.retry)
+                          .on("click", WatchMessage.ClickedRetry())
+                          .disabled(disabled)
+                          .class(ICON_BUTTON)
+                          .children(retrying ? Spinner(h) : RefreshGlyph(h)),
+                        h.button
+                          .attrs({ type: "button" })
+                          .attr("aria-label", COPY.copy)
+                          .on("click", WatchMessage.ClickedCopy())
+                          .disabled(disabled)
+                          .class(ICON_BUTTON)
+                          .children(CopyGlyph(h)),
+                        h.button
+                          .attrs({ type: "button", id: "watch-result" })
+                          .on("click", WatchMessage.ClickedWatch())
+                          .disabled(disabled)
+                          .class(
+                            `min-h-12 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80 sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
+                          )
+                          .children(COPY.watch),
                       ),
+                      ...(model.notice === null
+                        ? []
+                        : [
+                            h.p
+                              .attr("role", "status")
+                              .attr("aria-live", "polite")
+                              .class(
+                                "fixed bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-white px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
+                              )
+                              .children(model.notice),
+                          ]),
                     ),
                 ),
-              ]),
-        ),
-      ),
-  });
+              ),
+          ]),
+    );
 });
 
 export const WatchNoDeps = WatchDef.make({

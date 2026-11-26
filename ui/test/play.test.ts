@@ -52,11 +52,15 @@ it.layer(TestHost.layer(), { buildPerTest: true })("Watch as a Play", (it) => {
       const row = HtmlLocator.role("button", { name: /The Matrix/ });
       yield* play.expect(row).toExist();
       yield* play.click(row);
-      // The dialog renders in the top layer, which the test host does not
-      // expose. The shareable hash it writes and the Model prove it opened.
+      const dialog = HtmlLocator.role("dialog", { name: "The Matrix" });
+      yield* play.expect(dialog).toExist();
+      yield* play.expect(dialog).toHaveText(/vidsrc\.in/);
+      yield* play.expect(HtmlLocator.role("link", { name: result.url })).toExist();
+      // The shareable hash is the dialog's own side effect.
       assert.strictEqual(location.hash, "#id=tt0133093");
-      assert.strictEqual(play.root.model()?.lookup.openId, "tt0133093");
-      assert.strictEqual(play.root.model()?.lookup.result?.provider, "vidsrc.in");
+      yield* play.click(HtmlLocator.role("button", { name: COPY.cancel }));
+      yield* play.expect(dialog).toBeAbsent();
+      yield* play.expect(textbox).toHaveValue("The Matrix");
       yield* play.expect(row).toExist();
     }),
   );

@@ -140,7 +140,7 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("search done with a failed search shows the search failure text", () =>
+  it.effect("search done with a failed search shows the server's message", () =>
     Effect.gen(function* () {
       const actor = yield* createEffectActor(idle());
       yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
@@ -151,7 +151,7 @@ describe("lookup machine", () => {
       assert.strictEqual(snap.value, "idle");
       assert.deepStrictEqual(snap.context.status, {
         kind: "error",
-        text: SEARCH_FAILED,
+        text: "upstream is down",
       });
     }).pipe(Effect.scoped),
   );

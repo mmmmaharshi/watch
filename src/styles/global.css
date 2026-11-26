@@ -16,8 +16,25 @@
   --link: var(--foreground);
 }
 
-/* The native scrollbar is heavy against the hairline dialog. */
+/* The scrim belongs to the browser: a top-layer dialog is the containing
+   block for fixed children, so a fixed inset-0 div cannot span the page. */
+.watch-dialog::backdrop {
+  background: rgb(0 0 0 / 50%);
+}
+
+/* The dialog is only a transparent layer: the panel inside it owns the box,
+   the radius and the scrolling, so the page stays dimmed around it. */
 .watch-dialog {
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: rgb(0 0 0 / 18%) transparent;
   scrollbar-gutter: stable;

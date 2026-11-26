@@ -217,7 +217,8 @@ const onRetry = (context: LookupContext): Move | undefined =>
 
 const onSearchDone = (output: SearchOutcome): Move => {
   if (!output.ok) {
-    return { target: "idle", context: { status: errorStatus(SEARCH_FAILED) } };
+    // The server's copy names the reason, such as a missing language key.
+    return { target: "idle", context: { status: errorStatus(output.error) } };
   }
   if (output.candidates.length === 0) {
     return { target: "idle", context: { status: errorStatus(MESSAGES.noTitle) } };

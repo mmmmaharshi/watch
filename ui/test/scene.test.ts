@@ -2,7 +2,6 @@ import { Component } from "@effect/ui";
 import { HtmlCommand } from "@effect/ui/html";
 import { HtmlLocator } from "@effect/ui/html/testing";
 import { Locator } from "@effect/ui/testing";
-import { Dialog, DialogEvents } from "@effect/ui-kit";
 import { HtmlScene } from "@effect/ui/html/testing";
 import { Story } from "@effect/ui/testing";
 import { assert, describe, it } from "@effect/vitest";
@@ -227,7 +226,7 @@ describe("the result dialog", () => {
         .resolve(AdvanceLookup, WatchMessage.CompletedAdvanceLookup(open))
         .expectExact(WriteHistoryHash)
         .resolve(WriteHistoryHash, Component.noop)
-        .childEmit(Dialog, DialogEvents.RequestedClose({ reason: "close-press" }))
+        .fire(Locator.tag("dialog"), "cancel")
         .expectExact(AdvanceLookup)
         .resolve(
           AdvanceLookup,
