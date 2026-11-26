@@ -6,7 +6,7 @@ export const COPY = {
   intro: "Free, no sign-up. One ID in, one stream link out.",
   fieldLabel: "IMDb or TMDB ID or link",
   placeholder: "IMDb or TMDB ID, or link",
-  hint: "A bare number tries TMDB first.",
+  hint: "Eg: tt0371746",
   submit: "Watch now",
   footer:
     "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
