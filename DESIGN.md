@@ -298,7 +298,7 @@ The Effect UI root component implements the components in `ui/src/watch.ts`.
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID or link. Free, no sign-up."
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Free, no sign-up. One ID in, one stream link out."
 - **Page safety note:** a `text-xs leading-relaxed text-ink-2` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-ink-2` inside the dialog footer. It names the provider and states that the app does not control external sites.
 

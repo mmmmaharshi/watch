@@ -3,10 +3,10 @@
 export const COPY = {
   title: "watch — find a stream link by IMDb or TMDB ID",
   wordmark: "watch",
-  intro: "Paste an IMDb or TMDB ID or link. Free, no sign-up.",
+  intro: "Free, no sign-up. One ID in, one stream link out.",
   fieldLabel: "IMDb or TMDB ID or link",
   placeholder: "IMDb or TMDB ID, or link",
-  hint: "Paste an IMDb or TMDB ID or link. A bare number tries TMDB first.",
+  hint: "A bare number tries TMDB first.",
   submit: "Watch now",
   footer:
     "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
