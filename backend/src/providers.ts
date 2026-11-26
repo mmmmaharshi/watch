@@ -1,4 +1,4 @@
-import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option } from "effect";
 import { PROBE_TIMEOUT_MS } from "../../src/lib/provider-probes";
 import {
   DIRECTORY_URL,
@@ -84,19 +84,6 @@ const toRefreshFile = (file: ProvidersFile): RefreshFile => ({
   updatedAt: Date.parse(file.updatedAt),
 });
 
-const loadRefreshFile = (http: HttpShape, fileUrl: string) =>
-  http.getJson(fileUrl, Schema.Unknown).pipe(
-    Effect.timeoutOrElse({
-      duration: LOAD_TIMEOUT_MS,
-      orElse: () => Effect.fail(new HttpError({ url: fileUrl })),
-    }),
-    Effect.map((value): Option.Option<RefreshFile> => {
-      const parsed = parseProvidersFile(value);
-      return Option.isSome(parsed) ? Option.some(toRefreshFile(parsed.value)) : Option.none();
-    }),
-    Effect.orElseSucceed(() => Option.none<RefreshFile>()),
-  );
-
 const fetchDirectoryDomains = (http: HttpShape) =>
   http.getText(DIRECTORY_URL).pipe(
     Effect.timeoutOrElse({
@@ -134,85 +121,82 @@ const streamKey = (type: ContentType, id: string) => `providers:stream:${type}:$
 export class Providers extends Context.Service<Providers, ProvidersShape>()(
   "watch/backend/Providers",
 ) {
-  static readonly layer = (
-    fileUrl: string,
-  ): Layer.Layer<Providers, never, Http | Cache | ProviderList> =>
-    Layer.effect(
-      Providers,
-      Effect.gen(function* () {
-        const http = yield* Http;
-        const cache = yield* Cache;
-        const providerList = yield* ProviderList;
+  static readonly layer: Layer.Layer<Providers, never, Http | Cache | ProviderList> = Layer.effect(
+    Providers,
+    Effect.gen(function* () {
+      const http = yield* Http;
+      const cache = yield* Cache;
+      const providerList = yield* ProviderList;
 
-        const loadProviders = Effect.fnUntraced(function* () {
-          const cached = yield* cache.get(DOMAINS_KEY);
-          if (Option.isSome(cached)) {
-            return toProviders(cached.value.split("\n"));
+      const loadProviders = Effect.fnUntraced(function* () {
+        const cached = yield* cache.get(DOMAINS_KEY);
+        if (Option.isSome(cached)) {
+          return toProviders(cached.value.split("\n"));
+        }
+
+        // Shared storage first; the live directory fills when the stored
+        // list is stale or missing.
+        const stored = yield* providerList.load;
+        const file = Option.isSome(stored)
+          ? Option.some(toRefreshFile(stored.value))
+          : Option.none<RefreshFile>();
+        if (Option.isSome(file)) {
+          const age = (yield* Clock.currentTimeMillis) - file.value.updatedAt;
+          if (age <= PROVIDERS_STALE_MS) {
+            yield* cache.set(DOMAINS_KEY, file.value.domains.join("\n"), PROVIDERS_TTL_MS);
+            return toProviders(file.value.domains);
           }
+        }
 
-          // Shared storage first; the committed file is the current home and
-          // stays as a fallback until KV holds the list.
-          const stored = yield* providerList.load;
-          const file = Option.isSome(stored)
-            ? Option.some(toRefreshFile(stored.value))
-            : yield* loadRefreshFile(http, fileUrl);
-          if (Option.isSome(file)) {
-            const age = (yield* Clock.currentTimeMillis) - file.value.updatedAt;
-            if (age <= PROVIDERS_STALE_MS) {
-              yield* cache.set(DOMAINS_KEY, file.value.domains.join("\n"), PROVIDERS_TTL_MS);
-              return toProviders(file.value.domains);
-            }
+        const live = yield* fetchDirectoryDomains(http);
+        if (live.length) {
+          yield* cache.set(DOMAINS_KEY, live.join("\n"), PROVIDERS_TTL_MS);
+          return toProviders(live);
+        }
+
+        // A stale file still names hosts; the per-request probe vets them.
+        return toProviders(Option.isSome(file) ? file.value.domains : []);
+      });
+
+      const selectStream = Effect.fnUntraced(function* (args: {
+        readonly type: ContentType;
+        readonly id: string;
+        readonly exclude?: string;
+      }) {
+        const providers = yield* loadProviders();
+        const key = streamKey(args.type, args.id);
+        const cachedName = yield* cache.get(key);
+        const known = [...providers, VIDLINK, VIDZEE, VIDFAST];
+        const cached = Option.isSome(cachedName)
+          ? known.find((provider) => provider.name === cachedName.value)
+          : undefined;
+        const tiers: ReadonlyArray<ReadonlyArray<Provider>> = [
+          ...(cached === undefined ? [] : [[cached]]),
+          providers,
+          [VIDLINK, VIDZEE],
+          [VIDFAST],
+        ];
+
+        for (const tier of tiers) {
+          const candidates = tier.filter((provider) => provider.name !== args.exclude);
+          if (!candidates.length) {
+            continue;
           }
-
-          const live = yield* fetchDirectoryDomains(http);
-          if (live.length) {
-            yield* cache.set(DOMAINS_KEY, live.join("\n"), PROVIDERS_TTL_MS);
-            return toProviders(live);
+          // raceAll interrupts the losers, so they stop at their own timeouts.
+          // shortcut: Http takes no abort signal, so a losing fetch stops in the
+          // fiber but not on the wire; widen HttpShape when request volume matters.
+          const winner = yield* Effect.raceAll(
+            candidates.map((provider) => probe(http, provider, args.type, args.id)),
+          ).pipe(Effect.option);
+          if (Option.isSome(winner)) {
+            yield* cache.set(key, winner.value.provider, STREAM_TTL_MS);
+            return winner;
           }
+        }
+        return Option.none<Stream>();
+      });
 
-          // A stale file still names hosts; the per-request probe vets them.
-          return toProviders(Option.isSome(file) ? file.value.domains : []);
-        });
-
-        const selectStream = Effect.fnUntraced(function* (args: {
-          readonly type: ContentType;
-          readonly id: string;
-          readonly exclude?: string;
-        }) {
-          const providers = yield* loadProviders();
-          const key = streamKey(args.type, args.id);
-          const cachedName = yield* cache.get(key);
-          const known = [...providers, VIDLINK, VIDZEE, VIDFAST];
-          const cached = Option.isSome(cachedName)
-            ? known.find((provider) => provider.name === cachedName.value)
-            : undefined;
-          const tiers: ReadonlyArray<ReadonlyArray<Provider>> = [
-            ...(cached === undefined ? [] : [[cached]]),
-            providers,
-            [VIDLINK, VIDZEE],
-            [VIDFAST],
-          ];
-
-          for (const tier of tiers) {
-            const candidates = tier.filter((provider) => provider.name !== args.exclude);
-            if (!candidates.length) {
-              continue;
-            }
-            // raceAll interrupts the losers, so they stop at their own timeouts.
-            // shortcut: Http takes no abort signal, so a losing fetch stops in the
-            // fiber but not on the wire; widen HttpShape when request volume matters.
-            const winner = yield* Effect.raceAll(
-              candidates.map((provider) => probe(http, provider, args.type, args.id)),
-            ).pipe(Effect.option);
-            if (Option.isSome(winner)) {
-              yield* cache.set(key, winner.value.provider, STREAM_TTL_MS);
-              return winner;
-            }
-          }
-          return Option.none<Stream>();
-        });
-
-        return Providers.of({ selectStream });
-      }),
-    );
+      return Providers.of({ selectStream });
+    }),
+  );
 }

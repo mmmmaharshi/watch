@@ -7,8 +7,8 @@ export const REFRESH_WORKER = "provider-refresh";
 export const PROVIDER_LIST_NAMESPACE = "provider-list";
 export const CACHE_NAMESPACE = "cache";
 
-// Same expression as .github/workflows/refresh-providers.yml: Tue and Sat,
-// 05:00 UTC. The workflow is deleted when this stack takes over the schedule.
+// Tue and Sat, 05:00 UTC. The provider-refresh Worker owns this schedule; the
+// old GitHub refresh workflow is retired.
 export const REFRESH_CRON = "0 5 * * 2,6";
 
 // Claimed by the prod stage only.

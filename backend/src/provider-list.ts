@@ -4,8 +4,8 @@ import type { KvNamespace } from "./kv";
 import { PROVIDER_LIST_KEY, parseProvidersFile } from "./providers";
 
 export interface ProviderListShape {
-  // A read failure is a miss: the Providers service falls back to the file and
-  // the live directory.
+  // A read failure is a miss: the Providers service falls back to the live
+  // directory.
   readonly load: Effect.Effect<Option.Option<ProvidersFile>>;
   // A write failure must reach the cron, so it can log a run that stored
   // nothing.
@@ -39,8 +39,8 @@ export class ProviderList extends Context.Service<ProviderList, ProviderListShap
   static readonly layerKv = (kv: KvNamespace): Layer.Layer<ProviderList> =>
     Layer.succeed(ProviderList, ProviderList.of(providerListFromKv(kv)));
 
-  // No shared storage: every read misses, so the caller keeps its file and
-  // directory fallbacks. Tests and local runs use this.
+  // No shared storage: every read misses, so the caller uses the live
+  // directory. Tests and local runs use this.
   static readonly emptyLayer = Layer.succeed(
     ProviderList,
     ProviderList.of({
