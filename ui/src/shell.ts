@@ -25,8 +25,9 @@ export const pageHtml = (page: RenderedPage): string => `<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="text-scale" content="scale">
+<meta name="theme-color" content="#0a0a0a">
 ${page.head}
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
 <link rel="canonical" href="${SITE_URL}/">
 <meta name="description" content="${description}">
 <meta property="og:type" content="website">
@@ -44,11 +45,11 @@ ${page.head}
 <link rel="stylesheet" href="/assets/app.css">
 <script type="module" src="/assets/app.js"></script>
 </head>
-<body ${page.bodyAttributes} class="min-h-dvh bg-white px-6 text-black antialiased">
+<body ${page.bodyAttributes} class="min-h-dvh bg-canvas px-6 text-ink antialiased">
   <div id="app">${page.html}</div>
   <script type="application/json" id="state">${HtmlServer.serializeState(page.state)}</script>
   <noscript>
-    <p class="mt-4 text-sm leading-relaxed text-black/64">
+    <p class="mt-4 text-sm leading-relaxed text-ink-2">
       This page needs JavaScript to find a stream link.
     </p>
   </noscript>

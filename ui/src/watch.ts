@@ -24,11 +24,11 @@ export const SEARCH_FIELD_ID = "search-field";
 export const SEARCH_FIELD_NAME = "id";
 
 const FOCUS_RING =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black";
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
 const FIELD_RING =
-  "focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-black";
+  "focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ink";
 const DISABLED = "disabled:cursor-not-allowed disabled:opacity-50";
-const ICON_BUTTON = `flex size-12 items-center justify-center rounded-lg border border-black/10 bg-white sm:size-10 ${FOCUS_RING} ${DISABLED}`;
+const ICON_BUTTON = `flex size-12 items-center justify-center rounded-lg border border-line bg-fill hover:bg-fill-hover sm:size-10 ${FOCUS_RING} ${DISABLED}`;
 
 const focusSearch = () => HtmlCommand.focus(SearchField, () => Component.noop);
 
@@ -52,13 +52,13 @@ function Row<C extends View.Children<WatchMessage>>(h: H, label: string, childre
   return h.div
     .class("flex flex-col gap-1 py-3.5 sm:flex-row sm:gap-6")
     .children(
-      h.span.class("text-sm font-medium text-black/64 sm:w-28 sm:shrink-0").children(label),
+      h.span.class("text-sm font-medium text-ink-2 sm:w-28 sm:shrink-0").children(label),
       h.span.class("min-w-0 flex-1 text-sm tabular-nums").children(children),
     );
 }
 
 function Separator(h: H) {
-  return h.hr.class("h-px rounded-sm border-0 bg-black/10");
+  return h.hr.class("h-px rounded-sm border-0 bg-line");
 }
 
 function inputAttrs(invalid: boolean, describedBy: string) {
@@ -124,7 +124,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
         : [
             h.div
               .class(
-                "relative mx-auto my-8 max-h-[calc(100dvh-4rem)] w-[calc(100%-3rem)] max-w-[42rem] overflow-y-auto overscroll-contain rounded-xl border border-black/10 bg-white p-6 shadow-[var(--overlay-shadow)]",
+                "relative mx-auto my-8 max-h-[calc(100dvh-4rem)] w-[calc(100%-3rem)] max-w-[42rem] overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-6 shadow-[var(--overlay-shadow)]",
               )
               .children(
                 h.div.class("flex flex-col gap-0").children(
@@ -134,22 +134,22 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                       .children(title),
                     h.p
                       .attrs({ id: "watch-meta" })
-                      .class("mt-1 text-sm text-black/64 tabular-nums")
+                      .class("mt-1 text-sm text-ink-2 tabular-nums")
                       .children(meta),
                   ),
                   h.div.class("mt-4").children(
                     ...(result.description
                       ? [
                           h.p
-                            .class("text-base leading-relaxed text-black/64 text-pretty")
+                            .class("text-base leading-relaxed text-ink-2 text-pretty")
                             .children(result.description),
                         ]
                       : []),
                     h.p
-                      .class("mt-4 text-sm font-medium text-black/64")
+                      .class("mt-4 text-sm font-medium text-ink-2")
                       .children(resultType(result.type)),
                     h.div
-                      .class("mt-5 border-t border-black/10")
+                      .class("mt-5 border-t border-line")
                       .children(
                         Row(h, COPY.imdb, [link(imdbUrl(result.id), result.id, "")]),
                         Separator(h),
@@ -166,8 +166,8 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                             .class(
                               `mt-4 text-sm leading-relaxed ${
                                 model.lookup.status.kind === "error"
-                                  ? "font-medium text-black"
-                                  : "text-black/64"
+                                  ? "font-medium text-ink"
+                                  : "text-ink-2"
                               }`,
                             )
                             .children(model.lookup.status.text),
@@ -175,14 +175,14 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                   ),
                   h.div
                     .class(
-                      "mt-5 flex flex-col gap-4 border-t border-black/10 pt-5 sm:flex-row sm:items-center sm:justify-between",
+                      "mt-5 flex flex-col gap-4 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between",
                     )
                     .children(
                       h.p
-                        .class("text-sm leading-relaxed text-black/64 text-pretty")
+                        .class("text-sm leading-relaxed text-ink-2 text-pretty")
                         .children(
                           "You'll leave this site and play on ",
-                          h.strong.class("font-medium text-black").children(result.provider),
+                          h.strong.class("font-medium text-ink").children(result.provider),
                           ". We don't control external sites.",
                         ),
                       h.div.class("flex shrink-0 flex-wrap justify-end gap-2").children(
@@ -191,7 +191,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                           .on("click", WatchMessage.RequestedCloseResult({ reason: "close-press" }))
                           .disabled(disabled)
                           .class(
-                            `min-h-12 rounded-lg bg-black/5 px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
+                            `min-h-12 rounded-lg bg-fill hover:bg-fill-hover px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
                           )
                           .children(COPY.cancel),
                         h.button
@@ -213,7 +213,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                           .on("click", WatchMessage.ClickedWatch())
                           .disabled(disabled)
                           .class(
-                            `min-h-12 rounded-lg bg-black px-5 text-sm font-medium text-white hover:bg-black/80 sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
+                            `min-h-12 rounded-lg bg-action px-5 text-sm font-medium text-canvas hover:bg-action-hover sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
                           )
                           .children(COPY.watch),
                       ),
@@ -224,7 +224,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                               .attr("role", "status")
                               .attr("aria-live", "polite")
                               .class(
-                                "fixed bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-white px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
+                                "fixed bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-lg bg-surface px-4 py-3 text-sm shadow-[var(--overlay-shadow)]",
                               )
                               .children(model.notice),
                           ]),
@@ -382,10 +382,10 @@ export const WatchNoDeps = WatchDef.make({
       .children(
         h.div.class("w-full sm:my-auto").children(
           h.header
-            .class("w-full border-b border-black/10 pb-6")
+            .class("w-full border-b border-line pb-6")
             .children(
               h.h1.class("text-2xl font-semibold tracking-tight").children(COPY.wordmark),
-              h.p.class("mt-1 text-sm text-black/64").children(COPY.intro),
+              h.p.class("mt-1 text-sm text-ink-2").children(COPY.intro),
             ),
           h.div.class("w-full").children(
             h.search.children(
@@ -401,7 +401,7 @@ export const WatchNoDeps = WatchDef.make({
                       .value(model.query)
                       .disabled(loading)
                       .class(
-                        `h-12 w-full rounded-lg border border-black/15 bg-white px-3 text-base ${FIELD_RING} data-[invalid]:border-[oklch(0.6532_0.2328_25.74)] data-[disabled]:opacity-50`,
+                        `h-12 w-full rounded-lg border border-line bg-canvas px-3 text-base ${FIELD_RING} data-[invalid]:border-[oklch(0.72_0.19_25)] data-[disabled]:opacity-50`,
                       )
                       .on("input", ({ value }) => WatchMessage.UpdatedQuery({ value }))
                       .onMount(ReadSearchField({})),
@@ -410,27 +410,27 @@ export const WatchNoDeps = WatchDef.make({
                     .attrs({ type: "submit" })
                     .disabled(loading)
                     .class(
-                      `flex min-h-12 items-center justify-center gap-2 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80 ${FOCUS_RING} ${DISABLED}`,
+                      `flex min-h-12 items-center justify-center gap-2 rounded-lg bg-action px-6 text-sm font-medium text-canvas hover:bg-action-hover ${FOCUS_RING} ${DISABLED}`,
                     )
                     .children(...(loading ? [Spinner(h)] : []), COPY.submit),
                 ),
             ),
             h.p
               .attrs({ id: "search-hint" })
-              .class("mt-3 text-xs leading-relaxed text-black/64")
+              .class("mt-3 text-xs leading-relaxed text-ink-2")
               .children(COPY.hint),
             h.p
               .attrs({ id: "status", role: "status", "aria-live": "polite" })
               .class(
                 "mt-1 min-h-[1.625em] text-sm leading-relaxed " +
-                  (strong ? "font-medium text-black" : "text-black/64"),
+                  (strong ? "font-medium text-ink" : "text-ink-2"),
               )
               .children(statusText),
           ),
         ),
         h.footer
-          .class("mt-14 w-full border-t border-black/10 pt-5")
-          .children(h.p.class("text-xs leading-relaxed text-black/64").children(COPY.footer)),
+          .class("mt-auto w-full border-t border-line pt-5 sm:mt-14")
+          .children(h.p.class("text-xs leading-relaxed text-ink-2").children(COPY.footer)),
         resultDialog(h, model, model.lookup.result),
       );
   },

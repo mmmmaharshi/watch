@@ -2,28 +2,51 @@
 @import "goeist/sans.css";
 @import "goeist/mono.css";
 
+/* One dark palette. The app ships dark only, so these tokens are the only
+   theme surface the view reads. Rungs are white over near-black: the light
+   ladder's percentages would read louder here, so secondary and tertiary ink
+   are tuned for this canvas rather than copied from it. */
 @theme {
   --font-sans: "Goeist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Goeist Mono", ui-monospace, monospace;
+
+  --color-canvas: #0a0a0a;
+  --color-surface: #121212;
+  --color-ink: #ffffff;
+  --color-ink-2: rgb(255 255 255 / 62%);
+  --color-line: rgb(255 255 255 / 12%);
+  --color-fill: rgb(255 255 255 / 9%);
+  --color-fill-hover: rgb(255 255 255 / 14%);
+  --color-action: #ffffff;
+  --color-action-hover: rgb(255 255 255 / 88%);
 }
 
-/* The palette is ink on paper. These tokens are the only theme surface the
-   view reads, so the UI no longer needs a component library for them. */
 :root {
-  --foreground: #000000;
-  --overlay-shadow: 0 10px 30px rgb(0 0 0 / 12%);
+  /* The native controls and scrollbars follow the canvas, not the OS theme. */
+  color-scheme: dark;
+
+  --foreground: #ffffff;
+  /* A shadow does nothing on near-black, so the dialog separates with a
+     barely visible halo plus its border. */
+  --overlay-shadow: 0 24px 80px rgb(255 255 255 / 5%);
   --focus: var(--foreground);
   --link: var(--foreground);
+}
+
+::selection {
+  background: rgb(255 255 255 / 18%);
 }
 
 /* The scrim belongs to the browser: a top-layer dialog is the containing
    block for fixed children, so a fixed inset-0 div cannot span the page. */
 .watch-dialog::backdrop {
-  background: rgb(0 0 0 / 50%);
+  background: rgb(0 0 0 / 72%);
 }
 
 /* The dialog is only a transparent layer: the panel inside it owns the box,
-   the radius and the scrolling, so the page stays dimmed around it. */
+   the radius and the scrolling, so the page stays dimmed around it. `clip`
+   keeps content in without making the layer a scroll container, which would
+   paint a second scrollbar beside the panel. */
 .watch-dialog {
   inset: 0;
   width: auto;
@@ -34,26 +57,5 @@
   padding: 0;
   border: 0;
   background: transparent;
-  overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(0 0 0 / 18%) transparent;
-  scrollbar-gutter: stable;
-}
-
-.watch-dialog::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.watch-dialog::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.watch-dialog::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgb(0 0 0 / 18%);
-}
-
-.watch-dialog::-webkit-scrollbar-thumb:hover {
-  background: rgb(0 0 0 / 30%);
+  overflow: clip;
 }
