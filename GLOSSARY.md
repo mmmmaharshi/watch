@@ -17,7 +17,3 @@ A third-party embed host the app links to (`VidSrc`, `VidLink`, `VidZee`, `VidFa
 ## Official
 
 The licensed services that carry a title in the visitor's country, read from TMDB watch providers and shown in the dialog as "Also on".
-
-## Language filter
-
-The search form option that keeps only titles whose original language matches. It applies to title searches, not to pasted IDs or links.

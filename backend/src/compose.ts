@@ -106,7 +106,7 @@ export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site
 export const siteLayer = (bindings: SiteBindings): Layer.Layer<Site> => {
   const tmdb = tmdbLayer(bindings.TMDB_API_KEY);
   return Site.layer.pipe(
-    Layer.provide(Layer.mergeAll(handlerLayer(), Search.layer.pipe(Layer.provide(tmdb)), tmdb)),
+    Layer.provide(Layer.mergeAll(handlerLayer(), Search.layer, tmdb)),
     Layer.provide(transportLayer(bindings)),
   );
 };

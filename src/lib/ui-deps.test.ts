@@ -97,7 +97,7 @@ describe("the browser lookup deps", () => {
       }),
     );
 
-    expect(await search(deps, { query: "The Matrix", kind: "movie", language: "" })).toEqual({
+    expect(await search(deps, { query: "The Matrix" })).toEqual({
       ok: true,
       candidates,
     });
@@ -112,7 +112,7 @@ describe("the browser lookup deps", () => {
       }),
     );
 
-    expect(await search(deps, { query: "The Matrix", kind: "movie", language: "" })).toEqual({
+    expect(await search(deps, { query: "The Matrix" })).toEqual({
       ok: false,
       error: SEARCH_FAILED,
     });

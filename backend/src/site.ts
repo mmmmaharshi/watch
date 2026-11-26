@@ -1,7 +1,6 @@
 import { Effect, Option, Schema } from "effect";
-import { isLanguage } from "../../src/lib/languages";
 import { limitResponse } from "../../src/lib/rate-limit";
-import type { SearchInput, SearchOutcome, WatchOutcome } from "../../src/lib/types";
+import type { SearchOutcome, WatchOutcome } from "../../src/lib/types";
 import { Kind } from "../../src/lib/types";
 import type { SiteBindings } from "./compose";
 import type { WatchInput } from "./compose";
@@ -22,8 +21,6 @@ const WatchBody = Schema.Struct({
 
 const SearchBody = Schema.Struct({
   query: Schema.String,
-  kind: Kind,
-  language: Schema.optionalKey(Schema.String),
 });
 
 const json = (body: unknown, status = 200): Response =>
@@ -53,7 +50,7 @@ const isKv = (value: unknown): value is KvNamespace =>
   typeof value.put === "function";
 
 // Every binding is optional: the site runs without KV (memory stores) and
-// without the TMDB key (no language filter, no official row).
+// without the TMDB key (no official row).
 export const bindingsOf = (source: unknown): SiteBindings => {
   if (!isObject(source)) {
     return {};
@@ -133,12 +130,7 @@ export const handleSiteRequest = async (
     if (trimmed.length === 0 || trimmed.length > 200) {
       return json({ error: "Send a title." }, 400);
     }
-    const language = input.language ?? "";
-    if (!isLanguage(language)) {
-      return json({ error: "Choose a listed language." }, 400);
-    }
-    const searchInput: SearchInput = { query: trimmed, kind: input.kind, language };
-    const outcome: SearchOutcome = await Effect.runPromise(site.search(searchInput));
+    const outcome: SearchOutcome = await Effect.runPromise(site.search({ query: trimmed }));
     return json(outcome);
   }
 

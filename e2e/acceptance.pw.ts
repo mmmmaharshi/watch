@@ -123,16 +123,6 @@ async function pickMatrix(page: Page) {
   await expect(resultTitle(page)).toHaveText("The Matrix", { timeout: 60_000 });
 }
 
-// The language filter and the official row need the site's TMDB key. Ask the
-// search action, which names the missing key in its reply, so a key-less run
-// skips these two criteria instead of failing them.
-async function tmdbConfigured(page: Page): Promise<boolean> {
-  const response = await page.request.post("/_actions/search", {
-    data: { query: "Pushpa", kind: "movie", language: "te" },
-  });
-  return !(await response.text()).includes("not set up");
-}
-
 test("A1 an empty submit asks for a title and holds the cursor", async ({ page }) => {
   await open(page);
   await page.getByRole("button", { name: "Watch now" }).click();
@@ -274,22 +264,7 @@ test("A10 a paste before hydration survives it", async ({ page }) => {
   await expect(page.locator("#status")).toHaveText("Finding a working stream...");
 });
 
-test("A11 a language choice narrows the list @live", async ({ page }) => {
-  test.skip(!(await tmdbConfigured(page)), "TMDB key is not configured");
-
-  await open(page);
-  await page.getByLabel("Language").selectOption("te");
-  await submit(page, "Pushpa");
-
-  await expect(page.locator("#status")).toHaveText(/^\d+ match(es)?\. Choose one\.$/, {
-    timeout: 60_000,
-  });
-  expect(await page.locator("ul li").count()).toBeLessThanOrEqual(6);
-});
-
 test("A12 the dialog names the official services @live", async ({ page }) => {
-  test.skip(!(await tmdbConfigured(page)), "TMDB key is not configured");
-
   await open(page);
   await pickMatrix(page);
 

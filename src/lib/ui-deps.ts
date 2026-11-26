@@ -18,11 +18,7 @@ export interface LookupTransport {
     readonly kind?: ContentType;
     readonly exclude?: string;
   }) => Promise<ApiResponse<WatchOutcome>>;
-  readonly search: (input: {
-    readonly query: string;
-    readonly kind: ContentType;
-    readonly language?: string;
-  }) => Promise<ApiResponse<SearchOutcome>>;
+  readonly search: (input: { readonly query: string }) => Promise<ApiResponse<SearchOutcome>>;
 }
 
 const resolve = async <A>(task: () => Promise<A>, fallback: A): Promise<A> => {

@@ -29,75 +29,7 @@ const route =
     return hit === undefined ? notFound(url) : json(hit[1]);
   };
 
-const PUSHPA = {
-  id: 1,
-  title: "Pushpa 2",
-  original_language: "te",
-  release_date: "2024-12-05",
-  poster_path: "/pushpa.jpg",
-};
-
 describe("Tmdb", () => {
-  it.effect("keeps only rows in the chosen language and gives them IMDb ids", () => {
-    return Effect.gen(function* () {
-      const tmdb = yield* Tmdb;
-      const found = yield* tmdb.search({ query: "Pushpa", kind: "movie", language: "te" });
-      assert.deepStrictEqual(Option.getOrNull(found), [
-        {
-          imdbId: "tt1757263",
-          name: "Pushpa 2",
-          kind: "movie",
-          year: "2024",
-          poster: "https://image.tmdb.org/t/p/w342/pushpa.jpg",
-        },
-      ]);
-    }).pipe(
-      Effect.provide(
-        withStub(
-          route([
-            [
-              "/search/movie",
-              { results: [PUSHPA, { id: 2, title: "Other", original_language: "en" }] },
-            ],
-            ["/movie/1/external_ids", { imdb_id: "tt1757263" }],
-            ["/movie/2/external_ids", { imdb_id: "tt0000002" }],
-          ]),
-        ),
-      ),
-    );
-  });
-
-  it.effect("finds a matching row on the second page", () => {
-    return Effect.gen(function* () {
-      const tmdb = yield* Tmdb;
-      const found = yield* tmdb.search({ query: "Pushpa", kind: "movie", language: "te" });
-      const values = Option.getOrNull(found);
-      assert.deepStrictEqual(
-        values?.map((row) => row.imdbId),
-        ["tt1757263"],
-      );
-    }).pipe(
-      Effect.provide(
-        withStub(
-          route([
-            ["page=1", { results: [{ id: 9, original_language: "en" }], total_pages: 2 }],
-            ["page=2", { results: [PUSHPA], total_pages: 2 }],
-            ["/movie/1/external_ids", { imdb_id: "tt1757263" }],
-          ]),
-        ),
-      ),
-    );
-  });
-
-  it.effect("an upstream failure is None, not an empty list", () => {
-    return Effect.gen(function* () {
-      const tmdb = yield* Tmdb;
-      assert.isTrue(
-        Option.isNone(yield* tmdb.search({ query: "Pushpa", kind: "movie", language: "te" })),
-      );
-    }).pipe(Effect.provide(withStub(notFound)));
-  });
-
   it.effect("names the official services in the region", () => {
     return Effect.gen(function* () {
       const tmdb = yield* Tmdb;
@@ -142,28 +74,6 @@ describe("Tmdb", () => {
           route([
             ["/find/tt1757263", { movie_results: [{ id: 1 }] }],
             ["/movie/1/watch/providers", { results: { US: { link: "https://example.com" } } }],
-          ]),
-        ),
-      ),
-    );
-  });
-
-  it.effect("a corrupt cached search is a miss, not a crash", () => {
-    return Effect.gen(function* () {
-      const cache = yield* Cache;
-      yield* cache.set("tmdb:search:movie:te:pushpa", "{not candidates", 60_000);
-      const tmdb = yield* Tmdb;
-      const found = yield* tmdb.search({ query: "Pushpa", kind: "movie", language: "te" });
-      assert.deepStrictEqual(
-        Option.getOrNull(found)?.map((row) => row.imdbId),
-        ["tt1757263"],
-      );
-    }).pipe(
-      Effect.provide(
-        withSharedCache(
-          route([
-            ["/search/movie", { results: [PUSHPA] }],
-            ["/movie/1/external_ids", { imdb_id: "tt1757263" }],
           ]),
         ),
       ),

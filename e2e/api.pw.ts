@@ -13,7 +13,7 @@ test("the watch route answers a failed lookup with its status", async ({ request
 });
 
 test("the search route rejects an empty title", async ({ request }) => {
-  const response = await request.post("/api/search", { data: { query: "", kind: "movie" } });
+  const response = await request.post("/api/search", { data: { query: "" } });
 
   expect(response.status()).toBe(400);
   expect(await response.json()).toMatchObject({ error: "Send a title." });

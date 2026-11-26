@@ -104,6 +104,15 @@ test("sorts newest first, whatever the title", () => {
   expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt0386676", "tt0273148"]);
 });
 
+test("puts the exact title first, then newest first", () => {
+  const candidates: Array<TitleCandidate> = [
+    { imdbId: "tt1", name: "Breaking Bad Wolf", year: "2018", kind: "movie" },
+    { imdbId: "tt2", name: "Breaking Bad", year: "2008", kind: "tv" },
+  ];
+
+  expect(sortResults(candidates, "breaking bad").map((c) => c.imdbId)).toEqual(["tt2", "tt1"]);
+});
+
 test("orders equal title matches by newest release year", () => {
   const shows: Array<TitleCandidate> = [
     { imdbId: "tt0386676", name: "The Office", year: "2005", kind: "tv" },

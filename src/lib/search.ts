@@ -101,7 +101,16 @@ function releaseYear(candidate: TitleCandidate): number {
   return candidate.year ? Number(candidate.year) : 0;
 }
 
-export function sortResults(candidates: Array<TitleCandidate>): Array<TitleCandidate> {
+// A person who types a title wants that title first. The rest stay newest
+// first, which is the existing rule.
+function exactMatch(candidate: TitleCandidate, query: string | undefined): number {
+  return query !== undefined && normalize(candidate.name) === normalize(query) ? 0 : 1;
+}
+
+export function sortResults(
+  candidates: Array<TitleCandidate>,
+  query?: string,
+): Array<TitleCandidate> {
   const wanted = new Set<string>();
   const deduped: Array<TitleCandidate> = [];
 
@@ -118,7 +127,12 @@ export function sortResults(candidates: Array<TitleCandidate>): Array<TitleCandi
 
   return deduped
     .map((candidate, index) => ({ candidate, index }))
-    .sort((a, b) => releaseYear(b.candidate) - releaseYear(a.candidate) || a.index - b.index)
+    .sort(
+      (a, b) =>
+        exactMatch(a.candidate, query) - exactMatch(b.candidate, query) ||
+        releaseYear(b.candidate) - releaseYear(a.candidate) ||
+        a.index - b.index,
+    )
     .slice(0, MAX_CANDIDATES)
     .map((entry) => entry.candidate);
 }

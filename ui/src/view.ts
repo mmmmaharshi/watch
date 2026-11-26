@@ -1,6 +1,5 @@
 import type { Document, Html, HtmlBuilder } from "foldkit/html";
-import { Dialog, Input, Select } from "@foldkit/ui";
-import { LANGUAGES } from "../../src/lib/languages";
+import { Dialog, Input } from "@foldkit/ui";
 import { imdbUrl } from "../../src/lib/parse-input";
 import { COPY } from "./copy";
 import { busy, resultMeta, resultTitle, resultType } from "./lookup";
@@ -426,27 +425,6 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
       ],
     );
 
-  const selectView =
-    (label: string, options: ReadonlyArray<{ value: string; text: string; selected: boolean }>) =>
-    (attributes: Select.SelectAttributes<Message>) =>
-      h.div(
-        [h.Class("contents")],
-        [
-          h.label([...attributes.label, h.Class("sr-only")], [label]),
-          h.select(
-            [
-              ...attributes.select,
-              h.Class(
-                `h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium ${FOCUS_RING} data-[disabled]:opacity-50`,
-              ),
-            ],
-            options.map((option) =>
-              h.option([h.Value(option.value), h.Selected(option.selected)], [option.text]),
-            ),
-          ),
-        ],
-      );
-
   return {
     title: COPY.title,
     lang: "en",
@@ -485,41 +463,6 @@ export function view(model: Model, h: HtmlBuilder<Message>): Document {
                             placeholder: COPY.placeholder,
                             onInput: (value) => Message.ChangedQuery({ value }),
                             toView: inputView,
-                          },
-                          h,
-                        ),
-                        Select.view(
-                          {
-                            id: "media-type",
-                            value: model.lookup.kind,
-                            isDisabled: loading,
-                            onChange: (value) =>
-                              Message.ChangedKind({ kind: value === "tv" ? "tv" : "movie" }),
-                            toView: selectView(COPY.kindLabel, [
-                              {
-                                value: "movie",
-                                text: COPY.movie,
-                                selected: model.lookup.kind === "movie",
-                              },
-                              { value: "tv", text: COPY.tv, selected: model.lookup.kind === "tv" },
-                            ]),
-                          },
-                          h,
-                        ),
-                        Select.view(
-                          {
-                            id: "language",
-                            value: model.lookup.language,
-                            isDisabled: loading,
-                            onChange: (value) => Message.ChangedLanguage({ language: value }),
-                            toView: selectView(
-                              COPY.languageLabel,
-                              LANGUAGES.map((language) => ({
-                                value: language.code,
-                                text: language.name,
-                                selected: language.code === model.lookup.language,
-                              })),
-                            ),
                           },
                           h,
                         ),

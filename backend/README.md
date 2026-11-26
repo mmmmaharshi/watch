@@ -17,8 +17,8 @@ root installs it.
   transport, and the two stores. KV-backed in a Worker, in-memory elsewhere.
 - `src/search.ts` — `Search` service: Cinemeta and TVMaze fallback over `Http`
   and `Cache`, with one ranking rule.
-- `src/tmdb.ts` — `Tmdb` service: language search and official availability. A
-  disabled layer serves when no key is bound.
+- `src/tmdb.ts` — `Tmdb` service: official availability. A disabled layer
+  serves when no key is bound.
 
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry

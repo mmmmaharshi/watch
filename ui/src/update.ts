@@ -152,22 +152,6 @@ export const update = (
       }),
     }),
 
-    ChangedKind: ({ kind }) =>
-      send(
-        modifyFields(model, {
-          lookup: () => ({ ...model.lookup, kind, candidates: [] }),
-        }),
-        { type: "kindChange", kind },
-      ),
-
-    ChangedLanguage: ({ language }) =>
-      send(
-        modifyFields(model, {
-          lookup: () => ({ ...model.lookup, language, candidates: [] }),
-        }),
-        { type: "languageChange", language },
-      ),
-
     SubmittedSearch: () =>
       isBusy(model.lookup) || model.generation > model.applied
         ? { model }

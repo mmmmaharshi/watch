@@ -50,8 +50,6 @@ export type SearchOutcome = typeof SearchOutcome.Type;
 
 export const SearchInput = Schema.Struct({
   query: Schema.String,
-  kind: Kind,
-  language: Schema.String,
 });
 export type SearchInput = typeof SearchInput.Type;
 

@@ -11,7 +11,6 @@ import {
   SearchInput,
   SearchOutcome,
 } from "../../src/lib/types";
-import type { ContentType } from "../../src/lib/types";
 // The status copy the machine emits. The tests pin these strings, because they
 // are what a person reads while a lookup runs.
 const MESSAGES = {
@@ -52,7 +51,6 @@ export type Status = typeof Status.Type;
 const LookupContext = Schema.Struct({
   value: Schema.String,
   kind: Kind,
-  language: Schema.String,
   candidates: Schema.Array(Candidate),
   result: Schema.NullOr(Result),
   status: Status,
@@ -79,8 +77,6 @@ export type LookupEvent =
   | { readonly type: "fail"; readonly message: string }
   | { readonly type: "close" }
   | { readonly type: "hashNav"; readonly id: string }
-  | { readonly type: "kindChange"; readonly kind: ContentType }
-  | { readonly type: "languageChange"; readonly language: string }
   | { readonly type: "change"; readonly value: string };
 
 const Events = {
@@ -92,8 +88,6 @@ const Events = {
   fail: Schema.Struct({ message: Schema.String }),
   close: Schema.Struct({}),
   hashNav: Schema.Struct({ id: Schema.String }),
-  kindChange: Schema.Struct({ kind: Kind }),
-  languageChange: Schema.Struct({ language: Schema.String }),
   change: Schema.Struct({ value: Schema.String }),
 };
 
@@ -122,20 +116,6 @@ type Move =
       readonly context?: Partial<LookupContext>;
     }
   | { readonly context?: Partial<LookupContext> };
-
-const onKindChange = (kind: ContentType): Move => ({
-  context: { kind, candidates: [] },
-});
-
-const onLanguageChange = (context: LookupContext, language: string): Move => {
-  // A message about the old choice is stale after the change.
-  const stale = context.status.kind === "error" || context.status.kind === "field";
-  return {
-    context: stale
-      ? { language, candidates: [], status: idleStatus() }
-      : { language, candidates: [] },
-  };
-};
 
 const onClose = (): Move => ({ context: { openId: null } });
 
@@ -262,7 +242,8 @@ const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
       result: output.result,
       // The id whose own history echo must be ignored.
       openId: output.result.id,
-      // The selector follows a pasted link; bare ids leave it alone.
+      // A pasted link sets the kind a later bare id will use; bare ids leave
+      // it alone.
       kind: isLinkLike(context.value) ? output.result.type : context.kind,
       status: afterLookup(context.candidates),
     },
@@ -327,7 +308,6 @@ export function createLookupMachine(deps: LookupDeps) {
     context: {
       value: "",
       kind: "movie",
-      language: "",
       candidates: [],
       result: null,
       status: idleStatus(),
@@ -338,8 +318,6 @@ export function createLookupMachine(deps: LookupDeps) {
     on: {
       close: onClose,
       hashNav: (args) => onHashNav(args.context, args.event.id),
-      kindChange: (args) => onKindChange(args.event.kind),
-      languageChange: (args) => onLanguageChange(args.context, args.event.language),
       change: (args) => onChange(args.context, args.event.value),
     },
     states: {
@@ -355,8 +333,6 @@ export function createLookupMachine(deps: LookupDeps) {
           src: "search",
           input: ({ context }) => ({
             query: context.value,
-            kind: context.kind,
-            language: context.language,
           }),
           onDone: (args, enq) => {
             enq.raise({ type: "searchDone", output: args.event.output });

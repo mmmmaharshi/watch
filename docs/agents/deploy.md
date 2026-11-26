@@ -45,17 +45,16 @@ starts its own.
 
 ## Secrets
 
-The language filter and the official-services row read `TMDB_API_KEY`, a free
-key from themoviedb.org. The stack binds it as a secret from the environment, so
-put it in `.env` at the repo root (ignored by git) or export it before deploying:
+The official-services row reads `TMDB_API_KEY`, a free key from themoviedb.org.
+The stack binds it as a secret from the environment, so put it in `.env` at the
+repo root (ignored by git) or export it before deploying:
 
 ```sh
 TMDB_API_KEY=your-key
 ```
 
 A deploy without it fails at the Config step, by design. A local run without it
-still serves the page and the stream link; a language choice reports that the
-filter is not set up.
+still serves the page and the stream link; the official row is absent.
 
 ## Inspect
 

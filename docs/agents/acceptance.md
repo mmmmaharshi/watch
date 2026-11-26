@@ -32,8 +32,8 @@ runs.
 2. Press **Watch now**.
 
 The page lists at most 6 titles. Each row shows the name, the year when it
-is known, and the IMDb ID. The kind comes from the Movie/TV selector. The
-1999 film is in the list.
+is known, and the IMDb ID. The search covers movies and TV shows. The 1999
+film is in the list.
 
 ## A4 — A pick opens a result
 
@@ -88,14 +88,6 @@ person taps the field.
 2. Press **Watch now** after load.
 
 The field still holds the link. A lookup starts.
-
-## A11 — A language choice narrows the list
-
-1. Pick **Telugu** in the language selector.
-2. Search `Pushpa`.
-
-The page lists at most 6 matches. When the site has a TMDB key, they are Telugu
-titles. Without the key, the page says the filter is not set up.
 
 ## A12 — The dialog names the official services
 

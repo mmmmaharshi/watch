@@ -6,11 +6,7 @@ export const COPY = {
   intro: "Find a movie or TV show. Free, no sign-up.",
   fieldLabel: "IMDb or TMDB ID, link, or title",
   placeholder: "Title, IMDb or TMDB ID, or link",
-  kindLabel: "Movie or TV show",
-  languageLabel: "Language",
-  hint:
-    "Paste an ID or link, or type a title. Bare numbers try TMDB first. " +
-    "The language filter applies to title searches.",
+  hint: "Paste an ID or link, or type a title. Bare numbers try TMDB first.",
   submit: "Watch now",
   footer:
     "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
@@ -25,6 +21,4 @@ export const COPY = {
   provider: "Provider",
   official: "Also on",
   streamUrl: "Stream URL",
-  movie: "Movie",
-  tv: "TV",
 } as const;
