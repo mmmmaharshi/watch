@@ -261,7 +261,7 @@ Rows are divided by 1px hairline bars. There are no pills and no clipped corners
 
 ## Components
 
-The Foldkit view implements the components in `ui/src/view.ts`.
+The Effect UI root component implements the components in `ui/src/watch.ts`, with one poster component in `ui/src/poster.ts`.
 
 ### Form
 

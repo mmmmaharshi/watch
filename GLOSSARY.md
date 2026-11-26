@@ -4,7 +4,7 @@ Single context for the `watch` app. Terms only — no implementation.
 
 ## Port
 
-Re-implementing the `watch` app on the CAFE stack (Cloudflare + Alchemy + Foldkit + Effect + XState) with behavior unchanged, judged by `docs/agents/acceptance.md`. The port added no features and redesigned no flows; later features are separate changes.
+Re-implementing the `watch` app on the CAFE stack (Cloudflare + Alchemy + Effect UI + Effect + XState) with behavior unchanged, judged by `docs/agents/acceptance.md`. The port added no features and redesigned no flows; later features are separate changes.
 
 ## Parity
 

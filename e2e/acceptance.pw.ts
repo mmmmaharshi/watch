@@ -44,36 +44,13 @@ test.afterEach(({ page }) => {
   expect(consoleErrors.get(page) ?? []).toEqual([]);
 });
 
-// The runtime replaces the server-rendered field on boot. Tag the served node
-// when it appears, so a test can tell the mounted app from the static page.
-const tagServerField = () => {
-  const seen = new WeakSet<Element>();
-  const mark = () => {
-    const field = document.querySelector<Element & { serverRendered?: boolean }>("#search-field");
-    if (field !== null && !field.serverRendered) {
-      seen.add(field);
-      field.serverRendered = true;
-      observer.disconnect();
-    }
-  };
-  const observer = new MutationObserver(mark);
-  observer.observe(document, { childList: true, subtree: true });
-  mark();
-};
-
+// The client marks #app once it adopted the server's nodes (or mounted
+// fresh). Hydration keeps the server's nodes, so the field is never replaced.
 async function mounted(page: Page) {
-  await page.waitForFunction(
-    () => {
-      const field = document.querySelector<Element & { serverRendered?: boolean }>("#search-field");
-      return field !== null && field.serverRendered !== true;
-    },
-    undefined,
-    { timeout: 30_000 },
-  );
+  await page.waitForSelector("#app[data-booted]", { timeout: 30_000 });
 }
 
 async function open(page: Page, path = "/") {
-  await page.addInitScript(tagServerField);
   await page.goto(path);
   await mounted(page);
 }
@@ -251,7 +228,6 @@ test("A10 a paste before hydration survives it", async ({ page }) => {
     });
     await route.continue();
   });
-  await page.addInitScript(tagServerField);
 
   // commit, not load: deferred module scripts run before load, and the paste
   // must beat them.

@@ -1,8 +1,9 @@
 # UI
 
-The Foldkit program for the watch page: one Model, one Message union, one pure
-`update`, and named Commands. `src/boot.ts` builds the page's deps and mounts it
-with `start(deps, container)`.
+The Effect UI program for the watch page: one root component with its Model,
+Messages, `init`, `update` and `view`, plus owned child components. Side
+effects are Commands the runtime runs. `src/boot.ts` builds the page's deps
+and mounts it with `start(deps, container)`.
 
 ## Layout
 
@@ -10,17 +11,20 @@ with `start(deps, container)`.
   rules.
 - `src/model.ts` — the page Model and its initial value.
 - `src/messages.ts` — every Message, named after the fact.
-- `src/commands.ts` — the named Commands and the `LookupEngine` layer that runs
+- `src/commands.ts` — the Command Services and the `LookupEngine` layer that runs
   the XState machine from `backend/src/lookup-machine.ts`.
-- `src/mounts.ts` — reads the field and the hash once, when the input mounts.
-- `src/subscriptions.ts` — hashchange and popstate as Messages.
-- `src/update.ts` — the pure transition function.
-- `src/view.ts` — the page, form, candidate list, and result dialog.
+- `src/mounts.ts` — reads the field once when the input mounts, and tracks
+  hash changes while the page lives.
+- `src/poster.ts` — one candidate poster, which owns its load failure.
+- `src/watch.ts` — the root component: `init`, `update`, the page view, and
+  the result dialog drawn with the headless Dialog from `@effect/ui-kit`.
 - `src/entry.ts` — `start(deps, container)`, called by the boot script.
 - `src/boot.ts` — the browser entry: `start` with the HTTP transport.
 - `src/shell.ts` — the static page HTML, rendered at build time.
-- `src/render.ts` — the page's static markup, rendered at build time.
-- `test/` — story tests over `update` and scene tests through the view.
+- `src/render.ts` — the page's server render and adopted state, built at
+  build time.
+- `test/` — Story tests over `update`, Scene tests through the view, and
+  Play tests of the whole flow against the real engine.
 
 ## How a lookup runs
 
@@ -31,9 +35,10 @@ the machine to come back to `idle`. Every Command carries a generation, and a
 reply from an older generation is dropped, so a superseded search cannot
 overwrite a newer one.
 
-Page state that the machine does not own lives in the Model: the field text,
-the auto-focus permission, hidden posters, and the copy notice. The dialog is
-the `@foldkit/ui` Dialog submodel.
+Page state that the machine does not own lives in the Model: the field text
+and the auto-focus permission. Each poster owns its own load failure, and the
+dialog is a headless child that the page opens by rendering it with
+`open: true`.
 
 ## Checks
 

@@ -1,33 +1,34 @@
+import { UiSchema } from "@effect/ui";
 import { Schema } from "effect";
-import { Dialog } from "@foldkit/ui";
-import { defineMessageUnion } from "foldkit/message";
 import { Candidate, LookupState } from "./lookup";
 
 // Fact-named messages. Anything the lookup lifecycle owns is sent to the
 // machine; these messages only describe what the person did or what came back.
-export const Message = defineMessageUnion({
+export const WatchMessage = UiSchema.TaggedEnum({
   MountedSearch: {
     fieldText: Schema.String,
     hash: Schema.String,
     search: Schema.String,
     isTouch: Schema.Boolean,
   },
-  ChangedQuery: { value: Schema.String },
+  UpdatedQuery: { value: Schema.String },
   SubmittedSearch: {},
   PickedCandidate: { candidate: Candidate },
-  FailedPoster: { imdbId: Schema.String },
   ClickedRetry: {},
   NavigatedToHash: { hash: Schema.String, search: Schema.String },
-  GotDialogMessage: { message: Dialog.Message },
-  GotLookupState: { generation: Schema.Number, snapshot: LookupState },
+  CompletedAdvanceLookup: {
+    generation: Schema.Number,
+    snapshot: LookupState,
+  },
+  CompletedAwaitLookupSettle: {
+    generation: Schema.Number,
+    snapshot: LookupState,
+  },
+  RequestedCloseResult: { reason: Schema.String },
   ClickedCopy: {},
-  CopiedLink: {},
-  CopyFailed: { message: Schema.String },
+  SucceededCopyShareLink: {},
+  FailedCopyShareLink: { message: Schema.String },
   ClickedWatch: {},
-  OpenedStream: {},
-  CompletedFocusSearch: {},
-  CompletedWriteHash: {},
-  CompletedClearHash: {},
-  DismissedNotice: {},
+  CompletedDismissNotice: {},
 });
-export type Message = typeof Message.Type;
+export type WatchMessage = typeof WatchMessage.Type;

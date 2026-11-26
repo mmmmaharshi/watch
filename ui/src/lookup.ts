@@ -9,7 +9,7 @@ export { Candidate, Kind, Result, Status };
 export const Phase = Schema.Literals(["idle", "searching", "looking", "retrying"]);
 export type Phase = typeof Phase.Type;
 
-// The machine's context minus `value`, which the Foldkit Model holds as `query`.
+// The machine's context minus `value`, which the page Model holds as `query`.
 export const LookupState = Schema.Struct({
   phase: Phase,
   kind: Kind,

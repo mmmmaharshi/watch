@@ -1,19 +1,23 @@
-import { describe, expect, test } from "bun:test";
-import { Command as StoryCommand, given, message, model, story } from "foldkit/story";
-import { Dialog } from "@foldkit/ui";
+import { Component } from "@effect/ui";
+import { HtmlCommand } from "@effect/ui/html";
+import { Story } from "@effect/ui/testing";
+import { assert, describe, it } from "@effect/vitest";
+import { Effect } from "effect";
 import {
   AdvanceLookup,
   AwaitLookupSettle,
   ClearHistoryHash,
-  FocusSearchField,
+  CopyShareLink,
+  DismissNotice,
+  OpenStream,
   WriteHistoryHash,
 } from "../src/commands";
 import { idleLookup } from "../src/lookup";
 import type { LookupState, Result } from "../src/lookup";
-import { Message } from "../src/messages";
-import { init } from "../src/model";
-import type { Model } from "../src/model";
-import { update } from "../src/update";
+import { WatchMessage } from "../src/messages";
+import { initModel } from "../src/model";
+import { Poster, PosterMessage } from "../src/poster";
+import { WatchNoDeps } from "../src/watch";
 
 const MATRIX: Result = {
   id: "tt0133093",
@@ -36,120 +40,96 @@ const opened = snapshot({
   openId: MATRIX.id,
 });
 
-const withDialogOpen = (base: Model): Model => ({
-  ...base,
-  dialog: Dialog.open(Dialog.init({ id: "result", focusSelector: "#watch-result" })).model,
-});
-
 describe("A9 — a phone does not open the keyboard", () => {
-  test("a desktop mount asks for focus", () => {
-    story(
-      update,
-      given(init()),
-      message(Message.MountedSearch({ fieldText: "", hash: "", search: "", isTouch: false })),
-      StoryCommand.expectHas(FocusSearchField),
-      StoryCommand.resolve(FocusSearchField, Message.CompletedFocusSearch()),
-    );
-  });
+  it.effect("a desktop mount asks for focus", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.MountedSearch({ fieldText: "", hash: "", search: "", isTouch: false }))
+        .expectExact(HtmlCommand.Focus)
+        .resolve(HtmlCommand.Focus, { found: true });
+    }),
+  );
 });
 
 describe("A10 — a paste before load finishes survives it", () => {
-  test("the text already in the field is adopted, not wiped", () => {
-    story(
-      update,
-      given(init()),
-      message(
-        Message.MountedSearch({
+  it.effect("the text already in the field is adopted, not wiped", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(
+        WatchMessage.MountedSearch({
           fieldText: LINK,
           hash: "#id=tt0133093",
           search: "",
           isTouch: false,
         }),
-      ),
-      StoryCommand.expectNone(),
-      model((actual: Model) => {
-        expect(actual.query).toBe(LINK);
-      }),
-    );
-  });
+      ).expectNone();
+      assert.strictEqual(s.model.query, LINK);
+    }),
+  );
 });
 
 describe("a successful lookup", () => {
-  test("opens the dialog and writes the shareable hash", () => {
-    story(
-      update,
-      given(init()),
-      message(Message.SubmittedSearch()),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: opened }),
-      ),
-      StoryCommand.expectHas(Dialog.ShowDialog),
-      StoryCommand.expectHas(WriteHistoryHash),
-      StoryCommand.resolve(WriteHistoryHash, Message.CompletedWriteHash()),
-      StoryCommand.resolve(Dialog.ShowDialog, Dialog.Message.SucceededShowDialog()),
-      model((actual: Model) => {
-        expect(actual.lookup.openId).toBe(MATRIX.id);
-        expect(actual.lookup.result).toEqual(MATRIX);
-        expect(actual.dialog.isOpen).toBe(true);
-        expect(actual.query).toBe("");
-      }),
-    );
-  });
+  it.effect("opens the dialog and writes the shareable hash", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.SubmittedSearch())
+        .expectExact(AdvanceLookup)
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: opened }),
+        )
+        .expectExact(WriteHistoryHash)
+        .resolve(WriteHistoryHash, Component.noop);
+      assert.strictEqual(s.model.lookup.openId, MATRIX.id);
+      assert.deepStrictEqual(s.model.lookup.result, MATRIX);
+      assert.strictEqual(s.model.query, "");
+    }),
+  );
 
-  test("a stale reply is dropped by generation", () => {
-    const stale = snapshot({ result: MATRIX, openId: MATRIX.id });
-    const current = idleLookup();
-    story(
-      update,
-      given(init()),
-      message(Message.SubmittedSearch()),
-      StoryCommand.resolve(
+  it.effect("a stale reply is dropped by generation", () =>
+    Effect.gen(function* () {
+      const stale = snapshot({ result: MATRIX, openId: MATRIX.id });
+      const current = idleLookup();
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.SubmittedSearch()).resolve(
         AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: current }),
-      ),
-      message(Message.SubmittedSearch()),
-      StoryCommand.resolve(
+        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: current }),
+      );
+      s.send(WatchMessage.SubmittedSearch()).resolve(
         AdvanceLookup,
-        Message.GotLookupState({ generation: 2, snapshot: current }),
-      ),
+        WatchMessage.CompletedAdvanceLookup({ generation: 2, snapshot: current }),
+      );
       // A late reply from the first attempt must not touch the page.
-      message(Message.GotLookupState({ generation: 1, snapshot: stale })),
-      model((actual: Model) => {
-        expect(actual.lookup.result).toBeNull();
-        expect(actual.lookup.openId).toBeNull();
-      }),
-    );
-  });
+      s.send(WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: stale })).expectNone();
+      assert.strictEqual(s.model.lookup.result, null);
+      assert.strictEqual(s.model.lookup.openId, null);
+    }),
+  );
 
-  test("a busy snapshot asks for the settled one", () => {
-    story(
-      update,
-      given(init()),
-      message(Message.SubmittedSearch()),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({
-          generation: 1,
-          snapshot: snapshot({
-            phase: "looking",
-            status: { kind: "loading", text: "Finding a working stream..." },
+  it.effect("a busy snapshot asks for the settled one", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.SubmittedSearch())
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({
+            generation: 1,
+            snapshot: snapshot({
+              phase: "looking",
+              status: { kind: "loading", text: "Finding a working stream..." },
+            }),
           }),
-        }),
-      ),
-      StoryCommand.expectHas(AwaitLookupSettle),
-      StoryCommand.resolve(
-        AwaitLookupSettle,
-        Message.GotLookupState({ generation: 1, snapshot: opened }),
-      ),
-      StoryCommand.resolve(WriteHistoryHash, Message.CompletedWriteHash()),
-      StoryCommand.resolve(Dialog.ShowDialog, Dialog.Message.SucceededShowDialog()),
-      model((actual: Model) => {
-        expect(actual.lookup.openId).toBe(MATRIX.id);
-        expect(actual.dialog.isOpen).toBe(true);
-      }),
-    );
-  });
+        )
+        .expectExact(AwaitLookupSettle)
+        .resolve(
+          AwaitLookupSettle,
+          WatchMessage.CompletedAwaitLookupSettle({ generation: 1, snapshot: opened }),
+        )
+        .expectExact(WriteHistoryHash)
+        .resolve(WriteHistoryHash, Component.noop);
+      assert.strictEqual(s.model.lookup.openId, MATRIX.id);
+    }),
+  );
 });
 
 describe("typing", () => {
@@ -160,156 +140,222 @@ describe("typing", () => {
     kind: "movie" as const,
   };
 
-  test("clears the match list and the status line", () => {
-    const listed: Model = {
-      ...init(),
-      lookup: snapshot({
-        candidates: [candidate],
-        status: { kind: "info", text: "1 match. Choose one." },
-      }),
-    };
-    story(
-      update,
-      given(listed),
-      message(Message.ChangedQuery({ value: "ma" })),
-      model((actual: Model) => {
-        expect(actual.query).toBe("ma");
-        expect(actual.lookup.candidates).toEqual([]);
-        expect(actual.lookup.status).toEqual({ kind: "idle" });
-      }),
-    );
-  });
+  it.effect("clears the match list and the status line", () =>
+    Effect.gen(function* () {
+      const listed = {
+        ...initModel(),
+        lookup: snapshot({
+          candidates: [candidate],
+          status: { kind: "info", text: "1 match. Choose one." } as const,
+        }),
+      };
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given(listed)
+        .send(WatchMessage.UpdatedQuery({ value: "ma" }))
+        .expectNone();
+      assert.strictEqual(s.model.query, "ma");
+      assert.deepStrictEqual(s.model.lookup.candidates, []);
+      assert.deepStrictEqual(s.model.lookup.status, { kind: "idle" });
+    }),
+  );
 
-  test("a poster that fails to load is hidden by id", () => {
-    const listed: Model = {
-      ...init(),
-      lookup: snapshot({ candidates: [candidate] }),
-    };
-    story(
-      update,
-      given(listed),
-      message(Message.FailedPoster({ imdbId: "tt0133093" })),
-      model((actual: Model) => {
-        expect(actual.hiddenPosters).toEqual(["tt0133093"]);
-      }),
-    );
-  });
+  it.effect("a kind change clears the list and looks up", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.ChangedKind({ kind: "tv" })).expectExact(AdvanceLookup);
+      assert.strictEqual(s.model.lookup.kind, "tv");
+      assert.deepStrictEqual(s.model.lookup.candidates, []);
+      s.resolve(
+        AdvanceLookup,
+        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
+      ).expectNone();
+    }),
+  );
+
+  it.effect("a language change clears the list and looks up", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.send(WatchMessage.ChangedLanguage({ language: "de" })).expectExact(AdvanceLookup);
+      assert.strictEqual(s.model.lookup.language, "de");
+      s.resolve(
+        AdvanceLookup,
+        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
+      ).expectNone();
+    }),
+  );
+});
+
+describe("a poster that fails to load", () => {
+  it.effect("swaps to the placeholder in its own model", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(Poster, {
+        poster: "https://images.metahub.space/poster/small/tt0133093/img",
+      });
+      s.send(PosterMessage.FailedLoad()).expectNone();
+      assert.strictEqual(s.model.failed, true);
+    }),
+  );
 });
 
 describe("Escape and the dialog", () => {
-  test("Escape closes the dialog when the page is idle", () => {
-    story(
-      update,
-      given({ ...withDialogOpen(init()), canAutoFocus: true }),
-      message(Message.GotDialogMessage({ message: Dialog.Message.RequestedClose() })),
-      StoryCommand.resolve(Dialog.CloseDialog, Dialog.Message.CompletedCloseDialog()),
-      StoryCommand.expectHas(FocusSearchField),
-      StoryCommand.resolve(FocusSearchField, Message.CompletedFocusSearch()),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: idleLookup() }),
-      ),
-      model((actual: Model) => {
-        expect(actual.dialog.isOpen).toBe(false);
-      }),
-    );
-  });
+  it.effect("Escape closes the dialog when the page is idle", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened, canAutoFocus: true })
+        .send(WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
+        .expectExact(AdvanceLookup)
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
+        )
+        .expectExact(ClearHistoryHash, HtmlCommand.Focus)
+        .resolve(ClearHistoryHash, Component.noop)
+        .resolve(HtmlCommand.Focus, { found: true });
+      assert.strictEqual(s.model.lookup.openId, null);
+    }),
+  );
 
-  test("removing the hash closes an open dialog", () => {
-    story(
-      update,
-      given({ ...withDialogOpen(init()), lookup: opened }),
-      message(Message.NavigatedToHash({ hash: "", search: "" })),
-      StoryCommand.expectHas(AdvanceLookup),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 1, snapshot: idleLookup() }),
-      ),
-      StoryCommand.resolve(Dialog.CloseDialog, Dialog.Message.CompletedCloseDialog()),
-      StoryCommand.resolve(
-        AdvanceLookup,
-        Message.GotLookupState({ generation: 2, snapshot: idleLookup() }),
-      ),
-      StoryCommand.resolve(ClearHistoryHash, Message.CompletedClearHash()),
-      model((actual: Model) => {
-        expect(actual.dialog.isOpen).toBe(false);
-        expect(actual.lookup.openId).toBeNull();
-      }),
-    );
-  });
+  it.effect("removing the hash closes an open dialog", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened })
+        .send(WatchMessage.NavigatedToHash({ hash: "", search: "" }))
+        .expectExact(AdvanceLookup)
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
+        )
+        .expectExact(ClearHistoryHash)
+        .resolve(ClearHistoryHash, Component.noop);
+      assert.strictEqual(s.model.lookup.openId, null);
+    }),
+  );
 
-  test("Escape is ignored while the next stream loads", () => {
-    const retrying: Model = {
-      ...withDialogOpen(init()),
-      lookup: snapshot({
-        phase: "retrying",
-        result: MATRIX,
-        openId: MATRIX.id,
-      }),
-    };
-    story(
-      update,
-      given(retrying),
-      message(Message.GotDialogMessage({ message: Dialog.Message.RequestedClose() })),
-      model((actual: Model) => {
-        expect(actual.dialog.isOpen).toBe(true);
-        expect(actual.lookup.openId).toBe(MATRIX.id);
-      }),
-    );
-  });
+  it.effect("Escape is ignored while the next stream loads", () =>
+    Effect.gen(function* () {
+      const retrying = snapshot({ phase: "retrying", result: MATRIX, openId: MATRIX.id });
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: retrying })
+        .send(WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
+        .expectNone();
+      assert.strictEqual(s.model.lookup.openId, MATRIX.id);
+    }),
+  );
+
+  it.effect("a press outside the dialog is ignored", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened })
+        .send(WatchMessage.RequestedCloseResult({ reason: "outside-press" }))
+        .expectNone();
+      assert.strictEqual(s.model.lookup.openId, MATRIX.id);
+    }),
+  );
+});
+
+describe("copying the share link", () => {
+  it.effect("shows the notice and dismisses it", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened })
+        .send(WatchMessage.ClickedCopy())
+        .expectExact(CopyShareLink)
+        .resolve(CopyShareLink, WatchMessage.SucceededCopyShareLink())
+        .expectExact(DismissNotice)
+        .resolve(DismissNotice, WatchMessage.CompletedDismissNotice())
+        .expectNone();
+      assert.strictEqual(s.model.notice, null);
+    }),
+  );
+
+  it.effect("a clipboard failure reads as a page error", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened })
+        .send(WatchMessage.ClickedCopy())
+        .resolve(CopyShareLink, WatchMessage.FailedCopyShareLink({ message: "Denied" }))
+        .expectNone();
+      assert.deepStrictEqual(s.model.lookup.status, { kind: "error", text: "Denied" });
+    }),
+  );
+});
+
+describe("watching the stream", () => {
+  it.effect("closes the dialog and opens the stream link", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), lookup: opened })
+        .send(WatchMessage.ClickedWatch())
+        .expectExact(AdvanceLookup, OpenStream)
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
+        )
+        .expectExact(OpenStream, ClearHistoryHash)
+        .resolve(OpenStream, Component.noop)
+        .resolve(ClearHistoryHash, Component.noop)
+        .expectNone();
+      assert.strictEqual(s.model.lookup.openId, null);
+      assert.strictEqual(s.model.notice, null);
+    }),
+  );
 });
 
 describe("double press", () => {
-  test("a submit is ignored while a snapshot is pending", () => {
-    const pending: Model = { ...init(), generation: 1, applied: 0 };
-    const result = update(pending, Message.SubmittedSearch());
+  it.effect("a submit is ignored while a snapshot is pending", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), generation: 1, applied: 0 })
+        .send(WatchMessage.SubmittedSearch())
+        .expectNone();
+      assert.strictEqual(s.model.generation, 1);
+    }),
+  );
 
-    expect(result.commands ?? []).toEqual([]);
-    expect(result.model.generation).toBe(1);
-  });
+  it.effect("a submit is ignored while a lookup is running", () =>
+    Effect.gen(function* () {
+      const searching = { ...initModel(), lookup: snapshot({ phase: "searching" }) };
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given(searching).send(WatchMessage.SubmittedSearch()).expectNone();
+      assert.strictEqual(s.model.lookup.phase, "searching");
+    }),
+  );
 
-  test("a submit is ignored while a lookup is running", () => {
-    const searching: Model = {
-      ...init(),
-      lookup: snapshot({ phase: "searching" }),
-    };
-    const result = update(searching, Message.SubmittedSearch());
-
-    expect(result.commands ?? []).toEqual([]);
-    expect(result.model.lookup.phase).toBe("searching");
-  });
-
-  test("a retry is ignored while a snapshot is pending", () => {
-    const pending: Model = {
-      ...withDialogOpen(init()),
-      lookup: opened,
-      generation: 1,
-      applied: 0,
-    };
-    const result = update(pending, Message.ClickedRetry());
-
-    expect(result.commands ?? []).toEqual([]);
-    expect(result.model.generation).toBe(1);
-  });
+  it.effect("a retry is ignored while a snapshot is pending", () =>
+    Effect.gen(function* () {
+      const pending = { ...initModel(), lookup: opened, generation: 1, applied: 0 };
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given(pending).send(WatchMessage.ClickedRetry()).expectNone();
+      assert.strictEqual(s.model.generation, 1);
+    }),
+  );
 });
 
 describe("history", () => {
-  test("a forward to the open result keeps the field and list", () => {
-    const model: Model = {
-      ...withDialogOpen(init()),
-      query: "The Matrix",
-      lookup: snapshot({
-        candidates: [
-          { imdbId: MATRIX.id, name: MATRIX.name, year: "1999", kind: "movie" as const },
-        ],
-        result: MATRIX,
-        openId: null,
-      }),
-    };
-    const result = update(model, Message.NavigatedToHash({ hash: `#id=${MATRIX.id}`, search: "" }));
-
-    expect(result.model.query).toBe("The Matrix");
-    expect(result.model.lookup.candidates).toHaveLength(1);
-    expect(result.commands ?? []).toHaveLength(1);
-  });
+  it.effect("a forward to the open result keeps the field and list", () =>
+    Effect.gen(function* () {
+      const model = {
+        ...initModel(),
+        query: "The Matrix",
+        lookup: snapshot({
+          candidates: [
+            { imdbId: MATRIX.id, name: MATRIX.name, year: "1999", kind: "movie" as const },
+          ],
+          result: MATRIX,
+          openId: null,
+        }),
+      };
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given(model)
+        .send(WatchMessage.NavigatedToHash({ hash: `#id=${MATRIX.id}`, search: "" }))
+        .expectExact(AdvanceLookup)
+        .resolve(
+          AdvanceLookup,
+          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: model.lookup }),
+        )
+        .expectNone();
+      assert.strictEqual(s.model.query, "The Matrix");
+      assert.strictEqual(s.model.lookup.candidates.length, 1);
+    }),
+  );
 });

@@ -15,7 +15,7 @@
 ### Layout
 
 One owner per folder: shared contracts in `src/lib`, Effect services in
-`backend/src`, Foldkit view in `ui/src`, Bun entry points in `scripts`. Read
+`backend/src`, Effect UI components in `ui/src`, Bun entry points in `scripts`. Read
 `docs/agents/layout.md` before adding a module or a shape that crosses layers.
 
 ### Issue tracker

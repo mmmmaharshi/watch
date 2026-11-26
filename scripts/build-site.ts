@@ -52,7 +52,7 @@ for (const [dir, name] of FONTS) {
   await cp(`${dir}/${name}`, `${OUT}/assets/${name}`);
 }
 
-await writeFile(`${OUT}/index.html`, pageHtml(render()));
+await writeFile(`${OUT}/index.html`, pageHtml(await render()));
 await cp("public", OUT, { recursive: true });
 
 // Static responses carry the page's policy. The four transport headers come

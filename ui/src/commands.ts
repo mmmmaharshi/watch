@@ -1,6 +1,6 @@
 import { Context, Effect, Layer, Schema } from "effect";
 import type { SnapshotFrom } from "xstate";
-import { Command } from "foldkit";
+import { Command, Component } from "@effect/ui";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../../backend/src/lookup-machine";
 import type { LookupDeps } from "../../backend/src/lookup-machine";
@@ -8,8 +8,7 @@ import { hashForId, shareUrl } from "../../src/lib/parse-input";
 import { LookupEvent, Phase } from "./lookup";
 import type { LookupState } from "./lookup";
 import { COPY } from "./copy";
-import { Message } from "./messages";
-import { SEARCH_FIELD_ID } from "./view";
+import { WatchMessage } from "./messages";
 
 type Machine = ReturnType<typeof createLookupMachine>;
 type Snapshot = SnapshotFrom<Machine>;
@@ -61,83 +60,103 @@ export const lookupEngineLayer = (deps: LookupDeps) =>
     }),
   );
 
-export const AdvanceLookup = Command.define("AdvanceLookup", {
+// Sends one machine event, then reports the snapshot the transition left.
+export class AdvanceLookup extends Command.Service<AdvanceLookup>()("watch/AdvanceLookup", {
   args: { generation: Schema.Number, event: LookupEvent },
-  messages: [Message.GotLookupState],
-  execute: ({ generation, event }) =>
+  success: WatchMessage,
+}) {
+  static readonly layer = this.toLayer(
     Effect.gen(function* () {
       const engine = yield* LookupEngine;
-      const snapshot = yield* engine.advance(event);
-      return Message.GotLookupState({ generation, snapshot });
+      return ({ generation, event }) =>
+        engine
+          .advance(event)
+          .pipe(
+            Effect.map((snapshot) => WatchMessage.CompletedAdvanceLookup({ generation, snapshot })),
+          );
     }),
-});
+  );
+}
 
-export const AwaitLookupSettle = Command.define("AwaitLookupSettle", {
-  args: { generation: Schema.Number },
-  messages: [Message.GotLookupState],
-  execute: ({ generation }) =>
+// Waits for running work to settle, then reports the snapshot it left.
+export class AwaitLookupSettle extends Command.Service<AwaitLookupSettle>()(
+  "watch/AwaitLookupSettle",
+  {
+    args: { generation: Schema.Number },
+    success: WatchMessage,
+  },
+) {
+  static readonly layer = this.toLayer(
     Effect.gen(function* () {
       const engine = yield* LookupEngine;
-      const snapshot = yield* engine.settle();
-      return Message.GotLookupState({ generation, snapshot });
+      return ({ generation }) =>
+        engine
+          .settle()
+          .pipe(
+            Effect.map((snapshot) =>
+              WatchMessage.CompletedAwaitLookupSettle({ generation, snapshot }),
+            ),
+          );
     }),
-});
+  );
+}
 
-export const FocusSearchField = Command.define("FocusSearchField", {
-  messages: [Message.CompletedFocusSearch],
-  execute: Effect.sync(() => {
-    document.getElementById(SEARCH_FIELD_ID)?.focus();
-    return Message.CompletedFocusSearch();
-  }),
-});
+// Writes the shareable hash for the open result. The update ignores the
+// result, so the Command ends silent.
+export const WriteHistoryHash = Command.make(
+  "watch/WriteHistoryHash",
+  { args: { id: Schema.String } },
+  ({ id }) =>
+    Effect.as(
+      Effect.sync(() => {
+        const hash = hashForId(id);
+        if (location.hash !== hash) {
+          history.pushState(null, "", hash);
+        }
+      }),
+      Component.noop,
+    ),
+);
 
-export const WriteHistoryHash = Command.define("WriteHistoryHash", {
-  args: { id: Schema.String },
-  messages: [Message.CompletedWriteHash],
-  execute: ({ id }) =>
+// Clears the shareable hash when the dialog closes. Silent like the write.
+export const ClearHistoryHash = Command.make("watch/ClearHistoryHash", { args: {} }, () =>
+  Effect.as(
     Effect.sync(() => {
-      const hash = hashForId(id);
-      if (location.hash !== hash) {
-        history.pushState(null, "", hash);
+      if (location.hash !== "") {
+        history.replaceState(null, "", location.pathname + location.search);
       }
-      return Message.CompletedWriteHash();
     }),
-});
+    Component.noop,
+  ),
+);
 
-export const ClearHistoryHash = Command.define("ClearHistoryHash", {
-  messages: [Message.CompletedClearHash],
-  execute: Effect.sync(() => {
-    if (location.hash !== "") {
-      history.replaceState(null, "", location.pathname + location.search);
-    }
-    return Message.CompletedClearHash();
-  }),
-});
-
-export const CopyShareLink = Command.define("CopyShareLink", {
-  args: { id: Schema.String },
-  messages: [Message.CopiedLink, Message.CopyFailed],
-  execute: ({ id }) =>
+export const CopyShareLink = Command.make(
+  "watch/CopyShareLink",
+  { args: { id: Schema.String } },
+  ({ id }) =>
     Effect.tryPromise({
       try: () => navigator.clipboard.writeText(shareUrl(location.origin, id)),
       catch: () => COPY.copyFailed,
     }).pipe(
-      Effect.as(Message.CopiedLink()),
-      Effect.catch(() => Effect.succeed(Message.CopyFailed({ message: COPY.copyFailed }))),
+      Effect.as(WatchMessage.SucceededCopyShareLink()),
+      Effect.catch(() =>
+        Effect.succeed(WatchMessage.FailedCopyShareLink({ message: COPY.copyFailed })),
+      ),
     ),
-});
+);
 
-export const DismissNotice = Command.define("DismissNotice", {
-  messages: [Message.DismissedNotice],
-  execute: Effect.sleep("4 seconds").pipe(Effect.as(Message.DismissedNotice())),
-});
+export const DismissNotice = Command.make("watch/DismissNotice", { args: {} }, () =>
+  Effect.as(Effect.sleep("4 seconds"), WatchMessage.CompletedDismissNotice()),
+);
 
-export const OpenStream = Command.define("OpenStream", {
-  args: { url: Schema.String },
-  messages: [Message.OpenedStream],
-  execute: ({ url }) =>
-    Effect.sync(() => {
-      window.open(url, "_blank", "noopener");
-      return Message.OpenedStream();
-    }),
-});
+export const OpenStream = Command.make(
+  "watch/OpenStream",
+  { args: { url: Schema.String } },
+  ({ url }) =>
+    Effect.as(
+      Effect.sync(() => {
+        window.open(url, "_blank", "noopener");
+      }),
+      Component.noop,
+    ),
+);
