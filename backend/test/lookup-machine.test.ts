@@ -168,7 +168,7 @@ describe("lookup machine", () => {
       });
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
-        [{ id: "tt0133093", kind: "movie" }],
+        [{ id: "tt0133093", kind: "movie", strictKind: true }],
       );
     }).pipe(Effect.scoped);
   });
@@ -184,7 +184,7 @@ describe("lookup machine", () => {
       });
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
-        [{ id: "603", kind: "movie" }],
+        [{ id: "603", kind: "movie", strictKind: true }],
       );
       const snap = yield* sendAndAwait(actor, {
         type: "lookupDone",
