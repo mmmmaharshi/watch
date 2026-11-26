@@ -119,15 +119,12 @@ export const CopyShareLink = Command.define("CopyShareLink", {
   args: { id: Schema.String },
   messages: [Message.CopiedLink, Message.CopyFailed],
   execute: ({ id }) =>
-    Effect.tryPromise(() => navigator.clipboard.writeText(shareUrl(location.origin, id))).pipe(
+    Effect.tryPromise({
+      try: () => navigator.clipboard.writeText(shareUrl(location.origin, id)),
+      catch: () => COPY.copyFailed,
+    }).pipe(
       Effect.as(Message.CopiedLink()),
-      Effect.catch((error) =>
-        Effect.succeed(
-          Message.CopyFailed({
-            message: error instanceof Error && error.message ? error.message : COPY.copyFailed,
-          }),
-        ),
-      ),
+      Effect.catch(() => Effect.succeed(Message.CopyFailed({ message: COPY.copyFailed }))),
     ),
 });
 
