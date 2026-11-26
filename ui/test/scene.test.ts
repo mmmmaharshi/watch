@@ -267,50 +267,6 @@ describe("the result dialog", () => {
   );
 });
 
-describe("the kind and language filters", () => {
-  it.effect("a kind change looks up again", () =>
-    Effect.gen(function* () {
-      const kind = HtmlLocator.role("combobox", { name: COPY.kindLabel });
-      const s = yield* HtmlScene.make(WatchNoDeps, {});
-      s.mounted(ReadSearchField, mounted({}))
-        .expectMount(TrackHash({}))
-        .resolve(HtmlCommand.Focus, { found: true })
-        .change(kind, "tv")
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: { ...idleLookup(), kind: "tv" as const },
-          }),
-        )
-        .expect(kind)
-        .toHaveValue("tv");
-    }),
-  );
-
-  it.effect("a language change looks up again", () =>
-    Effect.gen(function* () {
-      const language = HtmlLocator.role("combobox", { name: COPY.languageLabel });
-      const s = yield* HtmlScene.make(WatchNoDeps, {});
-      s.mounted(ReadSearchField, mounted({}))
-        .expectMount(TrackHash({}))
-        .resolve(HtmlCommand.Focus, { found: true })
-        .change(language, "de")
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: { ...idleLookup(), language: "de" },
-          }),
-        )
-        .expect(language)
-        .toHaveValue("de");
-    }),
-  );
-});
-
 describe("a poster", () => {
   const poster = "https://images.metahub.space/poster/small/tt0133093/img";
 

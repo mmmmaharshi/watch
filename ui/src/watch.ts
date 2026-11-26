@@ -1,7 +1,6 @@
 import { Component, Head } from "@effect/ui";
 import type { View } from "@effect/ui";
 import { Html, HtmlCommand, HtmlHead } from "@effect/ui/html";
-import { LANGUAGES } from "../../src/lib/languages";
 import { fullLinkForId, imdbUrl, parseSharedId } from "../../src/lib/parse-input";
 import {
   AdvanceLookup,
@@ -334,22 +333,6 @@ export const WatchNoDeps = WatchDef.make({
           lookup: { ...$.model.lookup, candidates: [], status: { kind: "idle" } },
         }),
 
-      ChangedKind: ({ kind }) => {
-        const generation = $.model.generation + 1;
-        return $.evolve({
-          generation,
-          lookup: { ...$.model.lookup, kind, candidates: [] },
-        }).run(AdvanceLookup.make({ generation, event: { type: "kindChange", kind } }));
-      },
-
-      ChangedLanguage: ({ language }) => {
-        const generation = $.model.generation + 1;
-        return $.evolve({
-          generation,
-          lookup: { ...$.model.lookup, language, candidates: [] },
-        }).run(AdvanceLookup.make({ generation, event: { type: "languageChange", language } }));
-      },
-
       SubmittedSearch: () =>
         isPending() ? $.model : advance({ type: "submit", input: $.model.query }),
 
@@ -458,41 +441,6 @@ export const WatchNoDeps = WatchDef.make({
                       )
                       .on("input", ({ value }) => WatchMessage.UpdatedQuery({ value }))
                       .onMount(ReadSearchField({})),
-                  ),
-                  h.div.class("contents").children(
-                    h.label.class("sr-only").attr("for", "media-type").children(COPY.kindLabel),
-                    h.select
-                      .attrs({ id: "media-type" })
-                      .value(model.lookup.kind)
-                      .disabled(loading)
-                      .class(
-                        `h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium ${FOCUS_RING} data-[disabled]:opacity-50`,
-                      )
-                      .on("change", ({ value }) =>
-                        WatchMessage.ChangedKind({ kind: value === "tv" ? "tv" : "movie" }),
-                      )
-                      .children(
-                        h.option.attrs({ value: "movie" }).children(COPY.movie),
-                        h.option.attrs({ value: "tv" }).children(COPY.tv),
-                      ),
-                  ),
-                  h.div.class("contents").children(
-                    h.label.class("sr-only").attr("for", "language").children(COPY.languageLabel),
-                    h.select
-                      .attrs({ id: "language" })
-                      .value(model.lookup.language)
-                      .disabled(loading)
-                      .class(
-                        `h-12 rounded-lg border border-black/15 bg-white px-3 text-sm font-medium ${FOCUS_RING} data-[disabled]:opacity-50`,
-                      )
-                      .on("change", ({ value }) =>
-                        WatchMessage.ChangedLanguage({ language: value }),
-                      )
-                      .children(
-                        LANGUAGES.map((language) =>
-                          h.option.attrs({ value: language.code }).children(language.name),
-                        ),
-                      ),
                   ),
                   h.button
                     .attrs({ type: "submit" })

@@ -158,31 +158,6 @@ describe("typing", () => {
       assert.deepStrictEqual(s.model.lookup.status, { kind: "idle" });
     }),
   );
-
-  it.effect("a kind change clears the list and looks up", () =>
-    Effect.gen(function* () {
-      const s = yield* Story.make(WatchNoDeps, {});
-      s.send(WatchMessage.ChangedKind({ kind: "tv" })).expectExact(AdvanceLookup);
-      assert.strictEqual(s.model.lookup.kind, "tv");
-      assert.deepStrictEqual(s.model.lookup.candidates, []);
-      s.resolve(
-        AdvanceLookup,
-        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-      ).expectNone();
-    }),
-  );
-
-  it.effect("a language change clears the list and looks up", () =>
-    Effect.gen(function* () {
-      const s = yield* Story.make(WatchNoDeps, {});
-      s.send(WatchMessage.ChangedLanguage({ language: "de" })).expectExact(AdvanceLookup);
-      assert.strictEqual(s.model.lookup.language, "de");
-      s.resolve(
-        AdvanceLookup,
-        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-      ).expectNone();
-    }),
-  );
 });
 
 describe("a poster that fails to load", () => {
