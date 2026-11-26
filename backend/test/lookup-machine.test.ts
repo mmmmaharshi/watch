@@ -226,6 +226,18 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped);
   });
 
+  it.effect("submit with a bare TMDB number keeps the kind open", () => {
+    const { deps, lookups } = controlled();
+    return Effect.gen(function* () {
+      const actor = yield* createEffectActor(createLookupMachine(deps));
+      yield* sendAndAwait(actor, { type: "submit", input: "1396" });
+      assert.deepStrictEqual(
+        lookups.map((call) => call.input),
+        [{ id: "1396", strictKind: true }],
+      );
+    }).pipe(Effect.scoped);
+  });
+
   it.effect("a TV pick sends the candidate kind as strict", () => {
     const { deps, lookups } = controlled();
     return Effect.gen(function* () {

@@ -17,11 +17,12 @@ beat instrumentation here.
 
 - H1: Dead-link picks drop when users pick Movie/TV first. Signal: retries
   per session fall in 5 hallway runs vs the pre-selector preview build.
-  Status: shipped untested — validate.
+  Status: the selector was removed on 2026-11-26 without the comparison run,
+  so this can no longer be A/B tested as written.
 - H2: Time-to-first-link shrinks with newest-first sorting. Signal: median
   picks-to-play 2 or fewer in 5 hallway runs. Status: shipped untested —
-  validate. If it loses to exact-match-first, revert the sort, keep the
-  selector.
+  validate. If it loses to exact-match-first, revert the sort; the build now
+  ranks an exact title match first.
 - H3: A signed `vs_src` token means watchable. Signal: 5 probe-passing
   titles all play a video element in a real browser. Status: open — needs
   a browser check, not a code change.

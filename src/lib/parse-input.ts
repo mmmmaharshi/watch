@@ -67,9 +67,8 @@ export function fullLinkForId(id: string, kind: ContentType): string | null {
   return null;
 }
 
-// One input box plus a Movie/TV selector: IMDb IDs and links pass through;
-// TMDB URLs carry their own type; a bare TMDB number takes the selected
-// type, so it is never ambiguous.
+// Inside one input box: IMDb IDs and links pass through; TMDB URLs carry their
+// own type; a bare TMDB number stays untyped.
 export function parseTitleInput(input: string, hint?: ContentType): TitleInput | null {
   const value = input.trim();
   const url = asUrl(value);

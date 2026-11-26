@@ -1,7 +1,7 @@
 import { Effect, Option, Schema } from "effect";
 import { limitResponse } from "../../src/lib/rate-limit";
 import type { SearchOutcome, WatchOutcome } from "../../src/lib/types";
-import { Kind } from "../../src/lib/types";
+import { Kind, SearchInput } from "../../src/lib/types";
 import type { SiteBindings } from "./compose";
 import type { WatchInput } from "./compose";
 import { siteFor } from "./compose";
@@ -17,10 +17,6 @@ const WatchBody = Schema.Struct({
   name: Schema.optionalKey(Schema.String),
   year: Schema.optionalKey(Schema.String),
   exclude: Schema.optionalKey(Schema.String),
-});
-
-const SearchBody = Schema.Struct({
-  query: Schema.String,
 });
 
 const json = (body: unknown, status = 200): Response =>
@@ -121,7 +117,7 @@ export const handleSiteRequest = async (
   }
 
   if (url.pathname === "/api/search") {
-    const parsed = decodeBody(SearchBody, body);
+    const parsed = decodeBody(SearchInput, body);
     if (Option.isNone(parsed)) {
       return json({ error: "Send a title." }, 400);
     }

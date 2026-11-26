@@ -60,7 +60,8 @@ export type LookupContext = typeof LookupContext.Type;
 
 const LookupInput = Schema.Struct({
   id: Schema.String,
-  kind: Kind,
+  // A bare TMDB number has no kind, so the mapping tries both ID spaces.
+  kind: Schema.optionalKey(Kind),
   strictKind: Schema.optionalKey(Schema.Boolean),
   name: Schema.optionalKey(Schema.String),
   year: Schema.optionalKey(Schema.String),
@@ -170,7 +171,11 @@ const onLookupInput = (context: LookupContext, event: { readonly type: string })
   }
   if (isSubmitEvent(event)) {
     const parsed = parseTitleInput(event.input);
-    // A TMDB link carries its own type, so the selector must not override it.
+    // A TMDB link carries its own type. A bare number keeps no kind, so the
+    // mapping tries the movie and TV spaces.
+    if (parsed?.kind === "tmdb" && parsed.type === undefined) {
+      return { id: parsed.id, strictKind: true };
+    }
     const kind = parsed?.kind === "tmdb" && parsed.type ? parsed.type : context.kind;
     return { id: parsed?.id ?? event.input.trim(), kind, strictKind: true };
   }

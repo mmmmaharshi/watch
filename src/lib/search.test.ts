@@ -101,7 +101,7 @@ test("sorts newest first, whatever the title", () => {
     { imdbId: "tt0386676", name: "The Office", year: "2005", kind: "tv" },
   ];
 
-  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt0386676", "tt0273148"]);
+  expect(sortResults(candidates, "").map((c) => c.imdbId)).toEqual(["tt0386676", "tt0273148"]);
 });
 
 test("puts the exact title first, then newest first", () => {
@@ -119,7 +119,7 @@ test("orders equal title matches by newest release year", () => {
     { imdbId: "tt10193026", name: "The Office", year: "2024", kind: "tv" },
   ];
 
-  expect(sortResults(shows).map((candidate) => candidate.year)).toEqual(["2024", "2005"]);
+  expect(sortResults(shows, "").map((candidate) => candidate.year)).toEqual(["2024", "2005"]);
 });
 
 test("keeps one row per name, year, and kind", () => {
@@ -128,7 +128,7 @@ test("keeps one row per name, year, and kind", () => {
     { imdbId: "tt2222222", name: "The Office", year: "2026", kind: "tv" },
   ];
 
-  expect(sortResults(shows)).toHaveLength(1);
+  expect(sortResults(shows, "")).toHaveLength(1);
 });
 
 test("puts titles without a year last", () => {
@@ -137,7 +137,7 @@ test("puts titles without a year last", () => {
     { imdbId: "tt2222222", name: "The Office", year: "2005", kind: "tv" },
   ];
 
-  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt2222222", "tt1111111"]);
+  expect(sortResults(candidates, "").map((c) => c.imdbId)).toEqual(["tt2222222", "tt1111111"]);
 });
 
 test("keeps input order when years are missing", () => {
@@ -146,7 +146,7 @@ test("keeps input order when years are missing", () => {
     { imdbId: "tt2222222", name: "The Office", kind: "tv" },
   ];
 
-  expect(sortResults(candidates).map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
+  expect(sortResults(candidates, "").map((c) => c.imdbId)).toEqual(["tt1111111", "tt2222222"]);
 });
 
 test("dedupes and caps the sorted list", () => {
@@ -157,7 +157,7 @@ test("dedupes and caps the sorted list", () => {
     kind: "movie" as const,
   }));
 
-  const sorted = sortResults(candidates);
+  const sorted = sortResults(candidates, "");
 
   expect(sorted).toHaveLength(6);
   const ids = sorted.map((candidate) => candidate.imdbId);
