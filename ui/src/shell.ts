@@ -4,10 +4,9 @@ import { SITE_URL } from "../../src/consts";
 import { COPY } from "./copy";
 
 const description =
-  "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.";
+  "Paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.";
 // Share cards cut the copy short, so they get the same promise in one line.
-const shareDescription =
-  "Search a movie or TV show by name, or paste an IMDb or TMDB ID or link. Get a working stream link for free.";
+const shareDescription = "Paste an IMDb or TMDB ID or link. Get a working stream link for free.";
 
 export interface RenderedPage {
   readonly html: string;

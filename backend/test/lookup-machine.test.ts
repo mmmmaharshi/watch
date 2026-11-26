@@ -3,22 +3,6 @@ import { Deferred, Effect } from "effect";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../src/lookup-machine";
 import type { LookupDeps, LookupInput, LookupOutcome } from "../src/lookup-machine";
-import type { SearchInput } from "../../src/lib/types";
-import type { SearchOutcome } from "../../src/lib/types";
-
-const MATRIX = {
-  imdbId: "tt0133093",
-  name: "The Matrix",
-  year: "1999",
-  kind: "movie",
-} as const;
-
-const BREAKING_BAD = {
-  imdbId: "tt0903747",
-  name: "Breaking Bad",
-  year: "2008",
-  kind: "tv",
-} as const;
 
 const MATRIX_RESULT = {
   id: "tt0133093",
@@ -36,33 +20,23 @@ const BREAKING_BAD_RESULT = {
   name: "Breaking Bad",
 } as const;
 
-const SEARCH_FAILED = "Title search failed. Try an ID.";
-
-type SearchReply = { input: SearchInput; reply: Deferred.Deferred<SearchOutcome> };
 type LookupReply = { input: LookupInput; reply: Deferred.Deferred<LookupOutcome> };
 
-// The services are the seam: the machine only ever sees this interface.
+// The service is the seam: the machine only ever sees this interface.
 const controlled = () => {
-  const searches: Array<SearchReply> = [];
   const lookups: Array<LookupReply> = [];
   const deps: LookupDeps = {
-    search: (input) => {
-      const reply = Deferred.makeUnsafe<SearchOutcome>();
-      searches.push({ input, reply });
-      return Deferred.await(reply);
-    },
     lookup: (input) => {
       const reply = Deferred.makeUnsafe<LookupOutcome>();
       lookups.push({ input, reply });
       return Deferred.await(reply);
     },
   };
-  return { deps, searches, lookups };
+  return { deps, lookups };
 };
 
 const idle = () =>
   createLookupMachine({
-    search: () => Effect.never,
     lookup: () => Effect.never,
   });
 
@@ -86,73 +60,6 @@ describe("lookup machine", () => {
       assert.strictEqual(snap.context.value, "");
       assert.strictEqual(snap.context.openId, null);
       assert.deepStrictEqual(snap.context.status, { kind: "idle" });
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("submit with a title searches the trimmed text and shows the loading text", () => {
-    const { deps, searches } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      const snap = yield* sendAndAwait(actor, { type: "submit", input: "  the matrix " });
-      assert.strictEqual(snap.value, "searching");
-      assert.strictEqual(snap.context.value, "the matrix");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "loading",
-        text: "Searching titles...",
-      });
-      assert.deepStrictEqual(
-        searches.map((call) => call.input),
-        [{ query: "the matrix" }],
-      );
-    }).pipe(Effect.scoped);
-  });
-
-  it.effect("search done with candidates fills the list and asks the viewer to choose", () =>
-    Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
-      const snap = yield* sendAndAwait(actor, {
-        type: "searchDone",
-        output: { ok: true, candidates: [MATRIX, BREAKING_BAD] },
-      });
-      assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context.candidates, [MATRIX, BREAKING_BAD]);
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "info",
-        text: "2 matches. Choose one.",
-      });
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("search done with no candidates says no title was found", () =>
-    Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      yield* sendAndAwait(actor, { type: "submit", input: "nothing" });
-      const snap = yield* sendAndAwait(actor, {
-        type: "searchDone",
-        output: { ok: true, candidates: [] },
-      });
-      assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "error",
-        text: "No title found. Try an ID or the full link.",
-      });
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("search done with a failed search shows the server's message", () =>
-    Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
-      const snap = yield* sendAndAwait(actor, {
-        type: "searchDone",
-        output: { ok: false, error: "upstream is down" },
-      });
-      assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "error",
-        text: "upstream is down",
-      });
     }).pipe(Effect.scoped),
   );
 
@@ -190,42 +97,6 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("a bare number missing from TMDB falls back to a title search", () => {
-    const { deps, searches, lookups } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "submit", input: "1917" });
-      const degraded = yield* sendAndAwait(actor, {
-        type: "lookupDone",
-        output: { ok: false, reason: "tmdb_not_found", error: "TMDB ID not found" },
-      });
-      assert.strictEqual(degraded.value, "searching");
-      assert.deepStrictEqual(
-        searches.map((call) => call.input),
-        [{ query: "1917" }],
-      );
-      assert.strictEqual(lookups.length, 1);
-    }).pipe(Effect.scoped);
-  });
-
-  it.effect("pick looks up the candidate id and opens the dialog", () => {
-    const { deps, lookups } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "pick", candidate: MATRIX });
-      assert.deepStrictEqual(
-        lookups.map((call) => call.input),
-        [{ id: "tt0133093", kind: "movie", strictKind: true, name: "The Matrix", year: "1999" }],
-      );
-      const snap = yield* sendAndAwait(actor, {
-        type: "lookupDone",
-        output: { ok: true, result: MATRIX_RESULT },
-      });
-      assert.strictEqual(snap.context.openId, "tt0133093");
-      assert.deepStrictEqual(snap.context.status, { kind: "idle" });
-    }).pipe(Effect.scoped);
-  });
-
   it.effect("submit with a bare TMDB number keeps the kind open", () => {
     const { deps, lookups } = controlled();
     return Effect.gen(function* () {
@@ -234,33 +105,6 @@ describe("lookup machine", () => {
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
         [{ id: "1396", strictKind: true }],
-      );
-    }).pipe(Effect.scoped);
-  });
-
-  it.effect("a TV pick sends the candidate kind as strict", () => {
-    const { deps, lookups } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "pick", candidate: BREAKING_BAD });
-      assert.deepStrictEqual(
-        lookups.map((call) => call.input),
-        [{ id: "tt0903747", kind: "tv", strictKind: true, name: "Breaking Bad", year: "2008" }],
-      );
-    }).pipe(Effect.scoped);
-  });
-
-  it.effect("pick supersedes a running search", () => {
-    const { deps, searches, lookups } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
-      const snap = yield* sendAndAwait(actor, { type: "pick", candidate: MATRIX });
-      assert.strictEqual(snap.value, "looking");
-      assert.strictEqual(searches.length, 1);
-      assert.deepStrictEqual(
-        lookups.map((call) => call.input),
-        [{ id: "tt0133093", kind: "movie", strictKind: true, name: "The Matrix", year: "1999" }],
       );
     }).pipe(Effect.scoped);
   });
@@ -336,23 +180,12 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("close hides the dialog but keeps the result and the list", () =>
+  it.effect("close hides the dialog but keeps the result", () =>
     Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
-      yield* sendAndAwait(actor, {
-        type: "searchDone",
-        output: { ok: true, candidates: [MATRIX] },
-      });
-      yield* sendAndAwait(actor, { type: "pick", candidate: MATRIX });
-      yield* sendAndAwait(actor, {
-        type: "lookupDone",
-        output: { ok: true, result: MATRIX_RESULT },
-      });
+      const actor = yield* opened();
       const snap = yield* sendAndAwait(actor, { type: "close" });
       assert.strictEqual(snap.context.openId, null);
       assert.deepStrictEqual(snap.context.result, MATRIX_RESULT);
-      assert.deepStrictEqual(snap.context.candidates, [MATRIX]);
     }).pipe(Effect.scoped),
   );
 
@@ -410,34 +243,32 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("typing clears the candidate list and a field error", () =>
+  it.effect("typing clears a field error", () =>
     Effect.gen(function* () {
       const actor = yield* createEffectActor(idle());
       yield* sendAndAwait(actor, { type: "submit", input: "   " });
-      const snap = yield* sendAndAwait(actor, { type: "change", value: "ma" });
-      assert.strictEqual(snap.context.value, "ma");
-      assert.deepStrictEqual(snap.context.candidates, []);
+      const snap = yield* sendAndAwait(actor, { type: "change", value: "tt0" });
+      assert.strictEqual(snap.context.value, "tt0");
       assert.deepStrictEqual(snap.context.status, { kind: "idle" });
     }).pipe(Effect.scoped),
   );
 
   it.effect("an empty submit is a field error and starts no work", () => {
-    const { deps, searches, lookups } = controlled();
+    const { deps, lookups } = controlled();
     return Effect.gen(function* () {
       const actor = yield* createEffectActor(createLookupMachine(deps));
       const snap = yield* sendAndAwait(actor, { type: "submit", input: "   " });
       assert.strictEqual(snap.value, "idle");
       assert.deepStrictEqual(snap.context.status, {
         kind: "field",
-        text: "Enter an IMDb or TMDB ID, link, or title.",
+        text: "Enter an IMDb or TMDB ID or link.",
       });
-      assert.strictEqual(searches.length, 0);
       assert.strictEqual(lookups.length, 0);
     }).pipe(Effect.scoped);
   });
 
   it.effect("a link from the wrong site is an error and starts no work", () => {
-    const { deps, searches, lookups } = controlled();
+    const { deps, lookups } = controlled();
     return Effect.gen(function* () {
       const actor = yield* createEffectActor(createLookupMachine(deps));
       const snap = yield* sendAndAwait(actor, {
@@ -449,52 +280,23 @@ describe("lookup machine", () => {
         kind: "error",
         text: "Use an IMDb title link or a TMDB movie or TV link.",
       });
-      assert.strictEqual(searches.length, 0);
       assert.strictEqual(lookups.length, 0);
     }).pipe(Effect.scoped);
   });
 
-  it.effect("a stale search reply is dropped after the next submit supersedes it", () => {
-    const { deps, searches } = controlled();
-    return Effect.gen(function* () {
-      const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "submit", input: "first" });
-      yield* sendAndAwait(actor, { type: "submit", input: "second" });
-      assert.strictEqual(searches.length, 2);
-
-      yield* Deferred.succeed(searches[0]!.reply, { ok: true, candidates: [MATRIX] });
-      yield* Effect.yieldNow;
-      yield* Effect.yieldNow;
-      const stillSearching = actor.getSnapshot();
-      assert.strictEqual(stillSearching.value, "searching");
-      assert.deepStrictEqual(stillSearching.context.candidates, []);
-
-      yield* Deferred.succeed(searches[1]!.reply, {
-        ok: true,
-        candidates: [BREAKING_BAD],
-      });
-      const settled = yield* waitFor(actor, (snap) => snap.matches("idle"), {
-        timeout: "1 second",
-      });
-      assert.deepStrictEqual(settled.context.candidates, [BREAKING_BAD]);
-      assert.strictEqual(settled.context.value, "second");
-    }).pipe(Effect.scoped);
-  });
-
-  it.effect("a search that dies returns to idle with the search failure text", () => {
+  it.effect("a lookup that dies returns to idle with the lookup failure text", () => {
     const deps: LookupDeps = {
-      search: () => Effect.die("boom"),
-      lookup: () => Effect.never,
+      lookup: () => Effect.die("boom"),
     };
     return Effect.gen(function* () {
       const actor = yield* createEffectActor(createLookupMachine(deps));
-      yield* sendAndAwait(actor, { type: "submit", input: "matrix" });
+      yield* sendAndAwait(actor, { type: "submit", input: "tt0133093" });
       const snap = yield* waitFor(actor, (state) => state.matches("idle"), {
         timeout: "1 second",
       });
       assert.deepStrictEqual(snap.context.status, {
         kind: "error",
-        text: SEARCH_FAILED,
+        text: "Something went wrong. Try again.",
       });
     }).pipe(Effect.scoped);
   });

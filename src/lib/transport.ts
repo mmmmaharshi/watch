@@ -1,5 +1,5 @@
 import { Option, Schema } from "effect";
-import { SearchOutcome, WatchOutcome } from "./types";
+import { WatchOutcome } from "./types";
 import type { LookupTransport } from "./ui-deps";
 
 interface ApiResponse<A> {
@@ -38,8 +38,7 @@ const post = async <A>(
   }
 };
 
-// The site's two endpoints.
+// The site's one endpoint.
 export const httpTransport: LookupTransport = {
   watch: (input) => post("/api/watch", input, WatchOutcome),
-  search: (input) => post("/api/search", input, SearchOutcome),
 };

@@ -1,31 +1,20 @@
 import { createEffectLogic, setupEffect } from "@xstate/effect";
 import { Schema } from "effect";
 import type { Effect } from "effect";
-import { LOOKUP_FAILED, SEARCH_FAILED } from "../../src/lib/messages";
+import { LOOKUP_FAILED } from "../../src/lib/messages";
 import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
-import {
-  Candidate,
-  FAILURE_REASONS,
-  Kind,
-  Result,
-  SearchInput,
-  SearchOutcome,
-} from "../../src/lib/types";
+import { FAILURE_REASONS, Kind, Result } from "../../src/lib/types";
+
 // The status copy the machine emits. The tests pin these strings, because they
 // are what a person reads while a lookup runs.
 const MESSAGES = {
-  empty: "Enter an IMDb or TMDB ID, link, or title.",
+  empty: "Enter an IMDb or TMDB ID or link.",
   badLink: "Use an IMDb title link or a TMDB movie or TV link.",
-  searching: "Searching titles...",
   looking: "Finding a working stream...",
   retrying: "Finding another stream...",
-  noTitle: "No title found. Try an ID or the full link.",
   lookupFailed: LOOKUP_FAILED,
   noProviders: "No other providers available.",
 } as const;
-
-const matchLabel = (count: number): string =>
-  `${count} ${count === 1 ? "match" : "matches"}. Choose one.`;
 
 const FailureReason = Schema.Literals(FAILURE_REASONS);
 
@@ -51,7 +40,6 @@ export type Status = typeof Status.Type;
 const LookupContext = Schema.Struct({
   value: Schema.String,
   kind: Kind,
-  candidates: Schema.Array(Candidate),
   result: Schema.NullOr(Result),
   status: Status,
   openId: Schema.NullOr(Schema.String),
@@ -71,9 +59,7 @@ export type LookupInput = typeof LookupInput.Type;
 
 export type LookupEvent =
   | { readonly type: "submit"; readonly input: string }
-  | { readonly type: "pick"; readonly candidate: Candidate }
   | { readonly type: "retry" }
-  | { readonly type: "searchDone"; readonly output: SearchOutcome }
   | { readonly type: "lookupDone"; readonly output: LookupOutcome }
   | { readonly type: "fail"; readonly message: string }
   | { readonly type: "close" }
@@ -82,9 +68,7 @@ export type LookupEvent =
 
 const Events = {
   submit: Schema.Struct({ input: Schema.String }),
-  pick: Schema.Struct({ candidate: Candidate }),
   retry: Schema.Struct({}),
-  searchDone: Schema.Struct({ output: SearchOutcome }),
   lookupDone: Schema.Struct({ output: LookupOutcome }),
   fail: Schema.Struct({ message: Schema.String }),
   close: Schema.Struct({}),
@@ -92,27 +76,21 @@ const Events = {
   change: Schema.Struct({ value: Schema.String }),
 };
 
-// Search titles and look up a stream. The UI supplies the real services; the
-// tests supply fakes. Product failures stay in the outcome union, so the
-// machine decides the next move instead of catching a thrown error.
+// Look up a stream for one id. The UI supplies the real services; the tests
+// supply fakes. Product failures stay in the outcome union, so the machine
+// decides the next move instead of catching a thrown error.
 export interface LookupDeps {
-  readonly search: (input: SearchInput) => Effect.Effect<SearchOutcome>;
   readonly lookup: (input: LookupInput) => Effect.Effect<LookupOutcome>;
 }
 
 const idleStatus = (): Status => ({ kind: "idle" });
-const infoStatus = (text: string): Status => ({ kind: "info", text });
 const loadingStatus = (text: string): Status => ({ kind: "loading", text });
 const errorStatus = (text: string): Status => ({ kind: "error", text });
 const fieldStatus = (text: string): Status => ({ kind: "field", text });
 
-// The status a successful lookup leaves behind: an open list keeps its count.
-const afterLookup = (candidates: ReadonlyArray<Candidate>): Status =>
-  candidates.length > 0 ? infoStatus(matchLabel(candidates.length)) : idleStatus();
-
 type Move =
   | {
-      readonly target: "idle" | "searching" | "looking" | "retrying";
+      readonly target: "idle" | "looking" | "retrying";
       readonly reenter?: boolean;
       readonly context?: Partial<LookupContext>;
     }
@@ -120,11 +98,9 @@ type Move =
 
 const onClose = (): Move => ({ context: { openId: null } });
 
+// A field error clears as soon as the person types again.
 const onChange = (context: LookupContext, value: string): Move => ({
-  context:
-    context.status.kind === "field"
-      ? { value, candidates: [], status: idleStatus() }
-      : { value, candidates: [] },
+  context: context.status.kind === "field" ? { value, status: idleStatus() } : { value },
 });
 
 // Hash navigation prefills but never opens. The id of the dialog we opened is
@@ -140,35 +116,14 @@ const onHashNav = (context: LookupContext, id: string): Move => {
   if (context.value === link) {
     return { context: {} };
   }
-  return { context: { value: link, candidates: [], openId: null } };
+  return { context: { value: link, openId: null } };
 };
-
-// What the person typed stays. A pasted link is not replaced by the id.
-const isPickEvent = (event: {
-  readonly type: string;
-}): event is Extract<LookupEvent, { type: "pick" }> => event.type === "pick";
 
 const isSubmitEvent = (event: {
   readonly type: string;
 }): event is Extract<LookupEvent, { type: "submit" }> => event.type === "submit";
 
 const onLookupInput = (context: LookupContext, event: { readonly type: string }): LookupInput => {
-  if (isPickEvent(event)) {
-    return event.candidate.year === undefined
-      ? {
-          id: event.candidate.imdbId,
-          kind: event.candidate.kind,
-          strictKind: true,
-          name: event.candidate.name,
-        }
-      : {
-          id: event.candidate.imdbId,
-          kind: event.candidate.kind,
-          strictKind: true,
-          name: event.candidate.name,
-          year: event.candidate.year,
-        };
-  }
   if (isSubmitEvent(event)) {
     const parsed = parseTitleInput(event.input);
     // A TMDB link carries its own type. A bare number keeps no kind, so the
@@ -187,15 +142,8 @@ const onSubmit = (context: LookupContext, input: string): Move => {
   if (!value) {
     return { context: { status: fieldStatus(MESSAGES.empty) } };
   }
-  if (!parseTitleInput(value)) {
-    if (isLinkLike(value)) {
-      return { context: { status: errorStatus(MESSAGES.badLink) } };
-    }
-    return {
-      target: "searching",
-      reenter: true,
-      context: { value, status: loadingStatus(MESSAGES.searching) },
-    };
+  if (!parseTitleInput(value) && isLinkLike(value)) {
+    return { context: { status: errorStatus(MESSAGES.badLink) } };
   }
   return {
     target: "looking",
@@ -204,42 +152,13 @@ const onSubmit = (context: LookupContext, input: string): Move => {
   };
 };
 
-const onPick = (): Move => ({
-  target: "looking",
-  reenter: true,
-  context: { status: loadingStatus(MESSAGES.looking) },
-});
-
 const onRetry = (context: LookupContext): Move | undefined =>
   context.result
     ? { target: "retrying", context: { status: loadingStatus(MESSAGES.retrying) } }
     : undefined;
 
-const onSearchDone = (output: SearchOutcome): Move => {
-  if (!output.ok) {
-    // The server's copy names the reason, such as a missing language key.
-    return { target: "idle", context: { status: errorStatus(output.error) } };
-  }
-  if (output.candidates.length === 0) {
-    return { target: "idle", context: { status: errorStatus(MESSAGES.noTitle) } };
-  }
-  return {
-    target: "idle",
-    context: {
-      candidates: output.candidates,
-      status: infoStatus(matchLabel(output.candidates.length)),
-    },
-  };
-};
-
 const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
   if (!output.ok) {
-    // A bare number may be a title ("1917") rather than a TMDB ID.
-    const parsed = parseTitleInput(context.value);
-    const bareTmdb = parsed?.kind === "tmdb" && parsed.type === undefined;
-    if (bareTmdb && output.reason === "tmdb_not_found") {
-      return { target: "searching", context: { status: loadingStatus(MESSAGES.searching) } };
-    }
     return { target: "idle", context: { status: errorStatus(output.error) } };
   }
   return {
@@ -251,7 +170,7 @@ const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
       // A pasted link sets the kind a later bare id will use; bare ids leave
       // it alone.
       kind: isLinkLike(context.value) ? output.result.type : context.kind,
-      status: afterLookup(context.candidates),
+      status: idleStatus(),
     },
   };
 };
@@ -296,11 +215,6 @@ const onRetryInput = (context: LookupContext): LookupInput => {
 export type LookupMachine = ReturnType<typeof createLookupMachine>;
 
 export function createLookupMachine(deps: LookupDeps) {
-  const search = createEffectLogic({
-    schemas: { input: SearchInput },
-    effect: ({ input }) => deps.search(input),
-  });
-
   const lookup = createEffectLogic({
     schemas: { input: LookupInput },
     effect: ({ input }) => deps.lookup(input),
@@ -308,13 +222,12 @@ export function createLookupMachine(deps: LookupDeps) {
 
   return setupEffect({
     schemas: { context: LookupContext, events: Events },
-    actors: { search, lookup },
+    actors: { lookup },
   }).createMachine({
     id: "lookup",
     context: {
       value: "",
       kind: "movie",
-      candidates: [],
       result: null,
       status: idleStatus(),
       openId: null,
@@ -330,29 +243,7 @@ export function createLookupMachine(deps: LookupDeps) {
       idle: {
         on: {
           submit: (args) => onSubmit(args.context, args.event.input),
-          pick: onPick,
           retry: (args) => onRetry(args.context),
-        },
-      },
-      searching: {
-        invoke: {
-          src: "search",
-          input: ({ context }) => ({
-            query: context.value,
-          }),
-          onDone: (args, enq) => {
-            enq.raise({ type: "searchDone", output: args.event.output });
-          },
-          onError: (_args, enq) => {
-            enq.raise({ type: "fail", message: SEARCH_FAILED });
-          },
-        },
-        on: {
-          submit: (args) => onSubmit(args.context, args.event.input),
-          pick: onPick,
-          retry: (args) => onRetry(args.context),
-          searchDone: (args) => onSearchDone(args.event.output),
-          fail: (args) => onFail(args.event.message),
         },
       },
       looking: {
@@ -368,7 +259,6 @@ export function createLookupMachine(deps: LookupDeps) {
         },
         on: {
           submit: (args) => onSubmit(args.context, args.event.input),
-          pick: onPick,
           retry: (args) => onRetry(args.context),
           lookupDone: (args) => onLookupDone(args.context, args.event.output),
           fail: (args) => onFail(args.event.message),
@@ -387,7 +277,6 @@ export function createLookupMachine(deps: LookupDeps) {
         },
         on: {
           submit: (args) => onSubmit(args.context, args.event.input),
-          pick: onPick,
           lookupDone: (args) => onRetryDone(args.event.output),
           fail: (args) => onFail(args.event.message),
         },

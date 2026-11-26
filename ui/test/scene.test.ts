@@ -3,8 +3,7 @@ import { HtmlCommand } from "@effect/ui/html";
 import { HtmlLocator } from "@effect/ui/html/testing";
 import { Locator } from "@effect/ui/testing";
 import { HtmlScene } from "@effect/ui/html/testing";
-import { Story } from "@effect/ui/testing";
-import { assert, describe, it } from "@effect/vitest";
+import { describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 import {
   AdvanceLookup,
@@ -17,7 +16,6 @@ import { idleLookup } from "../src/lookup";
 import type { LookupState } from "../src/lookup";
 import { WatchMessage } from "../src/messages";
 import { ReadSearchField, TrackHash } from "../src/mounts";
-import { Poster, PosterMessage } from "../src/poster";
 import { WatchNoDeps } from "../src/watch";
 
 const LINK = "https://www.imdb.com/title/tt0133093/";
@@ -132,74 +130,6 @@ describe("A10 — a paste before hydration survives it", () => {
   );
 });
 
-describe("the candidate list", () => {
-  it.effect("a title lists rows with name, year and mono id", () =>
-    Effect.gen(function* () {
-      const s = yield* HtmlScene.make(WatchNoDeps, {});
-      s.mounted(ReadSearchField, mounted({}))
-        .expectMount(TrackHash({}))
-        .resolve(HtmlCommand.Focus, { found: true })
-        .type(textbox, "The Matrix")
-        .click(watchNow)
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: snapshot({
-              candidates: [
-                {
-                  imdbId: "tt0133093",
-                  name: "The Matrix",
-                  year: "1999",
-                  kind: "movie",
-                  poster: "https://images.metahub.space/poster/small/tt0133093/img",
-                },
-              ],
-              status: { kind: "info", text: "1 match. Choose one." },
-            }),
-          }),
-        )
-        .expect(HtmlLocator.role("button", { name: /The Matrix/ }))
-        .toExist()
-        .expect(HtmlLocator.role("button", { name: /The Matrix/ }))
-        .toHaveText(/tt0133093/)
-        .expect(HtmlLocator.role("status"))
-        .toHaveText("1 match. Choose one.");
-    }),
-  );
-
-  it.effect("picking a row starts the lookup", () =>
-    Effect.gen(function* () {
-      const s = yield* HtmlScene.make(WatchNoDeps, {});
-      s.mounted(ReadSearchField, mounted({}))
-        .expectMount(TrackHash({}))
-        .resolve(HtmlCommand.Focus, { found: true })
-        .type(textbox, "The Matrix")
-        .click(watchNow)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: snapshot({
-              candidates: [
-                { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" },
-              ],
-              status: { kind: "info", text: "1 match. Choose one." },
-            }),
-          }),
-        )
-        .click(HtmlLocator.role("button", { name: /The Matrix/ }))
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 2, snapshot: idleLookup() }),
-        )
-        .expectNone();
-    }),
-  );
-});
-
 describe("the result dialog", () => {
   const result = {
     id: "tt0133093",
@@ -263,32 +193,6 @@ describe("the result dialog", () => {
         .resolve(HtmlCommand.Focus, { found: true })
         .expect(textbox)
         .toHaveValue("tt0133093");
-    }),
-  );
-});
-
-describe("a poster", () => {
-  const poster = "https://images.metahub.space/poster/small/tt0133093/img";
-
-  it.effect("shows the image", () =>
-    Effect.gen(function* () {
-      const s = yield* HtmlScene.make(Poster, { poster });
-      s.expect(Locator.tag("img")).toHaveAttribute("src", poster);
-    }),
-  );
-
-  it.effect("a load failure swaps to the placeholder", () =>
-    Effect.gen(function* () {
-      const s = yield* HtmlScene.make(Poster, { poster });
-      s.fire(Locator.tag("img"), "error").expect(Locator.tag("img")).toBeAbsent();
-    }),
-  );
-
-  it.effect("sends FailedLoad through update", () =>
-    Effect.gen(function* () {
-      const story = yield* Story.make(Poster, { poster });
-      story.send(PosterMessage.FailedLoad()).expectNone();
-      assert.strictEqual(story.model.failed, true);
     }),
   );
 });

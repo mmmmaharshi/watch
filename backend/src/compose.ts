@@ -1,5 +1,5 @@
-import { Context, Effect, Layer, Option } from "effect";
-import type { Mutable, SearchInput, SearchOutcome, WatchOutcome } from "../../src/lib/types";
+import { Context, Effect, Layer } from "effect";
+import type { Mutable, WatchOutcome } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Handler } from "./handler";
 import type { HandlerInput } from "./handler";
@@ -9,8 +9,6 @@ import { Mapping } from "./mapping";
 import { Metadata } from "./metadata";
 import { ProviderList } from "./provider-list";
 import { Providers } from "./providers";
-import { Search } from "./search";
-import { Tmdb } from "./tmdb";
 
 // The bindings the site Worker declares in backend/src/stack.ts. A local run
 // has neither KV namespace, so both stores fall back to process memory.
@@ -19,9 +17,7 @@ export interface Bindings {
   readonly PROVIDERS?: KvNamespace;
 }
 
-export interface SiteBindings extends Bindings {
-  readonly TMDB_API_KEY?: string;
-}
+export type SiteBindings = Bindings;
 
 const MEMORY_CACHE_ENTRIES = 500;
 
@@ -36,14 +32,10 @@ export const providerListLayer = (bindings: Bindings): Layer.Layer<ProviderList>
 const transportLayer = (bindings: Bindings): Layer.Layer<Http | Cache | ProviderList> =>
   Layer.mergeAll(Http.fetchLayer, cacheLayer(bindings), providerListLayer(bindings));
 
-const tmdbLayer = (key: string | undefined): Layer.Layer<Tmdb, never, Http | Cache> =>
-  key === undefined ? Tmdb.disabledLayer : Tmdb.layer(key);
-
 const handlerLayer = (): Layer.Layer<Handler, never, Http | Cache | ProviderList> =>
   Handler.layer.pipe(Layer.provide(Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer)));
 
-// The HTTP boundary: a watch lookup plus its official availability, and a
-// search. One graph, so the search and the watch share one cache.
+// The HTTP boundary: one id in, one stream link out.
 export interface WatchInput {
   readonly id: string;
   readonly kind?: "movie" | "tv";
@@ -51,21 +43,17 @@ export interface WatchInput {
   readonly name?: string;
   readonly year?: string;
   readonly exclude?: string;
-  readonly region: string;
 }
 
 export interface SiteShape {
   readonly watch: (input: WatchInput) => Effect.Effect<WatchOutcome>;
-  readonly search: (input: SearchInput) => Effect.Effect<SearchOutcome>;
 }
 
 export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site") {
-  static readonly layer: Layer.Layer<Site, never, Handler | Search | Tmdb> = Layer.effect(
+  static readonly layer: Layer.Layer<Site, never, Handler> = Layer.effect(
     Site,
     Effect.gen(function* () {
       const handler = yield* Handler;
-      const search = yield* Search;
-      const tmdb = yield* Tmdb;
 
       const watch = Effect.fnUntraced(function* (input: WatchInput) {
         const handlerInput: Mutable<HandlerInput> = { id: input.id };
@@ -84,32 +72,16 @@ export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site
         if (input.exclude !== undefined) {
           handlerInput.exclude = input.exclude;
         }
-        const outcome = yield* handler.handle(handlerInput);
-        if (!outcome.ok || !tmdb.configured) {
-          return outcome;
-        }
-        const official = yield* tmdb.official({
-          imdbId: outcome.result.id,
-          kind: outcome.result.type,
-          region: input.region,
-        });
-        return Option.isSome(official)
-          ? { ok: true as const, result: { ...outcome.result, official: official.value } }
-          : outcome;
+        return yield* handler.handle(handlerInput);
       });
 
-      return Site.of({ watch, search: search.search });
+      return Site.of({ watch });
     }),
   );
 }
 
-export const siteLayer = (bindings: SiteBindings): Layer.Layer<Site> => {
-  const tmdb = tmdbLayer(bindings.TMDB_API_KEY);
-  return Site.layer.pipe(
-    Layer.provide(Layer.mergeAll(handlerLayer(), Search.layer, tmdb)),
-    Layer.provide(transportLayer(bindings)),
-  );
-};
+export const siteLayer = (bindings: SiteBindings): Layer.Layer<Site> =>
+  Site.layer.pipe(Layer.provide(handlerLayer()), Layer.provide(transportLayer(bindings)));
 
 const composeSite = (bindings: SiteBindings): SiteShape =>
   Effect.runSync(

@@ -9,13 +9,13 @@ Each criterion has one test in `e2e/acceptance.pw.ts` with the same ID.
 The page-contract check in `e2e/page.pw.ts` reads the served document, so it
 guards the title, canonical, and sharing tags without depending on the source.
 
-## A1 — An empty submit asks for a title
+## A1 — An empty submit asks for an id
 
 1. Open the site.
 2. Leave the field empty.
 3. Press **Watch now**.
 
-The page shows "Enter an IMDb or TMDB ID, link, or title." The field is marked
+The page shows "Enter an IMDb or TMDB ID or link." The field is marked
 invalid and holds the cursor.
 
 ## A2 — A link that is not IMDb or TMDB is rejected
@@ -26,30 +26,20 @@ invalid and holds the cursor.
 The page shows "Use an IMDb title link or a TMDB movie or TV link." No lookup
 runs.
 
-## A3 — A title search lists titles
+## A4 — An id opens a result
 
-1. Type `The Matrix`.
+1. Type `tt0133093`.
 2. Press **Watch now**.
-
-The page lists at most 6 titles. Each row shows the name, the year when it
-is known, and the IMDb ID. The search covers movies and TV shows. The 1999
-film is in the list.
-
-## A4 — A pick opens a result
-
-1. Search `The Matrix`.
-2. Pick the 1999 film.
 
 A dialog opens with the title. It shows the IMDb ID, the provider name, and a
 stream URL. The stream URL is a link that opens in a new tab.
 
-## A5 — The search survives the dialog
+## A5 — The id survives the dialog
 
 1. Open the result for The Matrix.
 2. Press **Cancel**.
 
-The dialog closes. The field still holds `The Matrix`. The list still shows the
-same titles.
+The dialog closes. The field still holds `tt0133093`.
 
 ## A6 — A shared link prefills the field
 
@@ -88,11 +78,3 @@ person taps the field.
 2. Press **Watch now** after load.
 
 The field still holds the link. A lookup starts.
-
-## A12 — The dialog names the official services
-
-1. Open a result for The Matrix.
-
-The dialog shows an "Also on" row linked to the title's watch page on TMDB. When
-the site has a TMDB key, the row names the services that carry it in the
-visitor's country. Without the key, the row is absent.

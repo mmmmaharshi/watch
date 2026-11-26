@@ -9,16 +9,12 @@ Alchemy stack deploys the site, its assets, and the provider-refresh cron.
 `backend/` is a Bun workspace of the root package. One `bun install` at the repo
 root installs it.
 
-- `src/site.ts` — the HTTP boundary: `/api/watch` and `/api/search`, input
-  validation, the visitor's region.
+- `src/site.ts` — the HTTP boundary: `/api/watch`, input validation, the
+  visitor's region.
 - `src/site-worker.ts` — the Worker entry both Wrangler (dev) and Alchemy
   (deploy) use.
 - `src/compose.ts` — the `Site` service: one graph over the services, the fetch
   transport, and the two stores. KV-backed in a Worker, in-memory elsewhere.
-- `src/search.ts` — `Search` service: Cinemeta and TVMaze fallback over `Http`
-  and `Cache`, with one ranking rule.
-- `src/tmdb.ts` — `Tmdb` service: official availability. A disabled layer
-  serves when no key is bound.
 
 - `src/http.ts` — `Http` service: stub Layer and fetch-backed Layer.
 - `src/cache.ts` — `Cache` service: in-memory Layer with TTL and a max entry
@@ -42,8 +38,8 @@ root installs it.
   fallback and a negative cache.
 - `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
   through Wikidata.
-- `src/lookup-machine.ts` — the lookup lifecycle machine: `idle`, `searching`,
-  `looking`, `retrying`, with dialog-open state in context. Effect work runs
+- `src/lookup-machine.ts` — the lookup lifecycle machine: `idle`, `looking`,
+  `retrying`, with dialog-open state in context. Effect work runs
   only in declared actors, and leaving a busy state interrupts its actor.
 - `test/` — behavior tests through the service interfaces, plus property tests
   for the cache and provider rules and model tests over the machine's event

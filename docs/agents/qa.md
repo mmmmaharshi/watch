@@ -60,10 +60,10 @@ One bug per section. No praise, no summary of the code.
 
 ## Two speeds
 
-| Command            | Covers                            | Runs                        |
-| ------------------ | --------------------------------- | --------------------------- |
-| `bun run e2e`      | A1, A2, A9 — no network           | every pull request          |
-| `bun run e2e:live` | A3–A8 — real search and providers | after a deploy, and nightly |
+| Command            | Covers                  | Runs                        |
+| ------------------ | ----------------------- | --------------------------- |
+| `bun run e2e`      | A1, A2, A9 — no network | every pull request          |
+| `bun run e2e:live` | A4–A8 — real lookups    | after a deploy, and nightly |
 
 `bun run e2e:live` uses the local dev server by default. Set `LIVE_URL` to
 grade the deployed site:

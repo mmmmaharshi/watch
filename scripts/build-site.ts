@@ -1,6 +1,6 @@
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { SITE_URL } from "../src/consts";
-import { CSP, POSTER_HOST_NAMES } from "../src/lib/csp";
+import { CSP } from "../src/lib/csp";
 import { render } from "../ui/src/render";
 import { pageHtml } from "../ui/src/shell";
 
@@ -64,4 +64,4 @@ await writeFile(
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${SITE_URL}/</loc></url></urlset>\n`,
 );
 
-process.stdout.write(`Built ${OUT}: ${POSTER_HOST_NAMES.join(", ")} may serve posters.\n`);
+process.stdout.write(`Built ${OUT}.\n`);

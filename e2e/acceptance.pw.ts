@@ -1,37 +1,25 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { POSTER_HOST_NAMES } from "../src/lib/csp";
 
-// The @live tests talk to Cinemeta and the stream providers. They run nightly
+// The @live tests talk to Wikidata and the stream providers. They run nightly
 // and against the deployed site, not on every pull request.
 test.setTimeout(120_000);
 
-const EMPTY = "Enter an IMDb or TMDB ID, link, or title.";
+const EMPTY = "Enter an IMDb or TMDB ID or link.";
 const BAD_LINK = "Use an IMDb title link or a TMDB movie or TV link.";
 const NO_PROVIDERS = "No other providers available.";
 const MATRIX = "tt0133093";
 
 // A hidden console error is a bug the screenshots never show. Every test fails
-// if the page logged one or threw. Third-party poster art is the exception:
-// a dead poster image logs a network resource error the app already handles
-// by hiding the thumb, so those do not fail the run. Policy violations
-// ("Refused to load...") still do. The trusted hosts come from the CSP module,
-// so the allow-list lives in one place.
+// if the page logged one or threw.
 const consoleErrors = new WeakMap<Page, Array<string>>();
-
-function isPosterHostFailure(text: string, url: string): boolean {
-  return (
-    text.startsWith("Failed to load resource") &&
-    POSTER_HOST_NAMES.some((host) => text.includes(host) || url.includes(host))
-  );
-}
 
 test.beforeEach(({ page }) => {
   const errors: Array<string> = [];
   consoleErrors.set(page, errors);
   page.on("console", (message) => {
     const url = message.location().url;
-    if (message.type() === "error" && !isPosterHostFailure(message.text(), url)) {
+    if (message.type() === "error") {
       errors.push(url === "" ? message.text() : `${message.text()} (${url})`);
     }
   });
@@ -56,23 +44,12 @@ async function open(page: Page, path = "/") {
 }
 
 function field(page: Page) {
-  return page.getByRole("textbox", { name: "IMDb or TMDB ID, link, or title" });
+  return page.getByRole("textbox", { name: "IMDb or TMDB ID or link" });
 }
 
 async function submit(page: Page, text: string) {
   await field(page).fill(text);
   await page.getByRole("button", { name: "Watch now" }).click();
-}
-
-async function searchMatrix(page: Page) {
-  await submit(page, "The Matrix");
-  // Row text runs the name, year and id together: "The Matrix1999tt0133093".
-  const row = page
-    .locator("ul button")
-    .filter({ hasText: "The Matrix" })
-    .filter({ hasText: "1999" });
-  await expect(row).toHaveCount(1, { timeout: 30_000 });
-  return row;
 }
 
 function dialog(page: Page) {
@@ -95,12 +72,13 @@ async function providerOf(page: Page): Promise<string> {
   return new URL(href).host;
 }
 
-async function pickMatrix(page: Page) {
-  await (await searchMatrix(page)).click();
+async function openMatrix(page: Page) {
+  await open(page);
+  await submit(page, MATRIX);
   await expect(resultTitle(page)).toHaveText("The Matrix", { timeout: 60_000 });
 }
 
-test("A1 an empty submit asks for a title and holds the cursor", async ({ page }) => {
+test("A1 an empty submit asks for an id and holds the cursor", async ({ page }) => {
   await open(page);
   await page.getByRole("button", { name: "Watch now" }).click();
 
@@ -117,24 +95,9 @@ test("A2 a link that is not IMDb or TMDB is rejected", async ({ page }) => {
   await expect(page.locator("ul li")).toHaveCount(0);
 });
 
-test("A3 a title search lists titles @live", async ({ page }) => {
+test("A4 an id opens a result with a stream link @live", async ({ page }) => {
   await open(page);
-  await searchMatrix(page);
-
-  const rows = page.locator("ul li");
-  const count = await rows.count();
-  expect(count).toBeGreaterThan(0);
-  expect(count).toBeLessThanOrEqual(6);
-  await expect(rows.first()).toContainText(/tt\d{7,8}/);
-  // A bare \d{4} also matches inside an IMDb id; require non-digit edges so
-  // only a standalone year counts.
-  await expect(rows.first()).toContainText(/(?:^|\D)\d{4}(?:\D|$)/);
-  await expect(page.getByRole("status")).toHaveText(/^\d+ match(es)?\. Choose one\.$/);
-});
-
-test("A4 a pick opens a result with a stream link @live", async ({ page }) => {
-  await open(page);
-  await pickMatrix(page);
+  await openMatrix(page);
 
   await expect(dialog(page)).toContainText(MATRIX);
   await expect(dialog(page)).toContainText("Provider");
@@ -142,18 +105,14 @@ test("A4 a pick opens a result with a stream link @live", async ({ page }) => {
   await expect(streamLink(page)).toHaveAttribute("href", /^https:\/\//);
 });
 
-test("A5 the search survives the dialog @live", async ({ page }) => {
+test("A5 the id survives the dialog @live", async ({ page }) => {
   await open(page);
-  const row = await searchMatrix(page);
-  const count = await page.locator("ul li").count();
+  await openMatrix(page);
 
-  await row.click();
-  await expect(resultTitle(page)).toHaveText("The Matrix", { timeout: 60_000 });
   await dialog(page).getByRole("button", { name: "Cancel" }).click();
 
   await expect(dialog(page)).toHaveCount(0);
-  await expect(field(page)).toHaveValue("The Matrix");
-  await expect(page.locator("ul li")).toHaveCount(count);
+  await expect(field(page)).toHaveValue(MATRIX);
 });
 
 test("A6 a shared link prefills the full link without opening the dialog", async ({ page }) => {
@@ -173,7 +132,7 @@ test("A6b a shared TMDB id prefills the TMDB link", async ({ page }) => {
 test("A7 copy gives the share link @live", async ({ page }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await open(page);
-  await pickMatrix(page);
+  await openMatrix(page);
 
   await dialog(page).getByRole("button", { name: "Copy link" }).click();
 
@@ -184,7 +143,7 @@ test("A7 copy gives the share link @live", async ({ page }) => {
 
 test("A8 another stream uses another provider @live", async ({ page }) => {
   await open(page);
-  await pickMatrix(page);
+  await openMatrix(page);
 
   const before = await providerOf(page);
   const retry = dialog(page).getByRole("button", { name: "Get another stream link" });
@@ -238,13 +197,4 @@ test("A10 a paste before hydration survives it", async ({ page }) => {
 
   await page.getByRole("button", { name: "Watch now" }).click();
   await expect(page.locator("#status")).toHaveText("Finding a working stream...");
-});
-
-test("A12 the dialog names the official services @live", async ({ page }) => {
-  await open(page);
-  await pickMatrix(page);
-
-  // The row's only TMDB link is the watch-providers page; the other links are
-  // IMDb and the stream provider.
-  await expect(dialog(page).locator('a[href*="themoviedb.org"]')).toHaveCount(1);
 });

@@ -45,16 +45,8 @@ starts its own.
 
 ## Secrets
 
-The official-services row reads `TMDB_API_KEY`, a free key from themoviedb.org.
-The stack binds it as a secret from the environment, so put it in `.env` at the
-repo root (ignored by git) or export it before deploying:
-
-```sh
-TMDB_API_KEY=your-key
-```
-
-A deploy without it fails at the Config step, by design. A local run without it
-still serves the page and the stream link; the official row is absent.
+None. The app reads title metadata from keyless sources: Cinemeta and TVMaze
+for IMDb IDs, and Wikidata for the TMDB-to-IMDb mapping.
 
 ## Inspect
 

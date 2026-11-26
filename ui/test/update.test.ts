@@ -16,7 +16,6 @@ import { idleLookup } from "../src/lookup";
 import type { LookupState, Result } from "../src/lookup";
 import { WatchMessage } from "../src/messages";
 import { initModel } from "../src/model";
-import { Poster, PosterMessage } from "../src/poster";
 import { WatchNoDeps } from "../src/watch";
 
 const MATRIX: Result = {
@@ -133,20 +132,12 @@ describe("a successful lookup", () => {
 });
 
 describe("typing", () => {
-  const candidate = {
-    imdbId: "tt0133093",
-    name: "The Matrix",
-    year: "1999",
-    kind: "movie" as const,
-  };
-
-  it.effect("clears the match list and the status line", () =>
+  it.effect("clears the status line", () =>
     Effect.gen(function* () {
       const listed = {
         ...initModel(),
         lookup: snapshot({
-          candidates: [candidate],
-          status: { kind: "info", text: "1 match. Choose one." } as const,
+          status: { kind: "info", text: "1 match." },
         }),
       };
       const s = yield* Story.make(WatchNoDeps, {});
@@ -154,20 +145,7 @@ describe("typing", () => {
         .send(WatchMessage.UpdatedQuery({ value: "ma" }))
         .expectNone();
       assert.strictEqual(s.model.query, "ma");
-      assert.deepStrictEqual(s.model.lookup.candidates, []);
       assert.deepStrictEqual(s.model.lookup.status, { kind: "idle" });
-    }),
-  );
-});
-
-describe("a poster that fails to load", () => {
-  it.effect("swaps to the placeholder in its own model", () =>
-    Effect.gen(function* () {
-      const s = yield* Story.make(Poster, {
-        poster: "https://images.metahub.space/poster/small/tt0133093/img",
-      });
-      s.send(PosterMessage.FailedLoad()).expectNone();
-      assert.strictEqual(s.model.failed, true);
     }),
   );
 });
@@ -289,10 +267,10 @@ describe("double press", () => {
 
   it.effect("a submit is ignored while a lookup is running", () =>
     Effect.gen(function* () {
-      const searching = { ...initModel(), lookup: snapshot({ phase: "searching" }) };
+      const looking = { ...initModel(), lookup: snapshot({ phase: "looking" }) };
       const s = yield* Story.make(WatchNoDeps, {});
-      s.given(searching).send(WatchMessage.SubmittedSearch()).expectNone();
-      assert.strictEqual(s.model.lookup.phase, "searching");
+      s.given(looking).send(WatchMessage.SubmittedSearch()).expectNone();
+      assert.strictEqual(s.model.lookup.phase, "looking");
     }),
   );
 
@@ -313,9 +291,6 @@ describe("history", () => {
         ...initModel(),
         query: "The Matrix",
         lookup: snapshot({
-          candidates: [
-            { imdbId: MATRIX.id, name: MATRIX.name, year: "1999", kind: "movie" as const },
-          ],
           result: MATRIX,
           openId: null,
         }),
@@ -330,7 +305,6 @@ describe("history", () => {
         )
         .expectNone();
       assert.strictEqual(s.model.query, "The Matrix");
-      assert.strictEqual(s.model.lookup.candidates.length, 1);
     }),
   );
 });

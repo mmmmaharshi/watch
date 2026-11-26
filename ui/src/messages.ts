@@ -1,6 +1,6 @@
 import { UiSchema } from "@effect/ui";
 import { Schema } from "effect";
-import { Candidate, LookupState } from "./lookup";
+import { LookupState } from "./lookup";
 
 // Fact-named messages. Anything the lookup lifecycle owns is sent to the
 // machine; these messages only describe what the person did or what came back.
@@ -13,7 +13,6 @@ export const WatchMessage = UiSchema.TaggedEnum({
   },
   UpdatedQuery: { value: Schema.String },
   SubmittedSearch: {},
-  PickedCandidate: { candidate: Candidate },
   ClickedRetry: {},
   NavigatedToHash: { hash: Schema.String, search: Schema.String },
   CompletedAdvanceLookup: {

@@ -9,14 +9,6 @@ import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "../src/comm
 import { COPY } from "../src/copy";
 import { WatchNoDeps } from "../src/watch";
 
-const candidate = {
-  imdbId: "tt0133093",
-  name: "The Matrix",
-  year: "1999",
-  kind: "movie" as const,
-  poster: "https://images.metahub.space/poster/small/tt0133093/img",
-};
-
 const result = {
   id: "tt0133093",
   name: "The Matrix",
@@ -28,7 +20,6 @@ const result = {
 };
 
 const fakeDeps: LookupDeps = {
-  search: () => Effect.succeed({ ok: true as const, candidates: [candidate] }),
   lookup: () => Effect.succeed({ ok: true as const, result }),
 };
 
@@ -44,14 +35,11 @@ const textbox = HtmlLocator.role("textbox", { name: COPY.fieldLabel });
 const watchNow = HtmlLocator.role("button", { name: COPY.submit });
 
 it.layer(TestHost.layer(), { buildPerTest: true })("Watch as a Play", (it) => {
-  it.effect("searches, picks and opens a result against the real machine", () =>
+  it.effect("looks up an id and opens the result against the real machine", () =>
     Effect.gen(function* () {
       const play = yield* HtmlPlay.make(WatchTest, {});
-      yield* play.type(textbox, "The Matrix");
+      yield* play.type(textbox, "tt0133093");
       yield* play.click(watchNow);
-      const row = HtmlLocator.role("button", { name: /The Matrix/ });
-      yield* play.expect(row).toExist();
-      yield* play.click(row);
       const dialog = HtmlLocator.role("dialog", { name: "The Matrix" });
       yield* play.expect(dialog).toExist();
       yield* play.expect(dialog).toHaveText(/vidsrc\.in/);
@@ -60,8 +48,7 @@ it.layer(TestHost.layer(), { buildPerTest: true })("Watch as a Play", (it) => {
       assert.strictEqual(location.hash, "#id=tt0133093");
       yield* play.click(HtmlLocator.role("button", { name: COPY.cancel }));
       yield* play.expect(dialog).toBeAbsent();
-      yield* play.expect(textbox).toHaveValue("The Matrix");
-      yield* play.expect(row).toExist();
+      yield* play.expect(textbox).toHaveValue("tt0133093");
     }),
   );
 });

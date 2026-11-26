@@ -1,8 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
 import type { LookupInput } from "../../backend/src/lookup-machine";
-import type { SearchInput } from "./types";
-import { LOOKUP_FAILED, SEARCH_FAILED } from "./messages";
+import { LOOKUP_FAILED } from "./messages";
 import { makeLookupDeps } from "./ui-deps";
 import type { LookupTransport } from "./ui-deps";
 
@@ -21,15 +20,11 @@ const notCalled = async (): Promise<never> => {
 
 const transport = (overrides: Partial<LookupTransport> = {}): LookupTransport => ({
   watch: notCalled,
-  search: notCalled,
   ...overrides,
 });
 
 const lookup = (deps: ReturnType<typeof makeLookupDeps>, input: LookupInput) =>
   Effect.runPromise(deps.lookup(input));
-
-const search = (deps: ReturnType<typeof makeLookupDeps>, input: SearchInput) =>
-  Effect.runPromise(deps.search(input));
 
 describe("the browser lookup deps", () => {
   test("a found stream becomes a lookup result without the transport status", async () => {
@@ -84,37 +79,6 @@ describe("the browser lookup deps", () => {
       ok: false,
       reason: "invalid_input",
       error: LOOKUP_FAILED,
-    });
-  });
-
-  test("a title search passes its candidates through", async () => {
-    const candidates = [
-      { imdbId: "tt0133093", name: "The Matrix", year: "1999", kind: "movie" as const },
-    ];
-    const deps = makeLookupDeps(
-      transport({
-        search: async () => ({ data: { ok: true, candidates } }),
-      }),
-    );
-
-    expect(await search(deps, { query: "The Matrix" })).toEqual({
-      ok: true,
-      candidates,
-    });
-  });
-
-  test("a failed title search is a search failure", async () => {
-    const deps = makeLookupDeps(
-      transport({
-        search: async () => {
-          throw new Error("network down");
-        },
-      }),
-    );
-
-    expect(await search(deps, { query: "The Matrix" })).toEqual({
-      ok: false,
-      error: SEARCH_FAILED,
     });
   });
 });

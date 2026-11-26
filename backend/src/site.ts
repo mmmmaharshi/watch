@@ -1,14 +1,12 @@
 import { Effect, Option, Schema } from "effect";
 import { limitResponse } from "../../src/lib/rate-limit";
-import type { SearchOutcome, WatchOutcome } from "../../src/lib/types";
-import { Kind, SearchInput } from "../../src/lib/types";
+import type { WatchOutcome } from "../../src/lib/types";
+import { Kind } from "../../src/lib/types";
 import type { SiteBindings } from "./compose";
 import type { WatchInput } from "./compose";
 import { siteFor } from "./compose";
 import type { KvNamespace } from "./kv";
 import type { Mutable } from "../../src/lib/types";
-
-const DEFAULT_REGION = "IN";
 
 const WatchBody = Schema.Struct({
   id: Schema.String,
@@ -28,14 +26,6 @@ const json = (body: unknown, status = 200): Response =>
     },
   });
 
-// Cloudflare puts the visitor's country on the request. A local run has no
-// `cf`, so the site's own region is the fallback.
-const regionOf = (request: Request): string => {
-  const cf = (request as Request & { readonly cf?: { readonly country?: unknown } }).cf;
-  const country = cf?.country;
-  return typeof country === "string" && /^[A-Z]{2}$/.test(country) ? country : DEFAULT_REGION;
-};
-
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
 const isKv = (value: unknown): value is KvNamespace =>
@@ -45,8 +35,7 @@ const isKv = (value: unknown): value is KvNamespace =>
   "put" in value &&
   typeof value.put === "function";
 
-// Every binding is optional: the site runs without KV (memory stores) and
-// without the TMDB key (no official row).
+// Every binding is optional: the site runs without KV (memory stores).
 export const bindingsOf = (source: unknown): SiteBindings => {
   if (!isObject(source)) {
     return {};
@@ -57,12 +46,6 @@ export const bindingsOf = (source: unknown): SiteBindings => {
   }
   if ("PROVIDERS" in source && isKv(source.PROVIDERS)) {
     bindings.PROVIDERS = source.PROVIDERS;
-  }
-  if ("TMDB_API_KEY" in source) {
-    const key = source.TMDB_API_KEY;
-    if (typeof key === "string" && key.length > 0) {
-      bindings.TMDB_API_KEY = key;
-    }
   }
   return bindings;
 };
@@ -96,7 +79,7 @@ export const handleSiteRequest = async (
       return json({ error: "Send an IMDb or TMDB id." }, 400);
     }
     const input = parsed.value;
-    const watchInput: Mutable<WatchInput> = { id: input.id, region: regionOf(request) };
+    const watchInput: Mutable<WatchInput> = { id: input.id };
     if (input.kind !== undefined) {
       watchInput.kind = input.kind;
     }
@@ -114,20 +97,6 @@ export const handleSiteRequest = async (
     }
     const outcome: WatchOutcome = await Effect.runPromise(site.watch(watchInput));
     return json(outcome, outcome.ok ? 200 : outcome.status);
-  }
-
-  if (url.pathname === "/api/search") {
-    const parsed = decodeBody(SearchInput, body);
-    if (Option.isNone(parsed)) {
-      return json({ error: "Send a title." }, 400);
-    }
-    const input = parsed.value;
-    const trimmed = input.query.trim();
-    if (trimmed.length === 0 || trimmed.length > 200) {
-      return json({ error: "Send a title." }, 400);
-    }
-    const outcome: SearchOutcome = await Effect.runPromise(site.search({ query: trimmed }));
-    return json(outcome);
   }
 
   return json({ error: "Not found" }, 404);

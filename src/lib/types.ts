@@ -11,23 +11,6 @@ export type ContentType = Kind;
 // and optional, so a literal cannot assign conditionally.
 export type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
-export const Candidate = Schema.Struct({
-  imdbId: Schema.String,
-  name: Schema.String,
-  year: Schema.optionalKey(Schema.String),
-  kind: Kind,
-  poster: Schema.optionalKey(Schema.String),
-});
-export type Candidate = typeof Candidate.Type;
-
-// What the official services row shows: names plus the TMDB page that holds
-// the per-country availability.
-export const Official = Schema.Struct({
-  services: Schema.Array(Schema.String),
-  link: Schema.String,
-});
-export type Official = typeof Official.Type;
-
 export const Result = Schema.Struct({
   id: Schema.String,
   url: Schema.String,
@@ -37,21 +20,9 @@ export const Result = Schema.Struct({
   year: Schema.optionalKey(Schema.String),
   rating: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
-  official: Schema.optionalKey(Official),
 });
 export type Result = typeof Result.Type;
 export type WatchResult = Result;
-
-export const SearchOutcome = Schema.Union([
-  Schema.Struct({ ok: Schema.Literal(true), candidates: Schema.Array(Candidate) }),
-  Schema.Struct({ ok: Schema.Literal(false), error: Schema.String }),
-]);
-export type SearchOutcome = typeof SearchOutcome.Type;
-
-export const SearchInput = Schema.Struct({
-  query: Schema.String,
-});
-export type SearchInput = typeof SearchInput.Type;
 
 // One shape for every transport. The client branches on `reason`, never on the
 // message text.

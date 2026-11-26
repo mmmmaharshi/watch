@@ -1,12 +1,12 @@
 // Every string the UI shows. Copied word for word from DESIGN.md so the port
 // cannot drift from the old screen.
 export const COPY = {
-  title: "watch — find a stream link by title, IMDb, or TMDB",
+  title: "watch — find a stream link by IMDb or TMDB ID",
   wordmark: "watch",
-  intro: "Find a movie or TV show. Free, no sign-up.",
-  fieldLabel: "IMDb or TMDB ID, link, or title",
-  placeholder: "Title, IMDb or TMDB ID, or link",
-  hint: "Paste an ID or link, or type a title. Bare numbers try TMDB first.",
+  intro: "Paste an IMDb or TMDB ID or link. Free, no sign-up.",
+  fieldLabel: "IMDb or TMDB ID or link",
+  placeholder: "IMDb or TMDB ID, or link",
+  hint: "Paste an IMDb or TMDB ID or link. A bare number tries TMDB first.",
   submit: "Watch now",
   footer:
     "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
@@ -19,6 +19,5 @@ export const COPY = {
   copy: "Copy link",
   imdb: "IMDb",
   provider: "Provider",
-  official: "Also on",
   streamUrl: "Stream URL",
 } as const;

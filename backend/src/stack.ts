@@ -1,6 +1,6 @@
 import { Stack } from "alchemy/Stack";
 import { Worker, providers, state } from "@alchemy.run/cloudflare";
-import { Config, Effect } from "effect";
+import { Effect } from "effect";
 import { CacheKv, ProviderListKv } from "./cloudflare";
 import RefreshWorker from "./refresh-worker";
 import { SITE_DOMAIN, SITE_WORKER, STACK_NAME } from "./resources";
@@ -14,8 +14,6 @@ const SiteProps = {
     // Shared storage the Effect Providers and Metadata layers read.
     PROVIDERS: ProviderListKv,
     CACHE: CacheKv,
-    // Bound as a secret. A deploy without it fails here, by design.
-    TMDB_API_KEY: Config.Redacted("TMDB_API_KEY"),
   },
   assets: { directory: "./dist/client" },
 };

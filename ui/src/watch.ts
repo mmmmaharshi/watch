@@ -13,11 +13,10 @@ import {
 } from "./commands";
 import { COPY } from "./copy";
 import { busy, resultMeta, resultTitle, resultType } from "./lookup";
-import type { Candidate, LookupEvent, LookupState, Result } from "./lookup";
+import type { LookupEvent, LookupState, Result } from "./lookup";
 import { WatchMessage } from "./messages";
 import { WatchModel, WatchProps, initModel } from "./model";
 import { ReadSearchField, SearchField, TrackHash } from "./mounts";
-import { Poster } from "./poster";
 
 // The search field's DOM contract: the view writes these, and the mount and
 // the focus command read them.
@@ -78,29 +77,6 @@ function inputAttrs(invalid: boolean, describedBy: string) {
     return { ...attrs, "aria-invalid": "true", "data-invalid": "" };
   }
   return attrs;
-}
-
-function CandidateRow(h: H, candidate: Candidate) {
-  return h.li.key(candidate.imdbId).children(
-    h.button
-      .attrs({ type: "button" })
-      .on("click", WatchMessage.PickedCandidate({ candidate }))
-      .class(`flex w-full items-center gap-3 py-3 text-left hover:bg-black/5 ${FOCUS_RING}`)
-      .children(
-        candidate.poster
-          ? Poster(h, { key: candidate.imdbId, props: { poster: candidate.poster } })
-          : h.span
-              .attr("aria-hidden", "true")
-              .class("h-[60px] w-10 shrink-0 rounded-lg bg-black/5"),
-        h.span
-          .class("flex min-w-0 flex-col gap-0.5")
-          .children(
-            h.span.class("text-sm font-medium").children(candidate.name),
-            candidate.year ? h.span.class("text-sm text-black/64").children(candidate.year) : null,
-            h.span.class("font-mono text-xs text-black/44").children(candidate.imdbId),
-          ),
-      ),
-  );
 }
 
 const WatchDef = Html.component({
@@ -180,14 +156,6 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                         Row(h, COPY.provider, [result.provider]),
                         Separator(h),
                         Row(h, COPY.streamUrl, [link(result.url, result.url, "break-all")]),
-                        ...(result.official
-                          ? [
-                              Separator(h),
-                              Row(h, COPY.official, [
-                                link(result.official.link, result.official.services.join(", "), ""),
-                              ]),
-                            ]
-                          : []),
                       ),
                     ...(model.lookup.status.kind === "idle"
                       ? []
@@ -330,14 +298,11 @@ export const WatchNoDeps = WatchDef.make({
       UpdatedQuery: ({ value }) =>
         $.evolve({
           query: value,
-          lookup: { ...$.model.lookup, candidates: [], status: { kind: "idle" } },
+          lookup: { ...$.model.lookup, status: { kind: "idle" } },
         }),
 
       SubmittedSearch: () =>
         isPending() ? $.model : advance({ type: "submit", input: $.model.query }),
-
-      PickedCandidate: ({ candidate }) =>
-        isPending() ? $.model : advance({ type: "pick", candidate }),
 
       ClickedRetry: () => (isPending() ? $.model : advance({ type: "retry" })),
 
@@ -360,7 +325,6 @@ export const WatchNoDeps = WatchDef.make({
         return $.evolve({
           generation,
           query: link,
-          lookup: { ...$.model.lookup, candidates: [] },
         }).run(AdvanceLookup.make({ generation, event: { type: "hashNav", id } }));
       },
 
@@ -462,15 +426,6 @@ export const WatchNoDeps = WatchDef.make({
                   (strong ? "font-medium text-black" : "text-black/64"),
               )
               .children(statusText),
-            ...(model.lookup.candidates.length > 0
-              ? [
-                  h.ul
-                    .class("mt-3 divide-y divide-black/10 border-y border-black/10")
-                    .children(
-                      model.lookup.candidates.map((candidate) => CandidateRow(h, candidate)),
-                    ),
-                ]
-              : []),
           ),
         ),
         h.footer

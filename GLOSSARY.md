@@ -13,7 +13,3 @@ The state of behaving exactly like the current app: same lookups, same results, 
 ## Provider
 
 A third-party embed host the app links to (`VidSrc`, `VidLink`, `VidZee`, `VidFast`). The app hosts nothing.
-
-## Official
-
-The licensed services that carry a title in the visitor's country, read from TMDB watch providers and shown in the dialog as "Also on".

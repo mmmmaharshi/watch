@@ -1,6 +1,6 @@
 ---
 name: watch
-description: Search a title or paste an IMDb/TMDB ID or link; get a working stream link in one quiet, left-aligned record.
+description: Paste an IMDb or TMDB ID or link; get a working stream link in one quiet, left-aligned record.
 colors:
   canvas: "#FFFFFF"
   ink: "#000000"
@@ -146,12 +146,12 @@ components:
 
 watch is one plain screen with three parts: a short wordmark and intro, one input with one primary action, and a dialog that shows the found stream link. The page is white, the ink is black, and the only colour is a functional focus state. There is no accent filling the primary action; the action is ink on paper.
 
-The visitor pastes an IMDb or TMDB ID, a link, or a title and presses Watch now. A title is searched on Cinemeta, with TVMaze as a fallback for shows, and shown as a short list of films and shows; picking one runs the normal lookup. The result opens in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
+The visitor pastes an IMDb or TMDB ID or a link and presses Watch now. One lookup resolves the id to a title and a working provider, then opens the result in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
 
 - One input, one primary action, one result dialog.
-- A title search shows a short candidate list before the lookup.
+- One id in, one result dialog out. No browsing.
 - White canvas, black ink, and alpha-black neutrals. No blue accent.
 - Left-aligned text in one column capped by `max-w-[42rem]`.
 - Goeist Sans for the interface; Goeist Mono for identifiers.
@@ -261,22 +261,14 @@ Rows are divided by 1px hairline bars. There are no pills and no clipped corners
 
 ## Components
 
-The Effect UI root component implements the components in `ui/src/watch.ts`, with one poster component in `ui/src/poster.ts`.
+The Effect UI root component implements the components in `ui/src/watch.ts`.
 
 ### Form
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
-- **`Label`** is the accessible name, "IMDb or TMDB ID, link, or title". The class is `sr-only`, so the placeholder carries the visible prompt.
+- **`Label`** is the accessible name, "IMDb or TMDB ID or link". The class is `sr-only`, so the placeholder carries the visible prompt.
 - **`Input`** is white, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` always points at the hint, plus `status` while the field is invalid, so help stays tied to the field and the error text is not read before it appears. A shared link prefills the full link, not the bare id, and leaves the dialog closed until the visitor presses Watch now. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
-- **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup or the title search runs. It is disabled at the same time.
-
-### Title Search
-
-- **When:** the input is not an IMDb ID, TMDB ID, or link, `parseTitleInput` returns null and the island calls the `search` action. A bare number is tried as a TMDB ID first; if TMDB has no such title, the number is searched as a title. A link that is not an IMDb title link or a TMDB movie/TV link is rejected with a message.
-- **Server:** `src/lib/search.ts` asks the Cinemeta movie and series catalogs, with a TVMaze fallback when the series catalog fails or comes back empty, keeping scores of 0.5 or more and using its medium image. Each row keeps IMDb ID, name, release year, and poster art when present. `sortResults` dedupes by IMDb ID and by name/year/kind, puts an exact title match first, orders the rest newest release first, and caps the list at 6. The query forms the cache key; successful results and a verified empty list are cached for 10 minutes per instance, while a total outage is not cached.
-- **Candidates:** a `ul` with `mt-3 divide-y divide-black/10 border-y border-black/10`. Each item is a full-width `button` with `text-left` in a row: an optional 40 by 60 poster thumb (`rounded-lg object-cover`) plus name, year, and IMDb ID. The name is `text-sm font-medium`, the year follows in `text-sm text-black/64` only when known, and the IMDb ID shows in mono `text-xs text-black/44` so remakes stay apart. Hover and focus use `bg-black/5`; the focus ring is 2px ink. Thumbs load lazy and hide when no art ships.
-- **Picking:** keeps the typed title in the input, runs the normal lookup, and updates the hash to the IMDb ID. A pasted ID or link also stays as typed. The list stays in place, so after the dialog closes the user can pick another title. A failed or empty search reports through the status line.
-- **Copy:** "6 matches. Choose one." for a list, "No title found. Try an ID or the full link." for none.
+- **Submit `Button`** is ink: `min-h-12 rounded-lg bg-black px-6 text-sm font-medium text-white hover:bg-black/80`. It holds a `Spinner size="sm" color="current"` while the lookup runs. It is disabled at the same time.
 
 ### Result Dialog
 
@@ -305,7 +297,7 @@ The Effect UI root component implements the components in `ui/src/watch.ts`, wit
 
 ### Wordmark and Safety Notes
 
-- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Search a title, or paste an IMDb or TMDB ID or link."
+- **Wordmark:** the page `h1` reads "watch" in `text-2xl font-semibold tracking-tight`. The intro below it reads "Paste an IMDb or TMDB ID or link. Free, no sign-up."
 - **Page safety note:** a `text-xs leading-relaxed text-black/64` paragraph in the footer. It states that the app hosts nothing, links to third parties, and suggests an ad blocker.
 - **Dialog safety note:** `text-sm leading-relaxed text-black/64` inside `Card.Footer`. It names the provider and states that the app does not control external sites.
 
