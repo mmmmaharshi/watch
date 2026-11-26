@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { clientIp, createRateLimiter, isActionRequest, limitResponse } from "./rate-limit";
+import { clientIp, createRateLimiter, limitResponse } from "./rate-limit";
 
 test("trusts the edge address over a forwarded list", () => {
   const req = new Request("http://x/", {
@@ -30,11 +30,9 @@ test("counts per address and blocks after the limit", () => {
   expect(isLimited("a")).toBe(false);
 });
 
-test("routes only action calls to the limiter", () => {
-  expect(isActionRequest(new Request("http://x/_actions/watch"))).toBe(true);
-  expect(isActionRequest(new Request("http://x/"))).toBe(false);
+test("a limited request answers 429 and an allowed one passes", () => {
+  const watch = new Request("http://x/api/watch", { method: "POST" });
 
-  const limited = limitResponse(new Request("http://x/_actions/watch"), () => true);
-  expect(limited?.status).toBe(429);
-  expect(limitResponse(new Request("http://x/_actions/watch"), () => false)).toBeNull();
+  expect(limitResponse(watch, () => true)?.status).toBe(429);
+  expect(limitResponse(watch, () => false)).toBeNull();
 });

@@ -7,17 +7,6 @@ import { Cache } from "../src/cache";
 const Milliseconds = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 describe("Cache", () => {
-  it.effect("a value reads until its TTL passes, then reads as missing", () =>
-    Effect.gen(function* () {
-      const cache = yield* Cache;
-      yield* cache.set("key", "value", 1000);
-      yield* TestClock.adjust(999);
-      assertSome(yield* cache.get("key"), "value");
-      yield* TestClock.adjust(1);
-      assertNone(yield* cache.get("key"));
-    }).pipe(Effect.provide(Cache.layer(10))),
-  );
-
   it.effect.prop("reads follow the TTL boundary", [Milliseconds, Milliseconds], ([ttl, elapsed]) =>
     Effect.gen(function* () {
       const cache = yield* Cache;

@@ -134,14 +134,14 @@ describe("a successful lookup", () => {
 describe("typing", () => {
   it.effect("clears the status line", () =>
     Effect.gen(function* () {
-      const listed = {
+      const failing = {
         ...initModel(),
         lookup: snapshot({
-          status: { kind: "info", text: "1 match." },
+          status: { kind: "error", text: "No other providers available." },
         }),
       };
       const s = yield* Story.make(WatchNoDeps, {});
-      s.given(listed)
+      s.given(failing)
         .send(WatchMessage.UpdatedQuery({ value: "ma" }))
         .expectNone();
       assert.strictEqual(s.model.query, "ma");
@@ -155,7 +155,7 @@ describe("Escape and the dialog", () => {
     Effect.gen(function* () {
       const s = yield* Story.make(WatchNoDeps, {});
       s.given({ ...initModel(), lookup: opened, canAutoFocus: true })
-        .send(WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
+        .send(WatchMessage.RequestedCloseResult())
         .expectExact(AdvanceLookup)
         .resolve(
           AdvanceLookup,
@@ -189,17 +189,7 @@ describe("Escape and the dialog", () => {
       const retrying = snapshot({ phase: "retrying", result: MATRIX, openId: MATRIX.id });
       const s = yield* Story.make(WatchNoDeps, {});
       s.given({ ...initModel(), lookup: retrying })
-        .send(WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
-        .expectNone();
-      assert.strictEqual(s.model.lookup.openId, MATRIX.id);
-    }),
-  );
-
-  it.effect("a press outside the dialog is ignored", () =>
-    Effect.gen(function* () {
-      const s = yield* Story.make(WatchNoDeps, {});
-      s.given({ ...initModel(), lookup: opened })
-        .send(WatchMessage.RequestedCloseResult({ reason: "outside-press" }))
+        .send(WatchMessage.RequestedCloseResult())
         .expectNone();
       assert.strictEqual(s.model.lookup.openId, MATRIX.id);
     }),
@@ -285,7 +275,7 @@ describe("double press", () => {
 });
 
 describe("history", () => {
-  it.effect("a forward to the open result keeps the field and list", () =>
+  it.effect("a forward to the open result keeps the field", () =>
     Effect.gen(function* () {
       const model = {
         ...initModel(),

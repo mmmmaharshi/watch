@@ -117,7 +117,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
         });
   return frame
     .modal(dialogOpen)
-    .on("cancel", WatchMessage.RequestedCloseResult({ reason: "escape-key" }))
+    .on("cancel", WatchMessage.RequestedCloseResult())
     .children(
       ...(result === null
         ? []
@@ -188,7 +188,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                       h.div.class("flex shrink-0 flex-wrap justify-end gap-2").children(
                         h.button
                           .attrs({ type: "button" })
-                          .on("click", WatchMessage.RequestedCloseResult({ reason: "close-press" }))
+                          .on("click", WatchMessage.RequestedCloseResult())
                           .disabled(disabled)
                           .class(
                             `min-h-12 rounded-lg bg-fill hover:bg-fill-hover px-4 text-sm font-medium sm:min-h-10 ${FOCUS_RING} ${DISABLED}`,
@@ -332,15 +332,8 @@ export const WatchNoDeps = WatchDef.make({
 
       CompletedAwaitLookupSettle: ({ generation, snapshot }) => applySnapshot(generation, snapshot),
 
-      RequestedCloseResult: ({ reason }) => {
-        if (reason !== "escape-key" && reason !== "close-press") {
-          return $.model;
-        }
-        if ($.model.lookup.phase !== "idle") {
-          return $.model;
-        }
-        return advance({ type: "close" });
-      },
+      RequestedCloseResult: () =>
+        $.model.lookup.phase !== "idle" ? $.model : advance({ type: "close" }),
 
       ClickedCopy: () => {
         const result = $.model.lookup.result;

@@ -23,7 +23,7 @@ export const WatchMessage = UiSchema.TaggedEnum({
     generation: Schema.Number,
     snapshot: LookupState,
   },
-  RequestedCloseResult: { reason: Schema.String },
+  RequestedCloseResult: {},
   ClickedCopy: {},
   SucceededCopyShareLink: {},
   FailedCopyShareLink: { message: Schema.String },

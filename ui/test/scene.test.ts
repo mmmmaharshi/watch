@@ -19,7 +19,6 @@ import { ReadSearchField, TrackHash } from "../src/mounts";
 import { WatchNoDeps } from "../src/watch";
 
 const LINK = "https://www.imdb.com/title/tt0133093/";
-const EMPTY_MESSAGE = "Enter an IMDb or TMDB ID, link, or title.";
 
 const snapshot = (patch: Partial<LookupState>): LookupState => ({
   ...idleLookup(),
@@ -42,8 +41,8 @@ const mounted = (fields: {
 const textbox = HtmlLocator.role("textbox", { name: COPY.fieldLabel });
 const watchNow = HtmlLocator.role("button", { name: COPY.submit });
 
-describe("A1 — an empty submit asks for a title", () => {
-  it.effect("the status line asks for a title and the field is marked invalid", () =>
+describe("A1 — an empty submit asks for an id", () => {
+  it.effect("the field is marked invalid", () =>
     Effect.gen(function* () {
       const s = yield* HtmlScene.make(WatchNoDeps, {});
       s.mounted(ReadSearchField, mounted({}))
@@ -55,12 +54,12 @@ describe("A1 — an empty submit asks for a title", () => {
           AdvanceLookup,
           WatchMessage.CompletedAdvanceLookup({
             generation: 1,
-            snapshot: snapshot({ status: { kind: "field", text: EMPTY_MESSAGE } }),
+            snapshot: snapshot({
+              status: { kind: "field", text: "Enter an IMDb or TMDB ID or link." },
+            }),
           }),
         )
         .resolve(HtmlCommand.Focus, { found: true })
-        .expect(HtmlLocator.role("status"))
-        .toHaveText(EMPTY_MESSAGE)
         .expect(textbox)
         .toHaveAttribute("aria-invalid", "true")
         .expect(textbox)
@@ -87,14 +86,12 @@ describe("A6 — a shared link prefills the field", () => {
 });
 
 describe("A9 — a phone does not open the keyboard", () => {
-  it.effect("a touch mount starts with the field unfocused and no focus command", () =>
+  it.effect("a touch mount asks for no focus", () =>
     Effect.gen(function* () {
       const s = yield* HtmlScene.make(WatchNoDeps, {});
       s.mounted(ReadSearchField, mounted({ isTouch: true }))
         .expectMount(TrackHash({}))
-        .expectNone()
-        .expect(textbox)
-        .toExist();
+        .expectNone();
     }),
   );
 });

@@ -1,10 +1,4 @@
-// The edge answers 429 past this. The action RPC path is kept here (not in
-// middleware) so tests pin it: if Astro ever renames the endpoint, the
-// limiter must follow, not silently stop.
-export function isActionRequest(req: Request): boolean {
-  return new URL(req.url).pathname.startsWith("/_actions");
-}
-
+// The edge answers 429 past this.
 const MAX_TRACKED_IPS = 10_000;
 
 export function createRateLimiter(

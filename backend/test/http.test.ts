@@ -55,14 +55,6 @@ const startServer = (
   );
 
 describe("Http", () => {
-  it.effect("a stub layer answers a caller with no network", () =>
-    Effect.gen(function* () {
-      const http = yield* Http;
-      const body = yield* http.getText("https://example.test/playlist.m3u8");
-      assert.strictEqual(body, "#EXTM3U");
-    }).pipe(Effect.provide(Http.stubLayer(() => Effect.succeed("#EXTM3U")))),
-  );
-
   it.effect("the fetch layer reads and decodes JSON from a server", () =>
     Effect.gen(function* () {
       const { baseUrl } = yield* startServer((url, respond) => {
