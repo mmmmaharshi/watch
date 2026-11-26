@@ -83,9 +83,8 @@ The stack also pins, at the repo root:
 | `@alchemy.run/cloudflare`          | 2.0.0-beta.87 |
 | `@alchemy.run/frontend-frameworks` | 2.0.0-beta.87 |
 
-`effect` is also a root devDependency at 4.1.5: `scripts/refresh-providers.ts`
-runs the shared refresh core, which lives in this package. Both pins must
-match.
+`effect` is also a root devDependency at 4.1.5: the root `src/lib` tests run
+under the root workspace. Both pins must match.
 
 `@effect/vitest` 4.1.5 accepts `vitest >=5.0.0 <6.0.0`; 5.1.1 is the newest
 release in that range. The service patterns follow rat-stack's Effect 4.1.4

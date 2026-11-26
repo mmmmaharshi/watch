@@ -9,7 +9,7 @@ import {
   isVidZeeAlive,
   needsRotAlarm,
   ROT_ALARM_MS,
-} from "./refresh-providers";
+} from "./provider-probes";
 
 // Each test pins one probe signal from research/probe-26.md. A plain HTTP
 // 200 proves nothing: valid and bogus titles return the same shell.

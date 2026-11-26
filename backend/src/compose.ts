@@ -1,5 +1,4 @@
 import { Context, Effect, Layer, Option } from "effect";
-import { PROVIDERS_FILE_URL } from "../../src/lib/providers";
 import type { Mutable, SearchInput, SearchOutcome, WatchOutcome } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Handler } from "./handler";
@@ -41,11 +40,7 @@ const tmdbLayer = (key: string | undefined): Layer.Layer<Tmdb, never, Http | Cac
   key === undefined ? Tmdb.disabledLayer : Tmdb.layer(key);
 
 const handlerLayer = (): Layer.Layer<Handler, never, Http | Cache | ProviderList> =>
-  Handler.layer.pipe(
-    Layer.provide(
-      Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer(PROVIDERS_FILE_URL)),
-    ),
-  );
+  Handler.layer.pipe(Layer.provide(Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer)));
 
 // The HTTP boundary: a watch lookup plus its official availability, and a
 // search. One graph, so the search and the watch share one cache.

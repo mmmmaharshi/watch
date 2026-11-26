@@ -47,9 +47,9 @@ aggregator lists were used as evidence.
   supply that mapping, but it needs a key ([TMDB docs](https://developer.themoviedb.org/reference/find-by-id)),
   so these are not drop-ins for the current keyless server.
 - **Host gate:** none by name. Trust comes from provenance (our cron-written
-  `public/providers.json` or the curator's directory section, both TLS) plus a
-  live per-request probe before redirect. Any other provider needs a `Provider`
-  entry with the right path shape, not an allowlist edit.
+  provider list in KV or the curator's directory section, both TLS) plus a live
+  per-request probe before redirect. Any other provider needs a `Provider` entry
+  with the right path shape, not an allowlist edit.
 - **TV default:** for providers with required season/episode, the existing `1/1` convention from the
   VidFast fallback can be reused ([providers.ts](../src/lib/providers.ts)).
 

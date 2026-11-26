@@ -18,7 +18,6 @@ import { PROVIDERS_STALE_MS, Providers } from "../src/providers";
 import type { ProvidersShape } from "../src/providers";
 import type { ContentType } from "../../src/lib/types";
 
-const FILE_URL = "https://file.test/providers.json";
 const embeds = (base: string, type: ContentType = "movie", id = "tt1") =>
   `${base}/embed/${type}/${id}`;
 const probeUrl = (provider: Provider, type: ContentType = "movie", id = "tt1") =>
@@ -26,11 +25,6 @@ const probeUrl = (provider: Provider, type: ContentType = "movie", id = "tt1") =
 const valueTag = (url: string) => `<button data-val="${url}">copy</button>`;
 const directoryPage = (domains: ReadonlyArray<string>) =>
   `<section id="domains">${domains.map(valueTag).join("")}</section>`;
-const refreshFile = (domains: ReadonlyArray<string>, updatedAt: number) =>
-  JSON.stringify({
-    updatedAt: new Date(updatedAt).toISOString(),
-    providers: domains.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl })),
-  });
 const storedFile = (domains: ReadonlyArray<string>, updatedAt: number): ProvidersFile => ({
   updatedAt: new Date(updatedAt).toISOString(),
   providers: domains.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl })),
@@ -40,7 +34,7 @@ const providersLayer = (
   getText: HttpShape["getText"],
   stored: Option.Option<ProvidersFile> = Option.none(),
 ) =>
-  Providers.layer(FILE_URL).pipe(
+  Providers.layer.pipe(
     Layer.provide(Http.stubLayer(getText)),
     Layer.provide(Cache.layer(10)),
     Layer.provide(
@@ -79,56 +73,7 @@ const makeHarness = Effect.gen(function* () {
 const select = (providers: ProvidersShape) => providers.selectStream({ type: "movie", id: "tt1" });
 
 describe("Providers", () => {
-  it.effect("a fresh refresh file beats the directory", () =>
-    Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis;
-      const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://dir.test"], now));
-      h.routes.set(embeds("https://dir.test"), "<html>");
-      h.routes.set(DIRECTORY_URL, directoryPage(["https://live.test"]));
-      h.routes.set(embeds("https://live.test"), "<html>");
-
-      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
-
-      assert.strictEqual(stream.provider, "dir.test");
-      assert.strictEqual(stream.url, embeds("https://dir.test"));
-      assert.ok(!(yield* Ref.get(h.requests)).includes(DIRECTORY_URL));
-    }),
-  );
-
-  it.effect("a stale refresh file yields to the live directory", () =>
-    Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis;
-      const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://stale.test"], now - PROVIDERS_STALE_MS - 1));
-      h.routes.set(DIRECTORY_URL, directoryPage(["https://live.test"]));
-      h.routes.set(embeds("https://live.test"), "<html>");
-      h.routes.set(embeds("https://stale.test"), "<html>");
-
-      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
-
-      assert.strictEqual(stream.provider, "live.test");
-      const requested = yield* Ref.get(h.requests);
-      assert.ok(requested.includes(DIRECTORY_URL));
-      assert.ok(!requested.includes(embeds("https://stale.test")));
-    }),
-  );
-
-  it.effect("a stale refresh file answers when the directory is down", () =>
-    Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis;
-      const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://stale.test"], now - PROVIDERS_STALE_MS - 1));
-      h.routes.set(embeds("https://stale.test"), "<html>");
-
-      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
-
-      assert.strictEqual(stream.provider, "stale.test");
-      assert.ok((yield* Ref.get(h.requests)).includes(DIRECTORY_URL));
-    }),
-  );
-
-  it.effect("a missing refresh file uses the live directory", () =>
+  it.effect("no stored list uses the live directory", () =>
     Effect.gen(function* () {
       const h = yield* makeHarness;
       h.routes.set(DIRECTORY_URL, directoryPage(["https://live.test"]));
@@ -140,7 +85,7 @@ describe("Providers", () => {
     }),
   );
 
-  it.effect("a stored provider list answers before the legacy file", () =>
+  it.effect("a stored provider list answers before the directory", () =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
@@ -155,7 +100,7 @@ describe("Providers", () => {
       );
 
       assert.strictEqual(stream.provider, "stored.test");
-      assert.ok(!(yield* Ref.get(h.requests)).includes(FILE_URL));
+      assert.ok(!(yield* Ref.get(h.requests)).includes(DIRECTORY_URL));
     }),
   );
 
@@ -201,9 +146,8 @@ describe("Providers", () => {
 
   it.effect("a directory domain wins before the static providers", () =>
     Effect.gen(function* () {
-      const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://dir.test"], now));
+      h.routes.set(DIRECTORY_URL, directoryPage(["https://dir.test"]));
       h.routes.set(embeds("https://dir.test"), "<html>");
       h.routes.set(probeUrl(VIDLINK), "<html>");
 
@@ -261,8 +205,7 @@ describe("Providers", () => {
         const first = yield* select(providers);
         assert.strictEqual(Option.getOrThrow(first).provider, "vidlink.pro");
 
-        const now = yield* Clock.currentTimeMillis;
-        h.routes.set(FILE_URL, refreshFile(["https://dir.test"], now));
+        h.routes.set(DIRECTORY_URL, directoryPage(["https://dir.test"]));
         h.routes.set(embeds("https://dir.test"), "<html>");
         return yield* select(providers);
       });
@@ -278,13 +221,14 @@ describe("Providers", () => {
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://a.test", "https://b.test"], now));
       h.routes.set(embeds("https://a.test"), "<html>");
       h.routes.set(embeds("https://b.test"), "<html>");
 
       const stream = Option.getOrThrow(
-        yield* withProviders(h.getText, (providers) =>
-          providers.selectStream({ type: "movie", id: "tt1", exclude: "a.test" }),
+        yield* withProviders(
+          h.getText,
+          (providers) => providers.selectStream({ type: "movie", id: "tt1", exclude: "a.test" }),
+          Option.some(storedFile(["https://a.test", "https://b.test"], now)),
         ),
       );
 
@@ -297,11 +241,12 @@ describe("Providers", () => {
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
-      h.routes.set(FILE_URL, refreshFile(["https://a.test"], now));
       h.routes.set(embeds("https://a.test"), "<html>");
 
-      const stream = yield* withProviders(h.getText, (providers) =>
-        providers.selectStream({ type: "movie", id: "tt1", exclude: "a.test" }),
+      const stream = yield* withProviders(
+        h.getText,
+        (providers) => providers.selectStream({ type: "movie", id: "tt1", exclude: "a.test" }),
+        Option.some(storedFile(["https://a.test"], now)),
       );
 
       assert.ok(Option.isNone(stream));
@@ -315,9 +260,6 @@ describe("Providers", () => {
       const started = yield* Deferred.make<void>();
       const interrupted = yield* Ref.make<Array<string>>([]);
       const getText: HttpShape["getText"] = (url) => {
-        if (url === FILE_URL) {
-          return Effect.succeed(refreshFile(["https://a.test", "https://b.test"], now));
-        }
         if (url === embeds("https://b.test")) {
           return Deferred.succeed(started, undefined).pipe(
             Effect.andThen(
@@ -334,7 +276,13 @@ describe("Providers", () => {
         return Effect.fail(new HttpError({ url, status: 404 }));
       };
 
-      const stream = Option.getOrThrow(yield* withProviders(getText, select));
+      const stream = Option.getOrThrow(
+        yield* withProviders(
+          getText,
+          select,
+          Option.some(storedFile(["https://a.test", "https://b.test"], now)),
+        ),
+      );
 
       assert.strictEqual(stream.provider, "a.test");
       assert.deepStrictEqual(yield* Ref.get(interrupted), [embeds("https://b.test")]);

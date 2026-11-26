@@ -1,14 +1,8 @@
-import { SITE_URL } from "../consts";
 import type { ContentType } from "./types";
 
 // VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
 // still answer 200 and get picked ahead of the live one.
 export const DIRECTORY_URL = "https://vidsrc.domains/";
-
-// The refresh file: written twice weekly by scripts/refresh-providers.ts and
-// read by the app. One name, so a rename cannot leave a reader on the old path.
-export const PROVIDERS_FILENAME = "providers.json";
-export const PROVIDERS_FILE_URL = `${SITE_URL}/${PROVIDERS_FILENAME}`;
 
 export interface Provider {
   readonly name: string;
@@ -17,9 +11,9 @@ export interface Provider {
   readonly path?: (type: ContentType, id: string) => string;
 }
 
-// One entry of the refresh file. The cron writer and the app reader share this
-// type: a file row carries no embed path override, every listed host answers
-// the default shape, and static fallbacks keep their paths in code.
+// One entry of the stored provider list. The cron writer and the app reader
+// share this type: a stored row carries no embed path override, every listed
+// host answers the default shape, and static fallbacks keep their paths in code.
 export type ProviderEntry = Pick<Provider, "name" | "baseUrl">;
 
 export interface ProvidersFile {
