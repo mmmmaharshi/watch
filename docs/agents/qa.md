@@ -60,10 +60,10 @@ One bug per section. No praise, no summary of the code.
 
 ## Two speeds
 
-| Command            | Covers                            | Runs                    |
-| ------------------ | --------------------------------- | ----------------------- |
-| `bun run e2e`      | A1, A2, A9 — no network           | every pull request      |
-| `bun run e2e:live` | A3–A8 — real search and providers | after a deploy, by hand |
+| Command            | Covers                            | Runs                        |
+| ------------------ | --------------------------------- | --------------------------- |
+| `bun run e2e`      | A1, A2, A9 — no network           | every pull request          |
+| `bun run e2e:live` | A3–A8 — real search and providers | after a deploy, and nightly |
 
 `bun run e2e:live` uses the local dev server by default. Set `LIVE_URL` to
 grade the deployed site:
@@ -71,6 +71,9 @@ grade the deployed site:
 ```sh
 LIVE_URL=https://watch.maharshi.work bun run e2e:live
 ```
+
+`.github/workflows/live.yml` runs the same command against production every
+night at 03:00 UTC, and can be started by hand after a deploy.
 
 The scripted suite covers the listed criteria. The verifier still explores by
 hand, because a script only finds what it was told to look for.
