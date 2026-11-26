@@ -202,6 +202,15 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
           return fallback;
         }
 
+        if (strict && preferred !== undefined) {
+          const other = yield* fetchKind(preferred === "tv" ? "movie" : "series", id);
+          if (other.meta !== null) {
+            const meta = { ...other.meta, type: preferred };
+            yield* remember(cacheKind, id, meta);
+            return meta;
+          }
+        }
+
         if (!fetched.transient) {
           yield* cache.set(`miss:${cacheKind}:${id}`, "1", CACHE_TTL_MS);
         }

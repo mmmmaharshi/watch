@@ -86,7 +86,7 @@ describe("Metadata", () => {
     }).pipe(Effect.provide(withStub(getText)));
   });
 
-  it.effect("a strict kind does not fall back to the other catalog", () => {
+  it.effect("a strict kind keeps the requested type when the other catalog has the name", () => {
     const asked: Array<string> = [];
     const getText: HttpShape["getText"] = (url) => {
       asked.push(url);
@@ -94,9 +94,11 @@ describe("Metadata", () => {
     };
     return Effect.gen(function* () {
       const metadata = yield* Metadata;
-      const failure = yield* metadata.resolve("tt0133093", "tv", true).pipe(Effect.flip);
-      assertInstanceOf(failure, MetadataMissing);
-      assert.isFalse(asked.some((url) => url.includes("/meta/movie/")));
+      const meta = yield* metadata.resolve("tt0133093", "tv", true);
+      assert.strictEqual(meta.type, "tv");
+      assert.strictEqual(meta.name, "The Matrix");
+      assert.strictEqual(meta.rating, "8.7");
+      assert.isTrue(asked.some((url) => url.includes("/meta/movie/")));
     }).pipe(Effect.provide(withStub(getText)));
   });
 

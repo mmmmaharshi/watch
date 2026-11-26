@@ -192,7 +192,7 @@ const onLookupInput = (context: LookupContext, event: { readonly type: string })
     const parsed = parseTitleInput(event.input);
     // A TMDB link carries its own type, so the selector must not override it.
     const kind = parsed?.kind === "tmdb" && parsed.type ? parsed.type : context.kind;
-    return { id: parsed?.id ?? event.input.trim(), kind };
+    return { id: parsed?.id ?? event.input.trim(), kind, strictKind: true };
   }
   return { id: context.value, kind: context.kind };
 };
