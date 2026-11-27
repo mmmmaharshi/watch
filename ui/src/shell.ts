@@ -4,8 +4,38 @@ import { SITE_URL } from "../../src/consts";
 import { COPY } from "../../src/lib/copy";
 
 const description = COPY.shell.description;
-// Share cards cut the copy short, so they get the promise in one line.
-const shareDescription = COPY.intro;
+
+// One graph: the site, and the app it hosts. Search uses the app node for the
+// "free web app" result; the site node carries the name and URL.
+const structuredData = JSON.stringify({
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: `${SITE_URL}/`,
+      name: COPY.wordmark,
+      description,
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${SITE_URL}/#app`,
+      name: COPY.wordmark,
+      url: `${SITE_URL}/`,
+      applicationCategory: "MultimediaApplication",
+      operatingSystem: "Web",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      description,
+    },
+  ],
+});
+
+export interface PageAssets {
+  readonly css: string;
+  readonly js: string;
+}
+
+const defaultAssets: PageAssets = { css: "/assets/app.css", js: "/assets/app.js" };
 
 export interface RenderedPage {
   readonly html: string;
@@ -18,7 +48,10 @@ export interface RenderedPage {
 // The static page. The client bundle adopts the rendered view on boot; until
 // then the markup is real, so a paste that lands early has somewhere to go.
 // The head comes from the components, so the shell cannot drift from it.
-export const pageHtml = (page: RenderedPage): string => `<!DOCTYPE html>
+export const pageHtml = (
+  page: RenderedPage,
+  assets: PageAssets = defaultAssets,
+): string => `<!DOCTYPE html>
 <html ${page.htmlAttributes}>
 <head>
 <meta charset="UTF-8">
@@ -26,13 +59,15 @@ export const pageHtml = (page: RenderedPage): string => `<!DOCTYPE html>
 <meta name="text-scale" content="scale">
 <meta name="theme-color" content="#0a0a0a">
 ${page.head}
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polygon points='5 3 19 12 5 21 5 3'/></svg>">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.png" type="image/png" sizes="48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="canonical" href="${SITE_URL}/">
 <meta name="description" content="${description}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watch">
 <meta property="og:title" content="${COPY.title}">
-<meta property="og:description" content="${shareDescription}">
+<meta property="og:description" content="${description}">
 <meta property="og:url" content="${SITE_URL}/">
 <meta property="og:image" content="${SITE_URL}/og.png">
 <meta property="og:image:width" content="1200">
@@ -40,9 +75,10 @@ ${page.head}
 <meta property="og:image:alt" content="${COPY.shell.imageAlt}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${COPY.title}">
-<meta name="twitter:description" content="${shareDescription}">
-<link rel="stylesheet" href="/assets/app.css">
-<script type="module" src="/assets/app.js"></script>
+<meta name="twitter:description" content="${description}">
+<script type="application/ld+json">${structuredData}</script>
+<link rel="stylesheet" href="${assets.css}">
+<script type="module" src="${assets.js}"></script>
 </head>
 <body ${page.bodyAttributes} class="min-h-dvh bg-canvas px-6 text-ink antialiased">
   <div id="app">${page.html}</div>
