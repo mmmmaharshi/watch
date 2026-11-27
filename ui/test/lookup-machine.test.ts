@@ -58,7 +58,7 @@ describe("lookup machine", () => {
       const actor = yield* createEffectActor(idle());
       const snap = actor.getSnapshot();
       assert.strictEqual(snap.value, "idle");
-      assert.strictEqual(snap.context.value, "");
+      assert.strictEqual(snap.context.linkSubmit, false);
       assert.strictEqual(snap.context.openId, null);
       assert.deepStrictEqual(snap.context.status, { kind: "idle" });
     }).pipe(Effect.scoped),
@@ -110,7 +110,7 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped);
   });
 
-  it.effect("retry looks up the open result again while excluding its provider", () => {
+  it.effect("a retry opens the result it returns, even for another id", () => {
     const { deps, lookups } = controlled();
     return Effect.gen(function* () {
       const actor = yield* createEffectActor(createLookupMachine(deps));
@@ -134,7 +134,7 @@ describe("lookup machine", () => {
       });
       assert.strictEqual(done.value, "idle");
       assert.deepStrictEqual(done.context.result, BREAKING_BAD_RESULT);
-      assert.strictEqual(done.context.openId, "tt0133093");
+      assert.strictEqual(done.context.openId, "tt0903747");
       assert.deepStrictEqual(done.context.status, { kind: "idle" });
     }).pipe(Effect.scoped);
   });
@@ -190,23 +190,12 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("hash navigation prefills the canonical link without opening the dialog", () =>
-    Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
-      assert.strictEqual(snap.value, "idle");
-      assert.strictEqual(snap.context.value, "https://www.imdb.com/title/tt0133093/");
-      assert.strictEqual(snap.context.openId, null);
-    }).pipe(Effect.scoped),
-  );
-
   it.effect("a hash echo for the open dialog is ignored", () =>
     Effect.gen(function* () {
       const actor = yield* opened();
       const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
       assert.strictEqual(snap.value, "idle");
       assert.strictEqual(snap.context.openId, "tt0133093");
-      assert.strictEqual(snap.context.value, "tt0133093");
     }).pipe(Effect.scoped),
   );
 
@@ -225,19 +214,7 @@ describe("lookup machine", () => {
       const actor = yield* opened();
       const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0903747" });
       assert.strictEqual(snap.context.openId, null);
-      assert.strictEqual(snap.context.value, "https://www.imdb.com/title/tt0903747/");
       assert.deepStrictEqual(snap.context.result, MATRIX_RESULT);
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("re-applying the link the field already shows is a no-op", () =>
-    Effect.gen(function* () {
-      const actor = yield* opened();
-      const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
-      const again = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
-      assert.strictEqual(again.context.value, snap.context.value);
-      assert.deepStrictEqual(again.context.result, MATRIX_RESULT);
-      assert.strictEqual(again.context.openId, "tt0133093");
     }).pipe(Effect.scoped),
   );
 

@@ -17,10 +17,7 @@ type Snapshot = SnapshotFrom<Machine>;
 // Model; the machine stays the owner of the moves.
 const toLookupState = (snapshot: Snapshot): LookupState => ({
   phase: Schema.is(Phase)(snapshot.value) ? snapshot.value : "idle",
-  kind: snapshot.context.kind,
-  result: snapshot.context.result,
-  status: snapshot.context.status,
-  openId: snapshot.context.openId,
+  ...snapshot.context,
 });
 
 export interface LookupEngineShape {

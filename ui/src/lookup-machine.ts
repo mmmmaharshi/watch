@@ -2,7 +2,7 @@ import { createEffectLogic, setupEffect } from "@xstate/effect";
 import { Schema } from "effect";
 import type { Effect } from "effect";
 import { LOOKUP_FAILED } from "../../src/lib/messages";
-import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
+import { isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
 import { Kind, LookupInput, LookupOutcome, Result } from "../../src/lib/types";
 
 // The status copy the machine emits. The tests pin these strings, because they
@@ -26,7 +26,9 @@ export const Status = Schema.Union([
 export type Status = typeof Status.Type;
 
 const LookupContext = Schema.Struct({
-  value: Schema.String,
+  // True when the last submit was a pasted link, so its result type becomes
+  // the kind a later bare id uses.
+  linkSubmit: Schema.Boolean,
   kind: Kind,
   result: Schema.NullOr(Result),
   status: Status,
@@ -83,8 +85,7 @@ type Move =
 
 const onClose = (): Move => ({ context: { openId: null } });
 
-// Hash navigation prefills but never opens. The id of the dialog we opened is
-// its own history echo and is dropped; re-applying the shown link is a no-op.
+// Hash navigation only reopens or closes. The page owns the field text.
 const onHashNav = (context: LookupContext, id: string): Move => {
   if (id === context.openId) {
     return { context: {} };
@@ -92,29 +93,18 @@ const onHashNav = (context: LookupContext, id: string): Move => {
   if (context.result?.id === id) {
     return { context: { openId: id } };
   }
-  const link = fullLinkForId(id, context.kind) ?? id;
-  if (context.value === link) {
-    return { context: {} };
-  }
-  return { context: { value: link, openId: null } };
+  return { context: { openId: null } };
 };
 
-const isSubmitEvent = (event: {
-  readonly type: string;
-}): event is Extract<LookupEvent, { type: "submit" }> => event.type === "submit";
-
-const onLookupInput = (context: LookupContext, event: { readonly type: string }): LookupInput => {
-  if (isSubmitEvent(event)) {
-    const parsed = parseTitleInput(event.input);
-    // A TMDB link carries its own type. A bare number keeps no kind, so the
-    // mapping tries the movie and TV spaces.
-    if (parsed?.kind === "tmdb" && parsed.type === undefined) {
-      return { id: parsed.id, strictKind: true };
-    }
-    const kind = parsed?.kind === "tmdb" && parsed.type ? parsed.type : context.kind;
-    return { id: parsed?.id ?? event.input.trim(), kind, strictKind: true };
+const onLookupInput = (context: LookupContext, event: { readonly input: string }): LookupInput => {
+  const parsed = parseTitleInput(event.input);
+  // A TMDB link carries its own type. A bare number keeps no kind, so the
+  // mapping tries the movie and TV spaces.
+  if (parsed?.kind === "tmdb" && parsed.type === undefined) {
+    return { id: parsed.id, strictKind: true };
   }
-  return { id: context.value, kind: context.kind };
+  const kind = parsed?.kind === "tmdb" && parsed.type ? parsed.type : context.kind;
+  return { id: parsed?.id ?? event.input.trim(), kind, strictKind: true };
 };
 
 const onSubmit = (context: LookupContext, input: string): Move => {
@@ -128,7 +118,7 @@ const onSubmit = (context: LookupContext, input: string): Move => {
   return {
     target: "looking",
     reenter: true,
-    context: { value, status: loadingStatus(MESSAGES.looking) },
+    context: { linkSubmit: isLinkLike(value), status: loadingStatus(MESSAGES.looking) },
   };
 };
 
@@ -137,30 +127,31 @@ const onRetry = (context: LookupContext): Move | undefined =>
     ? { target: "retrying", context: { status: loadingStatus(MESSAGES.retrying) } }
     : undefined;
 
-const onLookupDone = (context: LookupContext, output: LookupOutcome): Move => {
-  if (!output.ok) {
-    return { target: "idle", context: { status: errorStatus(output.error) } };
-  }
-  return {
-    target: "idle",
-    context: {
-      result: output.result,
-      // The id whose own history echo must be ignored.
-      openId: output.result.id,
-      // A pasted link sets the kind a later bare id will use; bare ids leave
-      // it alone.
-      kind: isLinkLike(context.value) ? output.result.type : context.kind,
-      status: idleStatus(),
-    },
-  };
-};
+// One success move. Every completed lookup opens its own result, and a submit
+// that came from a link sets the kind a later bare id will use; a bare id
+// leaves it alone.
+const succeed = (context: LookupContext, result: Result): Move => ({
+  target: "idle",
+  context: {
+    result,
+    // The id whose own history echo must be ignored.
+    openId: result.id,
+    kind: context.linkSubmit ? result.type : context.kind,
+    status: idleStatus(),
+  },
+});
 
-const onRetryDone = (output: LookupOutcome): Move => {
-  if (!output.ok) {
-    const text = output.reason === "no_providers" ? MESSAGES.noProviders : output.error;
-    return { target: "idle", context: { status: errorStatus(text) } };
+const onLookupDone = (context: LookupContext, output: LookupOutcome): Move =>
+  output.ok
+    ? succeed(context, output.result)
+    : { target: "idle", context: { status: errorStatus(output.error) } };
+
+const onRetryDone = (context: LookupContext, output: LookupOutcome): Move => {
+  if (output.ok) {
+    return succeed(context, output.result);
   }
-  return { target: "idle", context: { result: output.result, status: idleStatus() } };
+  const text = output.reason === "no_providers" ? MESSAGES.noProviders : output.error;
+  return { target: "idle", context: { status: errorStatus(text) } };
 };
 
 const onFail = (message: string): Move => ({
@@ -170,9 +161,9 @@ const onFail = (message: string): Move => ({
 
 const onRetryInput = (context: LookupContext): LookupInput => {
   const result = context.result;
-  // The retry transition only exists when a result is open.
+  // Unreachable: only a state with an open result offers retry.
   if (!result) {
-    return { id: context.value, kind: context.kind };
+    return { id: "", kind: context.kind };
   }
   return result.year === undefined
     ? {
@@ -206,7 +197,7 @@ export function createLookupMachine(deps: LookupDeps) {
   }).createMachine({
     id: "lookup",
     context: {
-      value: "",
+      linkSubmit: false,
       kind: "movie",
       result: null,
       status: idleStatus(),
@@ -228,7 +219,8 @@ export function createLookupMachine(deps: LookupDeps) {
       looking: {
         invoke: {
           src: "lookup",
-          input: ({ context, event }) => onLookupInput(context, event),
+          input: ({ context, event }) =>
+            "input" in event ? onLookupInput(context, event) : onRetryInput(context),
           onDone: (args, enq) => {
             enq.raise({ type: "lookupDone", output: args.event.output });
           },
@@ -256,7 +248,7 @@ export function createLookupMachine(deps: LookupDeps) {
         },
         on: {
           submit: (args) => onSubmit(args.context, args.event.input),
-          lookupDone: (args) => onRetryDone(args.event.output),
+          lookupDone: (args) => onRetryDone(args.context, args.event.output),
           fail: (args) => onFail(args.event.message),
         },
       },

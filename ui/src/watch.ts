@@ -12,7 +12,7 @@ import {
   WriteHistoryHash,
 } from "./commands";
 import { COPY, exitNote } from "./copy";
-import { isLooking, resultMeta, resultTitle, resultType } from "./lookup";
+import { resultMeta, resultTitle, resultType } from "./lookup";
 import type { LookupState, Result } from "./lookup";
 import type { LookupCommand } from "./lookup-machine";
 import { WatchMessage } from "./messages";
@@ -32,6 +32,13 @@ const DISABLED = "disabled:cursor-not-allowed disabled:opacity-50";
 const ICON_BUTTON = `flex size-12 items-center justify-center rounded-lg border border-line bg-fill hover:bg-fill-hover sm:size-10 ${FOCUS_RING} ${DISABLED}`;
 
 const focusSearch = () => HtmlCommand.focus(SearchField, () => Component.noop);
+
+// The page is working when the machine is not idle, or a reply is still in
+// flight. The submit spinner is narrower: it does not spin on a retry.
+const isPending = (model: WatchModel): boolean =>
+  model.lookup.phase !== "idle" || model.generation > model.applied;
+const isLoading = (model: WatchModel): boolean =>
+  model.lookup.phase === "looking" || model.generation > model.applied;
 
 function Spinner(h: H) {
   return h.span
@@ -93,7 +100,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
   const retrying = model.lookup.phase === "retrying";
   const title = result === null ? "" : resultTitle(result);
   const meta = result === null ? "" : resultMeta(result);
-  const disabled = retrying || isLooking(model.lookup.phase) || model.generation > model.applied;
+  const disabled = isPending(model);
   const dialogOpen = model.lookup.openId !== null && result !== null;
 
   const link = (href: string, text: string, extra: string) => {
@@ -270,7 +277,7 @@ export const WatchNoDeps = WatchDef.make({
       return next;
     };
 
-    const isPending = () => $.model.lookup.phase !== "idle" || $.model.generation > $.model.applied;
+    const isPendingNow = () => isPending($.model);
 
     return WatchMessage.match(message, {
       MountedSearch: ({ fieldText, hash, search, isTouch }) => {
@@ -299,9 +306,9 @@ export const WatchNoDeps = WatchDef.make({
         }),
 
       SubmittedSearch: () =>
-        isPending() ? $.model : advance({ type: "submit", input: $.model.query }),
+        isPendingNow() ? $.model : advance({ type: "submit", input: $.model.query }),
 
-      ClickedRetry: () => (isPending() ? $.model : advance({ type: "retry" })),
+      ClickedRetry: () => (isPendingNow() ? $.model : advance({ type: "retry" })),
 
       NavigatedToHash: ({ hash, search }) => {
         const id = parseSharedId(search, hash);
@@ -360,7 +367,7 @@ export const WatchNoDeps = WatchDef.make({
     });
   },
   view: (h, model) => {
-    const loading = isLooking(model.lookup.phase) || model.generation > model.applied;
+    const loading = isLoading(model);
     const invalid = model.lookup.status.kind === "field";
     const statusText = model.lookup.status.kind === "idle" ? "" : model.lookup.status.text;
     const strong = model.lookup.status.kind === "error" || model.lookup.status.kind === "field";

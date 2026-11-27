@@ -16,6 +16,7 @@ export const LookupState = Schema.Struct({
   result: Schema.NullOr(Result),
   status: Status,
   openId: Schema.NullOr(Schema.String),
+  linkSubmit: Schema.Boolean,
 });
 export type LookupState = typeof LookupState.Type;
 
@@ -25,6 +26,7 @@ export const idleLookup = (): LookupState => ({
   result: null,
   status: { kind: "idle" },
   openId: null,
+  linkSubmit: false,
 });
 
 export const isLooking = (phase: Phase): boolean => phase === "looking";
