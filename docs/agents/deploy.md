@@ -16,6 +16,10 @@ those assets. The platform serves the page and the assets; the Worker answers
 
 ## Deploy
 
+Pushing `master` deploys production through Cloudflare's Git integration; the
+repo has no deploy job, so CI only checks and runs e2e. The commands below are
+for a manual redeploy.
+
 The Alchemy CLI needs Cloudflare credentials once. Either run the profile
 editor:
 

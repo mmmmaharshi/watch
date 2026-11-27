@@ -17,7 +17,7 @@
     "check:ui": "bun run --filter @watch/ui check",
     "e2e": "playwright test --project=ci",
     "e2e:live": "playwright test --project=live --project=live-mobile --retries=2",
-    "check": "bun run check:format && bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build",
+    "check": "bun run check:format && bun run lint && bun test && bun run check:backend && bun run check:ui && bun run build && bun run e2e",
     "deploy": "bun run build && bun alchemy deploy --stage prod",
     "prepare": "husky"
   },

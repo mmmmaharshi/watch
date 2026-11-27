@@ -4,7 +4,8 @@
 - Use `git twig new` in place of `git worktree add` when creating a worktree (see the `git-twig` skill).
 - Before trusting browser-measured numbers, curl-verify the dev server serves current code (grep the response for a string from the working tree).
 - On Windows, write multi-line issue, PR, and release bodies to a file and pass `--body-file`. Inline newlines in `--body` break.
-- Shell is Windows PowerShell 5.1: pass quoted or regex patterns to the `grep` tool, because shell `rg` rejects escaped quotes; write files with the file tools, because `Set-Content -NoNewline` does not exist.
+- Shell is Windows PowerShell 5.1: pass quoted or regex patterns to the `grep` tool, because shell `rg` rejects escaped quotes; edit text with the file tools, and when a shell rewrite is unavoidable write UTF-8 without BOM and LF.
+- Search the source folders (`src/`, `backend/`, `ui/`, `e2e/`); a repo-root recursive scan crosses `node_modules`.
 - `bun run dev` builds the site and starts `wrangler dev` on 4321; `bun run e2e` reuses a running server or starts its own (see `playwright.config.ts`), so run `bun run dev` yourself when you want to curl the app.
 - `agent-browser` hides scrollbars by default. Pass `--hide-scrollbars false` when a scrollbar is under review.
 - Respond to me with $simple-english and $i-have-adhd.
@@ -38,5 +39,6 @@ The verifier runs `$verify`, with fresh context and another provider. See
 
 ### Deploys
 
-The site runs on Cloudflare. The Worker, the host, and the security header rule
-are in `docs/agents/deploy.md`. Use the `cf` CLI for Cloudflare commands.
+The site runs on Cloudflare. Pushing `master` deploys it. The Worker, the host,
+the rate-limit rule and the manual path are in `docs/agents/deploy.md`. Use the
+`cf` CLI for Cloudflare commands.
