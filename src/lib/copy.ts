@@ -1,6 +1,6 @@
 // Every string a person reads, in one place: the page, the machine's status
 // lines, the Worker's outcome errors, and the static shell's meta text.
-const INTRO = "Free, no sign-up. One ID in, one stream link out.";
+const INTRO = "Free, no sign-up.";
 
 export const COPY = {
   title: "watch — find a stream link by IMDb or TMDB ID",
@@ -8,11 +8,10 @@ export const COPY = {
   intro: INTRO,
   fieldLabel: "IMDb or TMDB ID or link",
   placeholder: "IMDb or TMDB ID, or link",
-  hint: "Eg: tt0371746",
-  submit: "Watch now",
-  footer:
-    "We don't host anything. We only link to third-party providers. Check the URL before playing. " +
-    "Prefer an ad blocker for safety.",
+  hint: "Eg:",
+  exampleId: "tt0371746",
+  submit: "Find a stream",
+  footer: "We only link to third-party providers. Prefer an ad blocker for safety.",
   copied: "Link copied.",
   copyFailed: "Copy failed. Select the link text to copy it manually.",
   cancel: "Cancel",
@@ -40,7 +39,7 @@ export const COPY = {
     invalidInput: "Invalid IMDb or TMDB ID",
     tmdbAmbiguous: "TMDB ID is ambiguous. Use a movie or TV link.",
     tmdbNotFound: "TMDB ID not found",
-    metadataMissing: "Failed to detect content type",
+    metadataMissing: "Couldn't tell if that's a movie or a TV show.",
     noProviders: "No working providers available",
   },
   // The static page around the app.
@@ -53,4 +52,4 @@ export const COPY = {
 
 // The dialog's exit note names the provider, so it cannot be a plain string.
 export const exitNote = (provider: string): string =>
-  `You'll leave this site and play on ${provider}. We don't control external sites.`;
+  `You'll leave this site and play on ${provider}.`;

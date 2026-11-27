@@ -147,7 +147,7 @@ components:
 
 watch is one plain screen with three parts: a short wordmark and intro, one input with one primary action, and a dialog that shows the found stream link. The page is near-black, the ink is white, and the only colour is a functional focus state. There is no accent colour; the primary action is a white fill on the dark page.
 
-The visitor pastes an IMDb or TMDB ID or a link and presses Watch now. One lookup resolves the id to a title and a working provider, then opens the result in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
+The visitor pastes an IMDb or TMDB ID or a link and presses Find a stream. One lookup resolves the id to a title and a working provider, then opens the result in a dialog. The dialog shows the title, the year and IMDb rating, the type, the IMDb ID, the provider, and the full stream URL before the visitor leaves for the provider. A quiet line at the foot of the page states that the app hosts nothing. A second note inside the dialog repeats the warning at the moment of leaving.
 
 **Key Characteristics:**
 
@@ -193,7 +193,7 @@ The palette is neutral and dark only. The canvas is `#0A0A0A` and the ink is whi
 - **Goeist Sans** (`--font-sans`, family name `Goeist`) carries the interface: the wordmark, intro, card title, description, row keys, provider, buttons, status, and notes. It is loaded from `goeist/sans.css`.
 - **Goeist Mono** (`--font-mono`) carries identifiers: the IMDb ID and the stream URL. It is loaded from `goeist/mono.css`.
 
-Both are variable fonts from 100 to 900. There is no serif. There is no styled casing: the wordmark is "watch", the buttons read "Watch now" and "Watch", and the row keys read "IMDb", "Provider", and "Stream URL" as written.
+Both are variable fonts from 100 to 900. There is no serif. There is no styled casing: the wordmark is "watch", the buttons read "Find a stream" and "Watch", and the row keys read "IMDb", "Provider", and "Stream URL" as written.
 
 ### Hierarchy
 
@@ -268,7 +268,7 @@ The Effect UI root component implements the components in `ui/src/watch.ts`.
 
 - **`TextField`** wraps the input. It holds `name="id"`, the value, `isDisabled` while loading, and `isInvalid` on an error. Its class is `min-w-0 flex-1`.
 - **`Label`** is the accessible name, "IMDb or TMDB ID or link". The class is `sr-only`, so the placeholder carries the visible prompt.
-- **`Input`** sits on the canvas, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` always points at the hint, plus `status` while the field is invalid, so help stays tied to the field and the error text is not read before it appears. A shared link prefills the full link, not the bare id, and leaves the dialog closed until the visitor presses Watch now. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
+- **`Input`** sits on the canvas, `min-h-12`, `rounded-lg`, with `border border-black/15` and `text-base`. The placeholder uses the theme field placeholder. `aria-invalid` stays `false` until a failed submit. `aria-describedby` always points at the hint, plus `status` while the field is invalid, so help stays tied to the field and the error text is not read before it appears. A shared link prefills the full link, not the bare id, and leaves the dialog closed until the visitor presses Find a stream. On a device without touch points, the input takes focus on mount when no ID is shared, and again when the dialog closes. Touch devices are left alone so the on-screen keyboard does not open on its own.
 - **Submit `Button`** is ink: `min-h-12 rounded-lg bg-action px-6 text-sm font-medium text-canvas hover:bg-action-hover`. It holds a `Spinner size="sm" color="current"` while the lookup runs. It is disabled at the same time.
 
 ### Result Dialog
@@ -311,7 +311,7 @@ The Effect UI root component implements the components in `ui/src/watch.ts`.
 - Do keep the primary action in ink.
 - Do keep Goeist Sans for the interface and Goeist Mono for identifiers.
 - Do keep the labelled input, the keyboard-accessible dialog, focus return, and reduced motion.
-- Do keep one primary action per surface: Watch now on the page, Watch in the dialog.
+- Do keep one primary action per surface: Find a stream on the page, Watch in the dialog.
 
 ### Don't:
 

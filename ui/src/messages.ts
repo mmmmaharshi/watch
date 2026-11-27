@@ -12,6 +12,7 @@ export const WatchMessage = UiSchema.TaggedEnum({
     isTouch: Schema.Boolean,
   },
   UpdatedQuery: { value: Schema.String },
+  ClickedExample: {},
   SubmittedSearch: {},
   ClickedRetry: {},
   NavigatedToHash: { hash: Schema.String, search: Schema.String },

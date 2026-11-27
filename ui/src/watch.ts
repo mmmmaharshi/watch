@@ -317,6 +317,12 @@ export const WatchNoDeps = WatchDef.make({
           lookup: { ...$.model.lookup, status: { kind: "idle" } },
         }),
 
+      ClickedExample: () =>
+        $.evolve({
+          query: COPY.exampleId,
+          lookup: { ...$.model.lookup, status: { kind: "idle" } },
+        }).run(focusSearch()),
+
       SubmittedSearch: () =>
         isPendingNow() ? $.model : advance({ type: "submit", input: $.model.query }),
 
@@ -430,7 +436,17 @@ export const WatchNoDeps = WatchDef.make({
             h.p
               .attrs({ id: "search-hint" })
               .class("mt-3 text-xs leading-relaxed text-ink-2")
-              .children(COPY.hint),
+              .children(
+                COPY.hint,
+                " ",
+                h.button
+                  .attrs({ type: "button" })
+                  .class(
+                    "underline underline-offset-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+                  )
+                  .on("click", WatchMessage.ClickedExample())
+                  .children(COPY.exampleId),
+              ),
             h.p
               .attrs({ id: "status", role: "status", "aria-live": "polite" })
               .class(

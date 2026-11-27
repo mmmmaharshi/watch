@@ -13,7 +13,7 @@ guards the title, canonical, and sharing tags without depending on the source.
 
 1. Open the site.
 2. Leave the field empty.
-3. Press **Watch now**.
+3. Press **Find a stream**.
 
 The page shows "Enter an IMDb or TMDB ID or link." The field is marked
 invalid and holds the cursor.
@@ -21,7 +21,7 @@ invalid and holds the cursor.
 ## A2 — A link that is not IMDb or TMDB is rejected
 
 1. Type `https://example.com/movie/42`.
-2. Press **Watch now**.
+2. Press **Find a stream**.
 
 The page shows "Use an IMDb title link or a TMDB movie or TV link." No lookup
 runs.
@@ -29,7 +29,7 @@ runs.
 ## A4 — An id opens a result
 
 1. Type `tt0133093`.
-2. Press **Watch now**.
+2. Press **Find a stream**.
 
 A dialog opens with the title. It shows the IMDb ID, the provider name, and a
 stream URL. The stream URL is a link that opens in a new tab.
@@ -46,7 +46,7 @@ The dialog closes. The field still holds `tt0133093`.
 Open `/#id=tt0133093` directly.
 
 The field shows `https://www.imdb.com/title/tt0133093/`. No result opens
-until the person presses Watch now.
+until the person presses Find a stream.
 
 ## A7 — Copy gives the share link
 
@@ -75,6 +75,6 @@ person taps the field.
 ## A10 — A paste before load finishes survives it
 
 1. Paste `https://www.imdb.com/title/tt0133093/` before the page finishes loading.
-2. Press **Watch now** after load.
+2. Press **Find a stream** after load.
 
 The field still holds the link. A lookup starts.

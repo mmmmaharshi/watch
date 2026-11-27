@@ -89,7 +89,7 @@ describe("A9 — a phone does not open the keyboard", () => {
 });
 
 describe("A10 — a paste before hydration survives it", () => {
-  it.effect("the field keeps the pasted link and Watch now starts a lookup", () =>
+  it.effect("the field keeps the pasted link and Find a stream starts a lookup", () =>
     Effect.gen(function* () {
       const s = yield* HtmlScene.make(WatchNoDeps, {});
       s.mounted(ReadSearchField, mounted({ fieldText: LINK }))
@@ -101,6 +101,21 @@ describe("A10 — a paste before hydration survives it", () => {
         .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expect(textbox)
         .toHaveValue(LINK);
+    }),
+  );
+});
+
+describe("the example id fills the field", () => {
+  it.effect("clicking the example sets the field and takes the cursor", () =>
+    Effect.gen(function* () {
+      const s = yield* HtmlScene.make(WatchNoDeps, {});
+      s.mounted(ReadSearchField, mounted({}))
+        .expectMount(TrackHash({}))
+        .resolve(HtmlCommand.Focus, { found: true })
+        .click(HtmlLocator.role("button", { name: COPY.exampleId }))
+        .resolve(HtmlCommand.Focus, { found: true })
+        .expect(textbox)
+        .toHaveValue(COPY.exampleId);
     }),
   );
 });

@@ -49,7 +49,7 @@ function field(page: Page) {
 
 async function submit(page: Page, text: string) {
   await field(page).fill(text);
-  await page.getByRole("button", { name: "Watch now" }).click();
+  await page.getByRole("button", { name: "Find a stream" }).click();
 }
 
 function dialog(page: Page) {
@@ -80,7 +80,7 @@ async function openMatrix(page: Page) {
 
 test("A1 an empty submit asks for an id and holds the cursor", async ({ page }) => {
   await open(page);
-  await page.getByRole("button", { name: "Watch now" }).click();
+  await page.getByRole("button", { name: "Find a stream" }).click();
 
   await expect(page.getByRole("status")).toHaveText(EMPTY);
   await expect(field(page)).toHaveAttribute("aria-invalid", "true");
@@ -195,6 +195,6 @@ test("A10 a paste before hydration survives it", async ({ page }) => {
   await mounted(page);
   await expect(field(page)).toHaveValue(`https://www.imdb.com/title/${MATRIX}/`);
 
-  await page.getByRole("button", { name: "Watch now" }).click();
+  await page.getByRole("button", { name: "Find a stream" }).click();
   await expect(page.locator("#status")).toHaveText("Finding a working stream...");
 });
