@@ -4,6 +4,10 @@
       "astro-docs": {
         "type": "remote",
         "url": "https://mcp.docs.astro.build/mcp"
+      },
+      "effect-mcp": {
+        "type": "local",
+        "command": ["bunx", "effect-mcp@latest"]
       }
     }
   }
