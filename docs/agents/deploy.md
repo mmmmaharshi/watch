@@ -60,14 +60,22 @@ cf workers get watch
 ## Rate limits
 
 The Worker answers `429` after 100 requests per IP per 15 minutes
-(`src/lib/rate-limit.ts`). That counter lives in one isolate, so under load
-the real limit is 100 × the number of isolates, and it resets when an isolate
-is recycled. It is abuse control, not a guarantee.
+(`src/lib/rate-limit.ts`). That counter lives in one isolate, so it is a
+backstop, not the limit.
 
-The real limit belongs at the edge: one Rate limiting rule on the zone
-(Rules → Rate limiting rules) — path starts with `/api/watch`, 60 requests
-per minute per IP, block for 60 seconds. A shared counter in code would need a
-Durable Object; use it only if the zone rule cannot be set.
+The real limit is a zone rule: 10 requests per 10 seconds per IP, blocked for
+10 seconds, on `http.request.uri.path eq "/api/watch"`. Cloudflare counts per
+IP per colocation, and the free plan allows only a 10-second window. It lives
+in the zone ruleset `ebfee6dc9805419eb63f09307c3a29f1` (`http_ratelimit`).
+
+Recreate it after `cf auth login`:
+
+```sh
+cf rulesets create --zone maharshi.work --kind zone --phase http_ratelimit --name default --description "watch api limit"
+cf rulesets rules create <ruleset-id> --zone maharshi.work --body '{"description":"watch api","expression":"http.request.uri.path eq \"/api/watch\"","action":"block","ratelimit":{"characteristics":["ip.src","cf.colo.id"],"period":10,"requests_per_period":10,"mitigation_timeout":10}}'
+```
+
+Verify: 11 POSTs to `/api/watch` from one IP; the 11th answers `429`.
 
 ## Security headers
 
