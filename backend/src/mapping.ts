@@ -1,33 +1,16 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { USER_AGENT, WIKIDATA_HOST } from "../../src/consts";
 import { isImdbId } from "../../src/lib/parse-input";
 import type { ContentType } from "../../src/lib/types";
 import type { HttpError } from "./http";
 import { Http } from "./http";
+import { askWikidata } from "./wikidata";
 
 // Wikidata stores TMDB movie IDs in P4947 and TMDB TV IDs in P4983.
 const ID_PROPERTY = { movie: "P4947", tv: "P4983" } as const;
 
-const wikidataUrl = (property: (typeof ID_PROPERTY)[ContentType], id: string): string => {
-  const query =
-    `SELECT ?imdb WHERE { ?item wdt:${property} "${id}" . ` +
-    '?item wdt:P345 ?imdb . FILTER(STRSTARTS(?imdb, "tt")) }';
-  return `${WIKIDATA_HOST}/sparql?query=${encodeURIComponent(query)}&format=json`;
-};
-
-const WikidataAnswer = Schema.Struct({
-  results: Schema.optional(
-    Schema.Struct({
-      bindings: Schema.optional(
-        Schema.Array(
-          Schema.Struct({
-            imdb: Schema.optional(Schema.Struct({ value: Schema.optional(Schema.String) })),
-          }),
-        ),
-      ),
-    }),
-  ),
-});
+const mappingQuery = (property: (typeof ID_PROPERTY)[ContentType], id: string): string =>
+  `SELECT ?imdb WHERE { ?item wdt:${property} "${id}" . ` +
+  '?item wdt:P345 ?imdb . FILTER(STRSTARTS(?imdb, "tt")) }';
 
 export class TmdbAmbiguous extends Schema.TaggedError<TmdbAmbiguous>()("TmdbAmbiguous", {
   id: Schema.String,
@@ -61,11 +44,8 @@ export class Mapping extends Context.Service<Mapping, MappingShape>()("watch/bac
         property: (typeof ID_PROPERTY)[ContentType],
         id: string,
       ) {
-        const answer = yield* http.getJson(wikidataUrl(property, id), WikidataAnswer, {
-          "User-Agent": USER_AGENT,
-        });
-        const imdb = answer.results?.bindings?.[0]?.imdb?.value;
-        return imdb !== undefined && isImdbId(imdb) ? imdb : null;
+        const answer = yield* askWikidata(http, mappingQuery(property, id), "imdb");
+        return answer !== undefined && isImdbId(answer) ? answer : null;
       });
 
       // A known type asks one property. A bare number could be either kind, so

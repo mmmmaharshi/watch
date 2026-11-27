@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import { assertInstanceOf } from "@effect/vitest/utils";
-import { Effect, Layer } from "effect";
+import { Duration, Effect, Fiber, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import { Cache } from "../src/cache";
 import { Http, HttpError } from "../src/http";
 import type { HttpShape } from "../src/http";
@@ -54,8 +55,7 @@ const namedSeriesText: HttpShape["getText"] = (url) =>
     ? json({ meta: { name: "Some Show", year: "2020" } })
     : json(MATRIX);
 
-// Both kinds look real: a series with episodes and a movie carrying a year.
-// Wikidata's answer is the P31 root the stub returns.
+// Both kinds prove themselves: a series with episodes and a movie with a year.
 const bothLookReal =
   (root: string): HttpShape["getText"] =>
   (url) => {
@@ -69,15 +69,46 @@ const bothLookReal =
       : json({ meta: { name: "Yellowknife", year: "2002", imdbRating: "7.5" } });
   };
 
+// A hinted movie whose own record is a stub, beside a real series record.
+const hintedStubText: HttpShape["getText"] = (url) =>
+  url.includes("/meta/series/")
+    ? json({ meta: { name: "The 100", year: "2014–2020", videos: [{ id: "tt1" }] } })
+    : json({ meta: { name: "Yellowknife", year: "", releaseInfo: "2002" } });
+
 const brokenWikiText: HttpShape["getText"] = (url) =>
   url.includes("wikidata") ? notFound(url) : bothLookReal("Q5398426")(url);
+
+// Neither record proves itself: no episodes on the series, no year on the movie.
+const neitherProvesText =
+  (root: string): HttpShape["getText"] =>
+  (url) =>
+    url.includes("wikidata")
+      ? json({
+          results: { bindings: [{ root: { value: `http://www.wikidata.org/entity/${root}` } }] },
+        })
+      : url.includes("/meta/series/")
+        ? json({ meta: { name: "The 100", year: "2014–2020" } })
+        : json({ meta: { name: "Yellowknife", year: "", releaseInfo: "2002" } });
+
+// The series missed, so the stub movie is all Cinemeta has.
+const missedSeriesText: HttpShape["getText"] = (url) =>
+  url.includes("wikidata")
+    ? json({
+        results: { bindings: [{ root: { value: "http://www.wikidata.org/entity/Q5398426" } }] },
+      })
+    : url.includes("/meta/series/")
+      ? notFound(url)
+      : json({ meta: { name: "Yellowknife", year: "", releaseInfo: "2002" } });
+
+const slowWikiText: HttpShape["getText"] = (url) =>
+  url.includes("wikidata") ? Effect.never : bothLookReal("Q5398426")(url);
 
 describe("Metadata", () => {
   it.effect("a preferred kind answers without asking the other kind", () => {
     const asked: Array<string> = [];
     const getText: HttpShape["getText"] = (url) => {
       asked.push(url);
-      return json({ meta: { name: "Breaking Bad", year: "2008" } });
+      return json({ meta: { name: "Breaking Bad", year: "2008", videos: [{ id: "tt1" }] } });
     };
     return Effect.gen(function* () {
       const metadata = yield* Metadata;
@@ -193,6 +224,53 @@ describe("Metadata", () => {
       assert.strictEqual(meta.name, "The 100");
     }).pipe(Effect.provide(withStub(brokenWikiText)));
   });
+
+  it.effect("a hinted movie gives way to a series record that lists episodes", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044", "movie");
+      assert.strictEqual(meta.type, "tv");
+      assert.strictEqual(meta.name, "The 100");
+    }).pipe(Effect.provide(withStub(hintedStubText)));
+  });
+
+  it.effect("a hinted kind with no proof asks Wikidata before the stub names it", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044", "movie");
+      assert.strictEqual(meta.type, "tv");
+      assert.strictEqual(meta.name, "The 100");
+    }).pipe(Effect.provide(withStub(neitherProvesText("Q5398426"))));
+  });
+
+  it.effect("when neither kind proves itself, Wikidata decides", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.type, "movie");
+      assert.strictEqual(meta.name, "Yellowknife");
+    }).pipe(Effect.provide(withStub(neitherProvesText("Q11424"))));
+  });
+
+  it.effect("a Wikidata answer for a kind that missed keeps the record we hold", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.type, "movie");
+      assert.strictEqual(meta.name, "Yellowknife");
+    }).pipe(Effect.provide(withStub(missedSeriesText)));
+  });
+
+  it.effect("a Wikidata answer slower than 2 s falls back to Cinemeta", () =>
+    Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const fiber = yield* metadata.resolve("tt2661044").pipe(Effect.forkChild);
+      yield* Effect.yieldNow;
+      yield* TestClock.adjust(Duration.millis(2001));
+      const meta = yield* Fiber.join(fiber);
+      assert.strictEqual(meta.type, "tv");
+    }).pipe(Effect.provide(withStub(slowWikiText))),
+  );
 
   it.effect("an answer that proves itself asks no third party", () => {
     const asked: Array<string> = [];

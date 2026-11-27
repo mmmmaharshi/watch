@@ -307,18 +307,18 @@ proof of type.
 
 ## Recommendation
 
-Ordered by preference for this app. The type check should run only when the
-two Cinemeta kinds disagree, or when the winner looks like a stub (series with
-no `videos`, or a movie with a year that beat a series record). Cache the
-result with the existing 60-second metadata cache; type never changes.
+Ordered by preference for this app. The type check should run only when
+neither Cinemeta kind proves itself, or both do: a record proves its kind by
+listing episodes (series) or carrying its own `year` (movie). Cache the result
+with the existing 60-second metadata cache; type never changes.
 
 1. **Wikidata SPARQL** (keyless, 1 extra request, no package or key).
    One query with `P345` + `P31/P279*` gives the type for movies, series,
    miniseries, and episodes. It is documented and needs no key. Cost: about
    1.5 KB and 0.4-1.5 s typical, with a 5.75 s tail seen once; send a
    descriptive User-Agent. Use it as the deciding vote when Cinemeta is
-   ambiguous. Run it in parallel with the Cinemeta fetches and cap it at about
-   2 s, so the slow tail cannot stall the 5 s request budget.
+   ambiguous. It runs after both Cinemeta kinds answer and is capped at about
+   2 s, so the slow tail cannot stall the request.
 
 2. **IMDb suggestion** (keyless, 1 extra request, undocumented).
    Cheapest and fastest: about 0.2 s and 300 bytes, and it is first-party data.
@@ -344,15 +344,16 @@ result with the existing 60-second metadata cache; type never changes.
    scraping is prohibited by robots.txt.
 
 If only one change is made: add the Wikidata query as the tie-breaker in
-`bothKinds`, behind the existing 1-hour cache, and keep the current Cinemeta
+`bothKinds`, behind the existing 60-second cache, and keep the current Cinemeta
 heuristic for the common case.
 
 ## Implemented
 
-`backend/src/metadata.ts` (commit after this note) asks Wikidata only when both
-Cinemeta kinds look real, or neither does. The two Cinemeta calls finish first,
-so an unambiguous pair still costs no third-party request; the Wikidata answer
-is capped at 2 s and any failure falls back to the series record. The type query
-uses the same `WIKIDATA_HOST` constant as the TMDB-to-IMDb mapping in
-`backend/src/mapping.ts`, and the result is stored by the existing metadata
-cache.
+`backend/src/metadata.ts` asks Wikidata only when neither Cinemeta kind proves
+itself, or both do. The two Cinemeta calls finish first, so an unambiguous pair
+still costs no third-party request; the Wikidata answer is capped at 2 s and any
+failure falls back to the series record. A declared type from the caller still
+wins, but an unproven record under it is checked the same way, so a stub cannot
+name a hinted lookup. The SPARQL call itself lives in `backend/src/wikidata.ts`,
+shared with the TMDB-to-IMDb mapping, and the result is stored by the existing
+metadata cache.
