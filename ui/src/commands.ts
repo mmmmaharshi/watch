@@ -21,10 +21,8 @@ const toLookupState = (snapshot: Snapshot): LookupState => ({
 });
 
 export interface LookupEngineShape {
-  /** Sends one machine event and returns the snapshot its transition left. */
-  readonly advance: (event: LookupCommand) => Effect.Effect<LookupState>;
-  /** Waits for the running work to settle, then returns the snapshot. */
-  readonly settle: () => Effect.Effect<LookupState>;
+  /** Sends one event, waits for the work to settle, and returns the snapshot. */
+  readonly run: (event: LookupCommand) => Effect.Effect<LookupState>;
 }
 
 export class LookupEngine extends Context.Service<LookupEngine, LookupEngineShape>()(
@@ -39,25 +37,26 @@ export const lookupEngineLayer = (deps: LookupDeps) =>
       const current = () => toLookupState(actor.getSnapshot());
 
       return LookupEngine.of({
-        advance: (event) =>
-          sendAndAwait(actor, event).pipe(
-            Effect.map((snapshot) => toLookupState(snapshot)),
-            Effect.orElseSucceed(current),
-          ),
-        // A stopped actor or a timeout must not leave the page busy forever.
-        settle: () =>
-          waitFor(actor, (snapshot) => snapshot.matches("idle"), {
-            timeout: "60 seconds",
-          }).pipe(
-            Effect.map((snapshot) => toLookupState(snapshot)),
-            Effect.orElseSucceed(current),
-          ),
+        // A field error never leaves idle, and a lookup settles back to idle;
+        // the wait returns at once for the first and when the work is done for
+        // the second. A stopped actor or a timeout falls back to its snapshot.
+        run: (event) =>
+          Effect.gen(function* () {
+            yield* sendAndAwait(actor, event).pipe(Effect.orElseSucceed(() => actor.getSnapshot()));
+            return yield* waitFor(actor, (snapshot) => snapshot.matches("idle"), {
+              timeout: "60 seconds",
+            }).pipe(
+              Effect.map((snapshot) => toLookupState(snapshot)),
+              Effect.orElseSucceed(current),
+            );
+          }),
       });
     }),
   );
 
-// Sends one machine event, then reports the snapshot the transition left.
-export class AdvanceLookup extends Command.Service<AdvanceLookup>()("watch/AdvanceLookup", {
+// Sends one machine event, waits for the lookup it started, then reports the
+// snapshot it settled on.
+export class RunLookup extends Command.Service<RunLookup>()("watch/RunLookup", {
   args: { generation: Schema.Number, event: LookupCommand },
   success: WatchMessage,
 }) {
@@ -66,33 +65,8 @@ export class AdvanceLookup extends Command.Service<AdvanceLookup>()("watch/Advan
       const engine = yield* LookupEngine;
       return ({ generation, event }) =>
         engine
-          .advance(event)
-          .pipe(
-            Effect.map((snapshot) => WatchMessage.CompletedAdvanceLookup({ generation, snapshot })),
-          );
-    }),
-  );
-}
-
-// Waits for running work to settle, then reports the snapshot it left.
-export class AwaitLookupSettle extends Command.Service<AwaitLookupSettle>()(
-  "watch/AwaitLookupSettle",
-  {
-    args: { generation: Schema.Number },
-    success: WatchMessage,
-  },
-) {
-  static readonly layer = this.toLayer(
-    Effect.gen(function* () {
-      const engine = yield* LookupEngine;
-      return ({ generation }) =>
-        engine
-          .settle()
-          .pipe(
-            Effect.map((snapshot) =>
-              WatchMessage.CompletedAwaitLookupSettle({ generation, snapshot }),
-            ),
-          );
+          .run(event)
+          .pipe(Effect.map((snapshot) => WatchMessage.CompletedLookup({ generation, snapshot })));
     }),
   );
 }

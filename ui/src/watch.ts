@@ -3,8 +3,7 @@ import type { View } from "@effect/ui";
 import { Html, HtmlCommand, HtmlHead } from "@effect/ui/html";
 import { fullLinkForId, imdbUrl, parseSharedId } from "../../src/lib/parse-input";
 import {
-  AdvanceLookup,
-  AwaitLookupSettle,
+  RunLookup,
   ClearHistoryHash,
   CopyShareLink,
   DismissNotice,
@@ -39,6 +38,23 @@ const isPending = (model: WatchModel): boolean =>
   model.lookup.phase !== "idle" || model.generation > model.applied;
 const isLoading = (model: WatchModel): boolean =>
   model.lookup.phase === "looking" || model.generation > model.applied;
+
+// The line under the field and inside the dialog. A lookup in flight has no
+// snapshot yet, so the page says what it just started; a failed lookup says
+// what came back.
+const statusLine = (model: WatchModel) => {
+  if (isPending(model)) {
+    return {
+      text: model.lookup.result === null ? COPY.progress.looking : COPY.progress.retrying,
+      strong: false,
+    };
+  }
+  const { status } = model.lookup;
+  return {
+    text: status.kind === "idle" ? "" : status.text,
+    strong: status.kind === "error" || status.kind === "field",
+  };
+};
 
 function Spinner(h: H) {
   return h.span
@@ -101,6 +117,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
   const title = result === null ? "" : resultTitle(result);
   const meta = result === null ? "" : resultMeta(result);
   const disabled = isPending(model);
+  const status = statusLine(model);
   const dialogOpen = model.lookup.openId !== null && result !== null;
 
   const link = (href: string, text: string, extra: string) => {
@@ -165,7 +182,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                         Separator(h),
                         Row(h, COPY.streamUrl, [link(result.url, result.url, "break-all")]),
                       ),
-                    ...(model.lookup.status.kind === "idle"
+                    ...(status.text === ""
                       ? []
                       : [
                           h.p
@@ -173,12 +190,10 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                             .attr("aria-live", "polite")
                             .class(
                               `mt-4 text-sm leading-relaxed ${
-                                model.lookup.status.kind === "error"
-                                  ? "font-medium text-ink"
-                                  : "text-ink-2"
+                                status.strong ? "font-medium text-ink" : "text-ink-2"
                               }`,
                             )
-                            .children(model.lookup.status.text),
+                            .children(status.text),
                         ]),
                   ),
                   h.div
@@ -244,7 +259,7 @@ export const WatchNoDeps = WatchDef.make({
   update: ($, message) => {
     const advance = (event: LookupCommand) => {
       const generation = $.model.generation + 1;
-      return $.evolve({ generation }).run(AdvanceLookup.make({ generation, event }));
+      return $.evolve({ generation }).run(RunLookup.make({ generation, event }));
     };
 
     // A successful lookup is the only thing that opens the dialog. The same
@@ -254,14 +269,10 @@ export const WatchNoDeps = WatchDef.make({
         return $.model;
       }
       const previous = $.model.lookup.openId;
-      let next: Component.Step<WatchModel, WatchMessage, never, AdvanceLookup | AwaitLookupSettle> =
-        $.evolve({
-          lookup: snapshot,
-          applied: generation,
-        });
-      if (snapshot.phase !== "idle") {
-        next = next.run(AwaitLookupSettle.make({ generation }));
-      }
+      let next: Component.Step<WatchModel, WatchMessage, never, RunLookup> = $.evolve({
+        lookup: snapshot,
+        applied: generation,
+      });
       if (previous === null && snapshot.openId !== null) {
         next = next.run(WriteHistoryHash.make({ id: snapshot.openId }));
       } else if (previous !== null && snapshot.openId === null) {
@@ -292,7 +303,7 @@ export const WatchNoDeps = WatchDef.make({
           const link = fullLinkForId(sharedId, $.model.lookup.kind) ?? sharedId;
           const generation = $.model.generation + 1;
           return $.evolve({ canAutoFocus, query: link, generation }).run(
-            AdvanceLookup.make({ generation, event: { type: "hashNav", id: sharedId } }),
+            RunLookup.make({ generation, event: { type: "hashNav", id: sharedId } }),
           );
         }
         const applied = $.evolve({ canAutoFocus, query: "" });
@@ -329,12 +340,10 @@ export const WatchNoDeps = WatchDef.make({
         return $.evolve({
           generation,
           query: link,
-        }).run(AdvanceLookup.make({ generation, event: { type: "hashNav", id } }));
+        }).run(RunLookup.make({ generation, event: { type: "hashNav", id } }));
       },
 
-      CompletedAdvanceLookup: ({ generation, snapshot }) => applySnapshot(generation, snapshot),
-
-      CompletedAwaitLookupSettle: ({ generation, snapshot }) => applySnapshot(generation, snapshot),
+      CompletedLookup: ({ generation, snapshot }) => applySnapshot(generation, snapshot),
 
       RequestedCloseResult: () =>
         $.model.lookup.phase !== "idle" ? $.model : advance({ type: "close" }),
@@ -361,7 +370,7 @@ export const WatchNoDeps = WatchDef.make({
         }
         const generation = $.model.generation + 1;
         return $.evolve({ generation, notice: null }).run(
-          AdvanceLookup.make({ generation, event: { type: "close" } }),
+          RunLookup.make({ generation, event: { type: "close" } }),
           OpenStream.make({ url: result.url }),
         );
       },
@@ -373,8 +382,9 @@ export const WatchNoDeps = WatchDef.make({
   view: (h, model) => {
     const loading = isLoading(model);
     const invalid = model.lookup.status.kind === "field";
-    const statusText = model.lookup.status.kind === "idle" ? "" : model.lookup.status.text;
-    const strong = model.lookup.status.kind === "error" || model.lookup.status.kind === "field";
+    const status = statusLine(model);
+    const statusText = status.text;
+    const strong = status.strong;
     const describedBy = invalid ? "status search-hint" : "search-hint";
 
     return h.main

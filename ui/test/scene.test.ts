@@ -5,12 +5,7 @@ import { Locator } from "@effect/ui/testing";
 import { HtmlScene } from "@effect/ui/html/testing";
 import { describe, it } from "@effect/vitest";
 import { Effect } from "effect";
-import {
-  AdvanceLookup,
-  AwaitLookupSettle,
-  ClearHistoryHash,
-  WriteHistoryHash,
-} from "../src/commands";
+import { RunLookup, ClearHistoryHash, WriteHistoryHash } from "../src/commands";
 import { COPY } from "../../src/lib/copy";
 import { idleLookup } from "../src/lookup";
 import type { LookupState } from "../src/lookup";
@@ -49,10 +44,10 @@ describe("A1 — an empty submit asks for an id", () => {
         .expectMount(TrackHash({}))
         .resolve(HtmlCommand.Focus, { found: true })
         .click(watchNow)
-        .expectExact(AdvanceLookup)
+        .expectExact(RunLookup)
         .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
+          RunLookup,
+          WatchMessage.CompletedLookup({
             generation: 1,
             snapshot: snapshot({
               status: { kind: "field", text: "Enter an IMDb or TMDB ID or link." },
@@ -74,10 +69,7 @@ describe("A6 — a shared link prefills the field", () => {
       const s = yield* HtmlScene.make(WatchNoDeps, {});
       s.mounted(ReadSearchField, mounted({ hash: "#id=tt0133093" }))
         .expectMount(TrackHash({}))
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-        )
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expect(textbox)
         .toHaveValue(LINK)
         .expectNone();
@@ -105,22 +97,8 @@ describe("A10 — a paste before hydration survives it", () => {
         .expect(textbox)
         .toHaveValue(LINK)
         .click(watchNow)
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: snapshot({
-              phase: "looking",
-              status: { kind: "loading", text: "Finding a working stream..." },
-            }),
-          }),
-        )
-        .expectExact(AwaitLookupSettle)
-        .resolve(
-          AwaitLookupSettle,
-          WatchMessage.CompletedAwaitLookupSettle({ generation: 1, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expect(textbox)
         .toHaveValue(LINK);
     }),
@@ -149,16 +127,13 @@ describe("the result dialog", () => {
         .resolve(HtmlCommand.Focus, { found: true })
         .type(textbox, "tt0133093")
         .click(watchNow)
-        .expectExact(AdvanceLookup)
-        .resolve(AdvanceLookup, WatchMessage.CompletedAdvanceLookup(open))
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup(open))
         .expectExact(WriteHistoryHash)
         .resolve(WriteHistoryHash, Component.noop)
         .fire(Locator.tag("dialog"), "cancel")
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 2, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 2, snapshot: idleLookup() }))
         .expectExact(ClearHistoryHash, HtmlCommand.Focus)
         .resolve(ClearHistoryHash, Component.noop)
         .resolve(HtmlCommand.Focus, { found: true })
@@ -175,16 +150,13 @@ describe("the result dialog", () => {
         .resolve(HtmlCommand.Focus, { found: true })
         .type(textbox, "tt0133093")
         .click(watchNow)
-        .expectExact(AdvanceLookup)
-        .resolve(AdvanceLookup, WatchMessage.CompletedAdvanceLookup(open))
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup(open))
         .expectExact(WriteHistoryHash)
         .resolve(WriteHistoryHash, Component.noop)
         .mounted(TrackHash, WatchMessage.NavigatedToHash({ hash: "", search: "" }))
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 2, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 2, snapshot: idleLookup() }))
         .expectExact(ClearHistoryHash, HtmlCommand.Focus)
         .resolve(ClearHistoryHash, Component.noop)
         .resolve(HtmlCommand.Focus, { found: true })

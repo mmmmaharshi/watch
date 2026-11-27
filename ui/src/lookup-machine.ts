@@ -10,8 +10,6 @@ import { Kind, LookupInput, LookupOutcome, Result } from "../../src/lib/types";
 const MESSAGES = {
   empty: "Enter an IMDb or TMDB ID or link.",
   badLink: "Use an IMDb title link or a TMDB movie or TV link.",
-  looking: "Finding a working stream...",
-  retrying: "Finding another stream...",
   lookupFailed: COPY.lookupFailed,
   noProviders: "No other providers available.",
 } as const;
@@ -19,7 +17,6 @@ const MESSAGES = {
 export const Status = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("idle") }),
   Schema.Struct({ kind: Schema.Literal("info"), text: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("loading"), text: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("error"), text: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("field"), text: Schema.String }),
 ]);
@@ -44,22 +41,30 @@ export type LookupEvent =
   | { readonly type: "close" }
   | { readonly type: "hashNav"; readonly id: string };
 
+// One payload schema per event; the tagged commands below reuse them, so an
+// event's shape is declared once.
+const Submit = Schema.Struct({ input: Schema.String });
+const Exit = Schema.Struct({});
+const Done = Schema.Struct({ output: LookupOutcome });
+const Fail = Schema.Struct({ message: Schema.String });
+const Hash = Schema.Struct({ id: Schema.String });
+
 const Events = {
-  submit: Schema.Struct({ input: Schema.String }),
-  retry: Schema.Struct({}),
-  lookupDone: Schema.Struct({ output: LookupOutcome }),
-  fail: Schema.Struct({ message: Schema.String }),
-  close: Schema.Struct({}),
-  hashNav: Schema.Struct({ id: Schema.String }),
+  submit: Submit,
+  retry: Exit,
+  lookupDone: Done,
+  fail: Fail,
+  close: Exit,
+  hashNav: Hash,
 };
 
 // The four events the page sends. The machine's replies (`lookupDone`, `fail`)
 // stay inside.
 export const LookupCommand = Schema.Union([
-  Schema.Struct({ type: Schema.Literal("submit"), input: Schema.String }),
-  Schema.Struct({ type: Schema.Literal("retry") }),
-  Schema.Struct({ type: Schema.Literal("close") }),
-  Schema.Struct({ type: Schema.Literal("hashNav"), id: Schema.String }),
+  Schema.Struct({ type: Schema.Literal("submit"), ...Submit.fields }),
+  Schema.Struct({ type: Schema.Literal("retry"), ...Exit.fields }),
+  Schema.Struct({ type: Schema.Literal("close"), ...Exit.fields }),
+  Schema.Struct({ type: Schema.Literal("hashNav"), ...Hash.fields }),
 ]);
 export type LookupCommand = typeof LookupCommand.Type;
 
@@ -71,7 +76,6 @@ export interface LookupDeps {
 }
 
 const idleStatus = (): Status => ({ kind: "idle" });
-const loadingStatus = (text: string): Status => ({ kind: "loading", text });
 const errorStatus = (text: string): Status => ({ kind: "error", text });
 const fieldStatus = (text: string): Status => ({ kind: "field", text });
 
@@ -118,14 +122,12 @@ const onSubmit = (context: LookupContext, input: string): Move => {
   return {
     target: "looking",
     reenter: true,
-    context: { linkSubmit: isLinkLike(value), status: loadingStatus(MESSAGES.looking) },
+    context: { linkSubmit: isLinkLike(value) },
   };
 };
 
 const onRetry = (context: LookupContext): Move | undefined =>
-  context.result
-    ? { target: "retrying", context: { status: loadingStatus(MESSAGES.retrying) } }
-    : undefined;
+  context.result ? { target: "retrying" } : undefined;
 
 // One success move. Every completed lookup opens its own result, and a submit
 // that came from a link sets the kind a later bare id will use; a bare id

@@ -20,6 +20,10 @@ export const COPY = {
   provider: "Provider",
   streamUrl: "Stream URL",
   // Shared with the Worker: the outcome and lookup error text.
+  progress: {
+    looking: "Finding a working stream...",
+    retrying: "Finding another stream...",
+  },
   tmdbNotFound: "TMDB ID not found",
   lookupFailed: "Something went wrong. Try again.",
 } as const;

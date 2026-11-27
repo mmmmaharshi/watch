@@ -1,10 +1,9 @@
-import { Component } from "@effect/ui";
 import { BrowserHost, HtmlHydrate } from "@effect/ui/html";
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
+import { makeApp } from "./app";
 import type { LookupDeps } from "./lookup-machine";
-import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "./commands";
 import { readState, seedQuery } from "./state";
-import { SEARCH_FIELD_NAME, WatchNoDeps } from "./watch";
+import { SEARCH_FIELD_NAME } from "./watch";
 
 // Called by the host page once the Worker endpoints exist. The effects that
 // fetch live in the deps, never in the view.
@@ -12,11 +11,7 @@ export const start = (deps: LookupDeps, container: HTMLElement | null) => {
   if (container === null) {
     throw new Error("The #app container is missing.");
   }
-  const engine = lookupEngineLayer(deps);
-  const domain = Layer.mergeAll(AdvanceLookup.layer, AwaitLookupSettle.layer).pipe(
-    Layer.provide(engine),
-  );
-  const app = WatchNoDeps.pipe(Component.provide(domain));
+  const app = makeApp(deps);
   const text = document.getElementById("state")?.textContent;
   const parsed = readState(text);
   const fieldText = container.querySelector<HTMLInputElement>(

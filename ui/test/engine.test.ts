@@ -15,32 +15,18 @@ const MATRIX = {
 // The engine is the one place the UI touches the real XState machine. This
 // test drives it with fake services so a broken wire fails here, not in e2e.
 describe("the lookup engine", () => {
-  it.effect("advance shows the machine working and settle returns its answer", () =>
+  it.effect("run returns the snapshot the lookup settles on", () =>
     Effect.gen(function* () {
       const reply = yield* Deferred.make<LookupOutcome>();
+      yield* Deferred.succeed(reply, { ok: true, result: MATRIX });
       const deps: LookupDeps = {
         lookup: () => Deferred.await(reply),
       };
 
-      const settled = yield* Effect.scoped(
-        Effect.gen(function* () {
-          const engine = yield* LookupEngine;
-          const looking = yield* engine.advance({ type: "submit", input: "tt0133093" });
-          assert.strictEqual(looking.phase, "looking");
-          assert.deepStrictEqual(looking.status, {
-            kind: "loading",
-            text: "Finding a working stream...",
-          });
-
-          yield* Effect.forkChild(
-            Effect.gen(function* () {
-              yield* Deferred.succeed(reply, { ok: true, result: MATRIX });
-            }),
-          );
-
-          return yield* engine.settle();
-        }).pipe(Effect.provide(lookupEngineLayer(deps))),
-      );
+      const settled = yield* Effect.gen(function* () {
+        const engine = yield* LookupEngine;
+        return yield* engine.run({ type: "submit", input: "tt0133093" });
+      }).pipe(Effect.provide(lookupEngineLayer(deps)));
 
       assert.strictEqual(settled.phase, "idle");
       assert.deepStrictEqual(settled.result, MATRIX);

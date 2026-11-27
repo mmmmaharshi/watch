@@ -4,8 +4,7 @@ import { Story } from "@effect/ui/testing";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 import {
-  AdvanceLookup,
-  AwaitLookupSettle,
+  RunLookup,
   ClearHistoryHash,
   CopyShareLink,
   DismissNotice,
@@ -73,11 +72,8 @@ describe("a successful lookup", () => {
     Effect.gen(function* () {
       const s = yield* Story.make(WatchNoDeps, {});
       s.send(WatchMessage.SubmittedSearch())
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: opened }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: opened }))
         .expectExact(WriteHistoryHash)
         .resolve(WriteHistoryHash, Component.noop);
       assert.strictEqual(s.model.lookup.openId, MATRIX.id);
@@ -92,39 +88,25 @@ describe("a successful lookup", () => {
       const current = idleLookup();
       const s = yield* Story.make(WatchNoDeps, {});
       s.send(WatchMessage.SubmittedSearch()).resolve(
-        AdvanceLookup,
-        WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: current }),
+        RunLookup,
+        WatchMessage.CompletedLookup({ generation: 1, snapshot: current }),
       );
       s.send(WatchMessage.SubmittedSearch()).resolve(
-        AdvanceLookup,
-        WatchMessage.CompletedAdvanceLookup({ generation: 2, snapshot: current }),
+        RunLookup,
+        WatchMessage.CompletedLookup({ generation: 2, snapshot: current }),
       );
       // A late reply from the first attempt must not touch the page.
-      s.send(WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: stale })).expectNone();
+      s.send(WatchMessage.CompletedLookup({ generation: 1, snapshot: stale })).expectNone();
       assert.strictEqual(s.model.lookup.result, null);
       assert.strictEqual(s.model.lookup.openId, null);
     }),
   );
 
-  it.effect("a busy snapshot asks for the settled one", () =>
+  it.effect("a settled snapshot opens the result and writes the hash", () =>
     Effect.gen(function* () {
       const s = yield* Story.make(WatchNoDeps, {});
       s.send(WatchMessage.SubmittedSearch())
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({
-            generation: 1,
-            snapshot: snapshot({
-              phase: "looking",
-              status: { kind: "loading", text: "Finding a working stream..." },
-            }),
-          }),
-        )
-        .expectExact(AwaitLookupSettle)
-        .resolve(
-          AwaitLookupSettle,
-          WatchMessage.CompletedAwaitLookupSettle({ generation: 1, snapshot: opened }),
-        )
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: opened }))
         .expectExact(WriteHistoryHash)
         .resolve(WriteHistoryHash, Component.noop);
       assert.strictEqual(s.model.lookup.openId, MATRIX.id);
@@ -157,11 +139,8 @@ describe("Escape and the dialog", () => {
       const s = yield* Story.make(WatchNoDeps, {});
       s.given({ ...initModel(), lookup: opened, canAutoFocus: true })
         .send(WatchMessage.RequestedCloseResult())
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expectExact(ClearHistoryHash, HtmlCommand.Focus)
         .resolve(ClearHistoryHash, Component.noop)
         .resolve(HtmlCommand.Focus, { found: true });
@@ -174,11 +153,8 @@ describe("Escape and the dialog", () => {
       const s = yield* Story.make(WatchNoDeps, {});
       s.given({ ...initModel(), lookup: opened })
         .send(WatchMessage.NavigatedToHash({ hash: "", search: "" }))
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expectExact(ClearHistoryHash)
         .resolve(ClearHistoryHash, Component.noop);
       assert.strictEqual(s.model.lookup.openId, null);
@@ -240,11 +216,8 @@ describe("watching the stream", () => {
       const s = yield* Story.make(WatchNoDeps, {});
       s.given({ ...initModel(), lookup: opened })
         .send(WatchMessage.ClickedWatch())
-        .expectExact(AdvanceLookup, OpenStream)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: idleLookup() }),
-        )
+        .expectExact(RunLookup, OpenStream)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: idleLookup() }))
         .expectExact(OpenStream, ClearHistoryHash)
         .resolve(OpenStream, Component.noop)
         .resolve(ClearHistoryHash, Component.noop)
@@ -299,11 +272,8 @@ describe("history", () => {
       const s = yield* Story.make(WatchNoDeps, {});
       s.given(model)
         .send(WatchMessage.NavigatedToHash({ hash: `#id=${MATRIX.id}`, search: "" }))
-        .expectExact(AdvanceLookup)
-        .resolve(
-          AdvanceLookup,
-          WatchMessage.CompletedAdvanceLookup({ generation: 1, snapshot: model.lookup }),
-        )
+        .expectExact(RunLookup)
+        .resolve(RunLookup, WatchMessage.CompletedLookup({ generation: 1, snapshot: model.lookup }))
         .expectNone();
       assert.strictEqual(s.model.query, "The Matrix");
     }),

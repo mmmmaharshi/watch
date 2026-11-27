@@ -15,11 +15,7 @@ export const WatchMessage = UiSchema.TaggedEnum({
   SubmittedSearch: {},
   ClickedRetry: {},
   NavigatedToHash: { hash: Schema.String, search: Schema.String },
-  CompletedAdvanceLookup: {
-    generation: Schema.Number,
-    snapshot: LookupState,
-  },
-  CompletedAwaitLookupSettle: {
+  CompletedLookup: {
     generation: Schema.Number,
     snapshot: LookupState,
   },

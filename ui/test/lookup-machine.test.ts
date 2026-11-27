@@ -70,10 +70,7 @@ describe("lookup machine", () => {
       const actor = yield* createEffectActor(createLookupMachine(deps));
       const snap = yield* sendAndAwait(actor, { type: "submit", input: "tt0133093" });
       assert.strictEqual(snap.value, "looking");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "loading",
-        text: "Finding a working stream...",
-      });
+      assert.strictEqual(snap.context.linkSubmit, false);
       assert.deepStrictEqual(
         lookups.map((call) => call.input),
         [{ id: "tt0133093", kind: "movie", strictKind: true }],

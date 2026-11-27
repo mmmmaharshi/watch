@@ -5,7 +5,7 @@ import { TestHost } from "@effect/ui/testing";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import type { LookupDeps } from "../src/lookup-machine";
-import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "../src/commands";
+import { RunLookup, lookupEngineLayer } from "../src/commands";
 import { COPY } from "../../src/lib/copy";
 import { WatchNoDeps } from "../src/watch";
 
@@ -24,11 +24,7 @@ const fakeDeps: LookupDeps = {
 };
 
 const WatchTest = WatchNoDeps.pipe(
-  Component.provide(
-    Layer.mergeAll(AdvanceLookup.layer, AwaitLookupSettle.layer).pipe(
-      Layer.provide(lookupEngineLayer(fakeDeps)),
-    ),
-  ),
+  Component.provide(RunLookup.layer.pipe(Layer.provide(lookupEngineLayer(fakeDeps)))),
 );
 
 const textbox = HtmlLocator.role("textbox", { name: COPY.fieldLabel });
