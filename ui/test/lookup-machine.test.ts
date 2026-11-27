@@ -1,8 +1,9 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Deferred, Effect } from "effect";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
-import { createLookupMachine } from "../src/lookup-machine";
+import { createLookupMachine, LookupContext } from "../src/lookup-machine";
 import type { LookupDeps } from "../src/lookup-machine";
+import { LookupState } from "../src/lookup";
 import type { LookupInput, LookupOutcome } from "../../src/lib/types";
 
 const MATRIX_RESULT = {
@@ -286,4 +287,10 @@ describe("lookup machine", () => {
       assert.strictEqual(snap.context.status.kind, "error");
     }).pipe(Effect.scoped),
   );
+});
+
+it("the page state carries every machine context field", () => {
+  for (const key of Object.keys(LookupContext.fields)) {
+    assert.ok(key in LookupState.fields, key);
+  }
 });

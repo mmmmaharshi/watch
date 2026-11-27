@@ -6,11 +6,16 @@ import type { HttpShape } from "../src/http";
 import { ProviderList } from "../src/provider-list";
 import {
   DIRECTORY_URL,
+  NXSHA,
+  TWOEMBED,
+  VIDCORE,
   VIDFAST,
+  VIDFAST_DIRECTORY_URL,
   VIDLINK,
   VIDZEE,
   buildEmbedUrl,
   parseActiveDomains,
+  parseMirrorOrigins,
 } from "../../src/lib/providers";
 import type { Provider, ProvidersFile } from "../../src/lib/providers";
 import { Kind } from "../../src/lib/types";
@@ -20,6 +25,8 @@ import type { ContentType } from "../../src/lib/types";
 
 const embeds = (base: string, type: ContentType = "movie", id = "tt1") =>
   `${base}/embed/${type}/${id}`;
+const VIDLINK_BODY = "<html>tmdb vidlink</html>";
+const VIDZEE_BODY = "<html>tmdb vidzee</html>";
 const probeUrl = (provider: Provider, type: ContentType = "movie", id = "tt1") =>
   buildEmbedUrl(provider, type, id);
 const valueTag = (url: string) => `<button data-val="${url}">copy</button>`;
@@ -149,7 +156,7 @@ describe("Providers", () => {
       const h = yield* makeHarness;
       h.routes.set(DIRECTORY_URL, directoryPage(["https://dir.test"]));
       h.routes.set(embeds("https://dir.test"), "<html>");
-      h.routes.set(probeUrl(VIDLINK), "<html>");
+      h.routes.set(probeUrl(VIDLINK), VIDLINK_BODY);
 
       const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
 
@@ -161,7 +168,7 @@ describe("Providers", () => {
   it.effect("the static providers answer when the directory has no live host", () =>
     Effect.gen(function* () {
       const h = yield* makeHarness;
-      h.routes.set(probeUrl(VIDLINK), "<html>");
+      h.routes.set(probeUrl(VIDLINK), VIDLINK_BODY);
       h.routes.set(probeUrl(VIDFAST), "<html>");
 
       const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
@@ -174,13 +181,93 @@ describe("Providers", () => {
   it.effect("VidZee answers when VidLink fails", () =>
     Effect.gen(function* () {
       const h = yield* makeHarness;
-      h.routes.set(probeUrl(VIDZEE), "<html>");
+      h.routes.set(probeUrl(VIDZEE), VIDZEE_BODY);
       h.routes.set(probeUrl(VIDFAST), "<html>");
 
       const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
 
       assert.strictEqual(stream.provider, "player.vidzee.wtf");
       assert.ok(!(yield* Ref.get(h.requests)).includes(probeUrl(VIDFAST)));
+    }),
+  );
+
+  it.effect("Nxsha answers when VidLink and VidZee fail", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(probeUrl(NXSHA), "<html>");
+      h.routes.set(probeUrl(VIDFAST), "<html>");
+
+      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
+
+      assert.strictEqual(stream.provider, "nxsha.space");
+      assert.ok(!(yield* Ref.get(h.requests)).includes(probeUrl(VIDFAST)));
+    }),
+  );
+
+  it.effect("2Embed answers when the earlier providers fail", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(probeUrl(TWOEMBED), "<html>");
+
+      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
+
+      assert.strictEqual(stream.provider, "2embed.stream");
+    }),
+  );
+
+  it.effect("VidFast follows its published mirror list", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(
+        VIDFAST_DIRECTORY_URL,
+        '<a href="https://vidfast2.test/">vidfast2.test</a><a href="https://discord.gg/x">chat</a>',
+      );
+      h.routes.set("https://vidfast2.test/movie/tt1", "<html>");
+
+      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
+
+      assert.strictEqual(stream.provider, "vidfast2.test");
+    }),
+  );
+
+  it.effect("an unreachable VidFast mirror list keeps the hardcoded host", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(probeUrl(VIDFAST), "<html>");
+
+      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
+
+      assert.strictEqual(stream.provider, "vidfast.vc");
+    }),
+  );
+
+  it.effect("VidCore answers when the earlier providers fail", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(probeUrl(VIDCORE), "<html>");
+
+      const stream = Option.getOrThrow(yield* withProviders(h.getText, select));
+
+      assert.strictEqual(stream.provider, "vidcore.net");
+    }),
+  );
+
+  it.effect("a mirror directory is fetched once", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(VIDFAST_DIRECTORY_URL, '<a href="https://vidfast2.test/">vidfast2.test</a>');
+      h.routes.set("https://vidfast2.test/movie/tt1", "<html>");
+
+      const program = Effect.gen(function* () {
+        const providers = yield* Providers;
+        yield* select(providers);
+        return yield* select(providers);
+      });
+
+      yield* program.pipe(Effect.provide(providersLayer(h.getText)));
+
+      const fetches = (yield* Ref.get(h.requests)).filter((url) => url === VIDFAST_DIRECTORY_URL);
+      assert.strictEqual(fetches.length, 1);
     }),
   );
 
@@ -198,7 +285,7 @@ describe("Providers", () => {
   it.effect("a cached provider is probed before the directory on a repeat lookup", () =>
     Effect.gen(function* () {
       const h = yield* makeHarness;
-      h.routes.set(probeUrl(VIDLINK), "<html>");
+      h.routes.set(probeUrl(VIDLINK), VIDLINK_BODY);
 
       const program = Effect.gen(function* () {
         const providers = yield* Providers;
@@ -217,12 +304,13 @@ describe("Providers", () => {
     }),
   );
 
-  it.effect("an excluded provider never wins", () =>
+  it.effect("a retry leaves the whole directory", () =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
       h.routes.set(embeds("https://a.test"), "<html>");
       h.routes.set(embeds("https://b.test"), "<html>");
+      h.routes.set(probeUrl(VIDLINK), VIDLINK_BODY);
 
       const stream = Option.getOrThrow(
         yield* withProviders(
@@ -232,12 +320,28 @@ describe("Providers", () => {
         ),
       );
 
-      assert.strictEqual(stream.provider, "b.test");
+      assert.strictEqual(stream.provider, "vidlink.pro");
       assert.ok(!(yield* Ref.get(h.requests)).includes(embeds("https://a.test")));
+      assert.ok(!(yield* Ref.get(h.requests)).includes(embeds("https://b.test")));
     }),
   );
 
-  it.effect("an excluded provider that is the only candidate yields no stream", () =>
+  it.effect("a retry from VidLink still tries VidZee", () =>
+    Effect.gen(function* () {
+      const h = yield* makeHarness;
+      h.routes.set(probeUrl(VIDZEE), VIDZEE_BODY);
+
+      const stream = Option.getOrThrow(
+        yield* withProviders(h.getText, (providers) =>
+          providers.selectStream({ type: "movie", id: "tt1", exclude: "vidlink.pro" }),
+        ),
+      );
+
+      assert.strictEqual(stream.provider, "player.vidzee.wtf");
+    }),
+  );
+
+  it.effect("a retry with no other tier yields no stream", () =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const h = yield* makeHarness;
@@ -334,6 +438,15 @@ describe("Providers rules", () => {
     assert.strictEqual(buildEmbedUrl(provider, type, id), `https://x.test/custom/${type}/${id}`);
   });
 
+  it("the mirror list keeps bare origins and drops links with a path", () => {
+    assert.deepStrictEqual(
+      parseMirrorOrigins(
+        '<a href="https://a.test/">a</a><a href="https://b.test">b</a><a href="https://discord.gg/x">c</a>',
+      ),
+      ["https://a.test", "https://b.test"],
+    );
+  });
+
   it("VidZee uses the season path for TV", () => {
     assert.strictEqual(
       buildEmbedUrl(VIDZEE, "tv", "tt0903747"),
@@ -342,6 +455,36 @@ describe("Providers rules", () => {
     assert.strictEqual(
       buildEmbedUrl(VIDZEE, "movie", "tt0133093"),
       "https://player.vidzee.wtf/embed/movie/tt0133093",
+    );
+  });
+
+  it("Nxsha and 2Embed use the same season path", () => {
+    assert.strictEqual(
+      buildEmbedUrl(NXSHA, "tv", "tt0903747"),
+      "https://nxsha.space/embed/tv/tt0903747/1/1",
+    );
+    assert.strictEqual(
+      buildEmbedUrl(NXSHA, "movie", "tt0133093"),
+      "https://nxsha.space/embed/movie/tt0133093",
+    );
+    assert.strictEqual(
+      buildEmbedUrl(TWOEMBED, "tv", "tt0903747"),
+      "https://2embed.stream/embed/tv/tt0903747/1/1",
+    );
+    assert.strictEqual(
+      buildEmbedUrl(TWOEMBED, "movie", "tt0133093"),
+      "https://2embed.stream/embed/movie/tt0133093",
+    );
+  });
+
+  it("VidCore uses the plain season path", () => {
+    assert.strictEqual(
+      buildEmbedUrl(VIDCORE, "tv", "tt0903747"),
+      "https://vidcore.net/tv/tt0903747/1/1",
+    );
+    assert.strictEqual(
+      buildEmbedUrl(VIDCORE, "movie", "tt0133093"),
+      "https://vidcore.net/movie/tt0133093",
     );
   });
 });

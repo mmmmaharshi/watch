@@ -2,19 +2,16 @@ import { Clock, Effect, Option, Schema } from "effect";
 import {
   BOGUS_ID,
   PROBE_ID,
+  ROT_ALARM_MS,
   buildProvidersJson,
   hasPlayerApi,
   hasSignedSrc,
-  isVidFastAlive,
-  isVidLinkPairAlive,
-  isVidZeeAlive,
-  needsRotAlarm,
+  isAlive,
 } from "../../src/lib/provider-probes";
 import {
   DIRECTORY_URL,
-  VIDFAST,
+  PROVIDER_TIERS,
   VIDLINK,
-  VIDZEE,
   buildEmbedUrl,
   parseActiveDomains,
 } from "../../src/lib/providers";
@@ -97,7 +94,7 @@ export const runRefresh = (deps: RefreshDeps): Effect.Effect<RefreshOutcome, Ref
       }
       const updatedAt = Date.parse(current.value.updatedAt);
       const ageMs = Number.isNaN(updatedAt) ? null : now - updatedAt;
-      if (needsRotAlarm(ageMs)) {
+      if (ageMs === null || ageMs > ROT_ALARM_MS) {
         return yield* new RefreshFailed({
           reason: "directory_unreachable_and_stale",
           detail: `directory fetch failed and the stored list is ${String(ageMs)}ms old`,
@@ -119,32 +116,26 @@ export const runRefresh = (deps: RefreshDeps): Effect.Effect<RefreshOutcome, Ref
     const alive = checked.filter((one) => one.ok).map((one) => one.origin);
     const skipped = checked.filter((one) => !one.ok).map((one) => one.origin);
 
-    const vidLink = yield* Effect.gen(function* () {
-      const valid = yield* probeEmbed(deps, VIDLINK, PROBE_ID);
-      const bogus = yield* probeEmbed(deps, VIDLINK, BOGUS_ID);
-      return isVidLinkPairAlive(valid, bogus);
-    }).pipe(Effect.orElseSucceed(() => false));
-    if (vidLink) {
-      alive.push(VIDLINK.baseUrl);
-    } else {
-      skipped.push(VIDLINK.baseUrl);
-    }
-
-    const vidZee = yield* probeEmbed(deps, VIDZEE, PROBE_ID).pipe(Effect.option);
-    if (Option.isSome(vidZee) && isVidZeeAlive(vidZee.value.status, vidZee.value.body)) {
-      alive.push(VIDZEE.baseUrl);
-    } else {
-      skipped.push(VIDZEE.baseUrl);
-    }
-
-    const vidFast = yield* probeEmbed(deps, VIDFAST, PROBE_ID).pipe(Effect.option);
-    const vidFastAlive = Option.isSome(vidFast) && isVidFastAlive(vidFast.value.status);
-
-    const file = buildProvidersJson(
-      alive,
-      new Date(now).toISOString(),
-      vidFastAlive ? [VIDFAST.baseUrl] : [],
+    // The stored file holds only the VidSrc domains: they are the only hosts
+    // with the default /embed shape. Every static provider is still probed, so
+    // a dead one is named in the log.
+    const health = yield* Effect.forEach(
+      PROVIDER_TIERS.flat(),
+      (spec) =>
+        Effect.gen(function* () {
+          const provider = spec.provider;
+          const valid = yield* probeEmbed(deps, provider, PROBE_ID);
+          if (provider.name !== VIDLINK.name) {
+            return { provider, ok: isAlive(provider, valid) };
+          }
+          const bogus = yield* probeEmbed(deps, provider, BOGUS_ID);
+          return { provider, ok: isAlive(provider, valid) && !isAlive(provider, bogus) };
+        }).pipe(Effect.orElseSucceed(() => ({ provider: spec.provider, ok: false }))),
+      { concurrency: 4 },
     );
+    skipped.push(...health.filter((one) => !one.ok).map((one) => one.provider.baseUrl));
+
+    const file = buildProvidersJson(alive, new Date(now).toISOString());
     if (!file.providers.length) {
       return yield* new RefreshFailed({
         reason: "no_providers",

@@ -39,9 +39,9 @@ aggregator lists were used as evidence.
   with no name-based gate: listing plus a live probe decides.
 - **Already wired:** VidFast uses a custom path `/movie/{id}` for movies and `/tv/{id}/1/1` for TV
   ([providers.ts](../src/lib/providers.ts)), matching the [official endpoints](https://vidfast.vc/).
-- **Small change:** AutoEmbed and SuperEmbed accept IMDb IDs, so they need only a custom `path` plus
-  a host-allowlist edit; SuperEmbed uses a query string, not path segments
-  ([AutoEmbed](https://autoembed.me), [SuperEmbed](https://www.superembed.stream/)).
+- **Small change:** SuperEmbed accepts IMDb IDs, so it needs only a custom `path` plus
+  a host entry; it uses a query string, not path segments
+  ([SuperEmbed](https://www.superembed.stream/)).
 - **Needs an IMDb→TMDB mapping first:** VidLink and Videasy document TMDB IDs only
   ([VidLink](https://vidlink.pro/), [Videasy](https://www.videasy.to/docs)). TMDB find-by-id can
   supply that mapping, but it needs a key ([TMDB docs](https://developer.themoviedb.org/reference/find-by-id)),
@@ -52,6 +52,76 @@ aggregator lists were used as evidence.
   with the right path shape, not an allowlist edit.
 - **TV default:** for providers with required season/episode, the existing `1/1` convention from the
   VidFast fallback can be reused ([providers.ts](../src/lib/providers.ts)).
+
+## AutoEmbed's player servers (checked 2026-11-27)
+
+Source: the player config in `watch-v2.autoembed.app`'s JS bundle
+(`common-48faf7daf3126862.js`). The site stores four arrays (movie, TV, anime,
+and one more). About 50 distinct hosts, with language and "server" variants
+reusing the same host.
+
+| Host                                        | Server names on the site                             | ID AutoEmbed sends                          |
+| ------------------------------------------- | ---------------------------------------------------- | ------------------------------------------- |
+| `player.vidplus.pro`, `player2.vidplus.pro` | Premium, V2                                          | TMDB                                        |
+| `player.videasy.to`                         | 4K, Max (anime)                                      | TMDB / AniList                              |
+| `vidlink.pro`                               | Echo                                                 | TMDB / AniList                              |
+| `vidfast.vc`                                | Vidfast                                              | TMDB                                        |
+| `nxsha.space`                               | Nxsha, Prime, Netflix, Hotstar, and 10 language rows | TMDB                                        |
+| `vixsrc.to`                                 | Vidpro, Italy                                        | TMDB                                        |
+| `ythd.org`                                  | Max                                                  | TMDB                                        |
+| `vidsuper.net`                              | Super                                                | TMDB                                        |
+| `vidcore.net`                               | Vidcore                                              | TMDB                                        |
+| `vidrock.net`                               | Rock                                                 | TMDB                                        |
+| `vidnest.fun`                               | Vidnest, VN DUB, VN SUB                              | TMDB / AniList                              |
+| `cinemaos.tech`                             | Cinemaos                                             | TMDB                                        |
+| `2embed.stream`                             | 2Embed                                               | TMDB                                        |
+| `moviesapi.to`                              | Bravo                                                | TMDB                                        |
+| `111movies.net`                             | 111                                                  | TMDB                                        |
+| `flicky.host`                               | Flicky                                               | TMDB                                        |
+| `frembed.hair`                              | French                                               | TMDB                                        |
+| `superflixapi.lifestyle`                    | Jade                                                 | TMDB                                        |
+| `rozgarlelo.modiplay.xyz`                   | Mplay                                                | TMDB                                        |
+| `nhdapi.com`                                | NHD                                                  | TMDB                                        |
+| `peachify.top`                              | Peachify                                             | TMDB                                        |
+| `www.nontongo.win`                          | Tongo                                                | TMDB                                        |
+| `www.vidking.net`                           | Vidking                                              | TMDB                                        |
+| `www.rivestream.app`                        | Rive                                                 | TMDB                                        |
+| `primesrc.me`                               | Primesrc                                             | IMDb (movie), TMDB (TV)                     |
+| `play.xpass.top`                            | Xpass                                                | IMDb                                        |
+| `autoembed.cc`                              | Asia                                                 | MAL                                         |
+| `/api/hdmovies/embed`                       | Hdmovies                                             | IMDb, but a proxy on AutoEmbed's own origin |
+
+The ID column is what AutoEmbed sends, not what this app sends. This app sends
+the IMDb id. The hosts marked TMDB also answered an IMDb id in the tests below.
+
+### What this means for this repo
+
+- **Two kinds of provider.** A _directory_ publishes live mirror domains, so a
+  domain move needs no code edit (VidSrc, VidFast). A _multi-source host_ keeps
+  several sources inside its own player, so one dead CDN link is its problem,
+  not ours (VidSrc, Nxsha, 2Embed). Only these two kinds survive link expiry
+  and blocks without a code change.
+- **VidFast mirrors are read at runtime.** `parseMirrorOrigins` reads the bare
+  origin links from `vidfast.domains`; an unreachable page keeps the hardcoded
+  `vidfast.vc`. The list holds one domain today.
+- **AutoEmbed is not wired.** Its watch site cannot be linked. `Play Now` posts
+  to `/api/watch/start`, which sets a signed `watch_session` cookie, then opens
+  the client route `/watch/movie`. The id never appears in the URL, and a
+  direct GET of that route answers 404. The video itself comes from the
+  third-party hosts in the table above.
+- **Almost all of them take a TMDB id.** This repo resolves to IMDb, and the
+  reverse map needs the TMDB key that the repo does not use. Those hosts are
+  not drop-ins.
+- **Verified with an IMDb id:** `nxsha.space`, `2embed.stream`, and
+  `vidcore.net`, for both movie and TV. A valid title appears in the body; a
+  bogus id does not. All three are static fallbacks after VidLink and VidZee.
+- **Not added:** `cinemaos.tech` answers IMDb for movies but showed no per-title
+  signal for TV. `play.xpass.top` and `primesrc.me` return the same shell for a
+  bogus id.
+- **Checked and unreachable on this date:** `vidsuper.net`, `player.videasy.to`,
+  and `www.vidking.net` failed DNS; `peachify.top` returned 523;
+  `player.vidplus.pro` timed out; `vixsrc.to` and `moviesapi.to` returned a
+  Cloudflare challenge; `nhdapi.com` timed out.
 
 ## Gaps / needs validation
 
