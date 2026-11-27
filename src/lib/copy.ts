@@ -1,8 +1,11 @@
-// Every string the UI shows. DESIGN.md quotes the same copy.
+// Every string a person reads, in one place: the page, the machine's status
+// lines, the Worker's outcome errors, and the static shell's meta text.
+const INTRO = "Free, no sign-up. One ID in, one stream link out.";
+
 export const COPY = {
   title: "watch — find a stream link by IMDb or TMDB ID",
   wordmark: "watch",
-  intro: "Free, no sign-up. One ID in, one stream link out.",
+  intro: INTRO,
   fieldLabel: "IMDb or TMDB ID or link",
   placeholder: "IMDb or TMDB ID, or link",
   hint: "Eg: tt0371746",
@@ -19,13 +22,33 @@ export const COPY = {
   imdb: "IMDb",
   provider: "Provider",
   streamUrl: "Stream URL",
-  // Shared with the Worker: the outcome and lookup error text.
   progress: {
     looking: "Finding a working stream...",
     retrying: "Finding another stream...",
   },
-  tmdbNotFound: "TMDB ID not found",
-  lookupFailed: "Something went wrong. Try again.",
+  // The result dialog's type label.
+  resultTypes: { tv: "TV Show", movie: "Movie" },
+  // The machine's field and failure lines.
+  machine: {
+    empty: "Enter an IMDb or TMDB ID or link.",
+    badLink: "Use an IMDb title link or a TMDB movie or TV link.",
+    noProviders: "No other providers available.",
+    failed: "Something went wrong. Try again.",
+  },
+  // The Worker's outcome errors, shown after a failed lookup.
+  outcome: {
+    invalidInput: "Invalid IMDb or TMDB ID",
+    tmdbAmbiguous: "TMDB ID is ambiguous. Use a movie or TV link.",
+    tmdbNotFound: "TMDB ID not found",
+    metadataMissing: "Failed to detect content type",
+    noProviders: "No working providers available",
+  },
+  // The static page around the app.
+  shell: {
+    description: `${INTRO} Paste an IMDb or TMDB ID or link.`,
+    noscript: "This page needs JavaScript to find a stream link.",
+    imageAlt: "watch — paste an IMDb or TMDB ID or link to get a stream link.",
+  },
 } as const;
 
 // The dialog's exit note names the provider, so it cannot be a plain string.

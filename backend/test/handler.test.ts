@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Layer, Option } from "effect";
 import { Handler } from "../src/handler";
+import { COPY } from "../../src/lib/copy";
 import type { LookupInput } from "../../src/lib/types";
 import { Mapping, TmdbAmbiguous, TmdbNotFound } from "../src/mapping";
 import type { MappingShape } from "../src/mapping";
@@ -45,7 +46,7 @@ describe("Handler", () => {
         ok: false,
         status: 400,
         reason: "invalid_input",
-        error: "Invalid IMDb or TMDB ID",
+        error: COPY.outcome.invalidInput,
       });
     }),
   );
@@ -93,7 +94,7 @@ describe("Handler", () => {
         ok: false,
         status: 502,
         reason: "metadata_missing",
-        error: "Failed to detect content type",
+        error: COPY.outcome.metadataMissing,
       });
     }),
   );
@@ -112,7 +113,7 @@ describe("Handler", () => {
         ok: false,
         status: 503,
         reason: "no_providers",
-        error: "No working providers available",
+        error: COPY.outcome.noProviders,
       });
     }),
   );
@@ -139,7 +140,7 @@ describe("Handler", () => {
         ok: false,
         status: 502,
         reason: "metadata_missing",
-        error: "Failed to detect content type",
+        error: COPY.outcome.metadataMissing,
       });
     });
   });

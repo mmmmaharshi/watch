@@ -25,31 +25,31 @@ const INVALID: HandlerOutcome = {
   ok: false,
   status: 400,
   reason: "invalid_input",
-  error: "Invalid IMDb or TMDB ID",
+  error: COPY.outcome.invalidInput,
 };
 const AMBIGUOUS: HandlerOutcome = {
   ok: false,
   status: 400,
   reason: "tmdb_ambiguous",
-  error: "TMDB ID is ambiguous. Use a movie or TV link.",
+  error: COPY.outcome.tmdbAmbiguous,
 };
 const NOT_FOUND: HandlerOutcome = {
   ok: false,
   status: 502,
   reason: "tmdb_not_found",
-  error: COPY.tmdbNotFound,
+  error: COPY.outcome.tmdbNotFound,
 };
 const NO_METADATA: HandlerOutcome = {
   ok: false,
   status: 502,
   reason: "metadata_missing",
-  error: "Failed to detect content type",
+  error: COPY.outcome.metadataMissing,
 };
 const NO_PROVIDERS: HandlerOutcome = {
   ok: false,
   status: 503,
   reason: "no_providers",
-  error: "No working providers available",
+  error: COPY.outcome.noProviders,
 };
 
 export class Handler extends Context.Service<Handler, HandlerShape>()("watch/backend/Handler") {

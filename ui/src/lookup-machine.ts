@@ -5,15 +5,6 @@ import { COPY } from "../../src/lib/copy";
 import { isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
 import { Kind, LookupInput, LookupOutcome, Result } from "../../src/lib/types";
 
-// The status copy the machine emits. The tests pin these strings, because they
-// are what a person reads while a lookup runs.
-const MESSAGES = {
-  empty: "Enter an IMDb or TMDB ID or link.",
-  badLink: "Use an IMDb title link or a TMDB movie or TV link.",
-  lookupFailed: COPY.lookupFailed,
-  noProviders: "No other providers available.",
-} as const;
-
 export const Status = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("idle") }),
   Schema.Struct({ kind: Schema.Literal("info"), text: Schema.String }),
@@ -114,10 +105,10 @@ const onLookupInput = (context: LookupContext, event: { readonly input: string }
 const onSubmit = (context: LookupContext, input: string): Move => {
   const value = input.trim();
   if (!value) {
-    return { context: { status: fieldStatus(MESSAGES.empty) } };
+    return { context: { status: fieldStatus(COPY.machine.empty) } };
   }
   if (!parseTitleInput(value) && isLinkLike(value)) {
-    return { context: { status: errorStatus(MESSAGES.badLink) } };
+    return { context: { status: errorStatus(COPY.machine.badLink) } };
   }
   return {
     target: "looking",
@@ -156,7 +147,7 @@ const onRetryDone = (context: LookupContext, output: LookupOutcome): Move => {
       context.result === null ? output.result : { ...context.result, ...output.result };
     return succeed(context, merged);
   }
-  const text = output.reason === "no_providers" ? MESSAGES.noProviders : output.error;
+  const text = output.reason === "no_providers" ? COPY.machine.noProviders : output.error;
   return { target: "idle", context: { status: errorStatus(text) } };
 };
 
@@ -229,7 +220,7 @@ export function createLookupMachine(deps: LookupDeps) {
             enq.raise({ type: "lookupDone", output: args.event.output });
           },
           onError: (_args, enq) => {
-            enq.raise({ type: "fail", message: MESSAGES.lookupFailed });
+            enq.raise({ type: "fail", message: COPY.machine.failed });
           },
         },
         on: {
@@ -247,7 +238,7 @@ export function createLookupMachine(deps: LookupDeps) {
             enq.raise({ type: "lookupDone", output: args.event.output });
           },
           onError: (_args, enq) => {
-            enq.raise({ type: "fail", message: MESSAGES.noProviders });
+            enq.raise({ type: "fail", message: COPY.machine.noProviders });
           },
         },
         on: {

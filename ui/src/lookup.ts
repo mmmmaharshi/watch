@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { COPY } from "../../src/lib/copy";
 import { Kind, Result } from "../../src/lib/types";
 import { Status } from "./lookup-machine";
 
@@ -37,4 +38,4 @@ export const resultTitle = (data: Pick<Result, "id" | "name">): string =>
 export const resultMeta = (data: Pick<Result, "year" | "rating">): string =>
   [data.year, data.rating ? `IMDb ${data.rating}` : null].filter(Boolean).join(" · ");
 
-export const resultType = (type: Kind): string => (type === "tv" ? "TV Show" : "Movie");
+export const resultType = (type: Kind): string => COPY.resultTypes[type];

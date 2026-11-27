@@ -78,7 +78,7 @@ describe("the browser lookup deps", () => {
     expect(await lookup(deps, { id: "tt0133093", kind: "movie" })).toEqual({
       ok: false,
       reason: "invalid_input",
-      error: COPY.lookupFailed,
+      error: COPY.machine.failed,
     });
   });
 });

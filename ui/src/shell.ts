@@ -3,7 +3,7 @@ import { HtmlServer } from "@effect/ui/html";
 import { SITE_URL } from "../../src/consts";
 import { COPY } from "../../src/lib/copy";
 
-const description = `${COPY.intro} Paste an IMDb or TMDB ID or link.`;
+const description = COPY.shell.description;
 // Share cards cut the copy short, so they get the promise in one line.
 const shareDescription = COPY.intro;
 
@@ -37,7 +37,7 @@ ${page.head}
 <meta property="og:image" content="${SITE_URL}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="watch — paste an IMDb or TMDB ID or link to get a stream link.">
+<meta property="og:image:alt" content="${COPY.shell.imageAlt}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${COPY.title}">
 <meta name="twitter:description" content="${shareDescription}">
@@ -49,7 +49,7 @@ ${page.head}
   <script type="application/json" id="state">${HtmlServer.serializeState(page.state)}</script>
   <noscript>
     <p class="mt-4 text-sm leading-relaxed text-ink-2">
-      This page needs JavaScript to find a stream link.
+      ${COPY.shell.noscript}
     </p>
   </noscript>
 </body>

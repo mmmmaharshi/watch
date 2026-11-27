@@ -17,7 +17,7 @@ const resolve = async <A>(task: () => Promise<A>, fallback: A): Promise<A> => {
 const LOOKUP_TRANSPORT_FAILURE: LookupOutcome = {
   ok: false,
   reason: "invalid_input",
-  error: COPY.lookupFailed,
+  error: COPY.machine.failed,
 };
 
 export const makeLookupDeps = (transport: LookupTransport): LookupDeps => ({

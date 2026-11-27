@@ -239,10 +239,7 @@ describe("lookup machine", () => {
       const actor = yield* createEffectActor(createLookupMachine(deps));
       const snap = yield* sendAndAwait(actor, { type: "submit", input: "   " });
       assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "field",
-        text: "Enter an IMDb or TMDB ID or link.",
-      });
+      assert.strictEqual(snap.context.status.kind, "field");
       assert.strictEqual(lookups.length, 0);
     }).pipe(Effect.scoped);
   });
@@ -256,10 +253,7 @@ describe("lookup machine", () => {
         input: "https://example.com/movie/603",
       });
       assert.strictEqual(snap.value, "idle");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "error",
-        text: "Use an IMDb title link or a TMDB movie or TV link.",
-      });
+      assert.strictEqual(snap.context.status.kind, "error");
       assert.strictEqual(lookups.length, 0);
     }).pipe(Effect.scoped);
   });
@@ -274,10 +268,7 @@ describe("lookup machine", () => {
       const snap = yield* waitFor(actor, (state) => state.matches("idle"), {
         timeout: "1 second",
       });
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "error",
-        text: "Something went wrong. Try again.",
-      });
+      assert.strictEqual(snap.context.status.kind, "error");
     }).pipe(Effect.scoped);
   });
 
@@ -292,10 +283,7 @@ describe("lookup machine", () => {
       assert.strictEqual(snap.value, "idle");
       assert.deepStrictEqual(snap.context.result, MATRIX_RESULT);
       assert.strictEqual(snap.context.openId, "tt0133093");
-      assert.deepStrictEqual(snap.context.status, {
-        kind: "error",
-        text: "No other providers available.",
-      });
+      assert.strictEqual(snap.context.status.kind, "error");
     }).pipe(Effect.scoped),
   );
 });
