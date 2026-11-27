@@ -43,12 +43,14 @@ export const handleSiteRequest = async (
   if (!url.pathname.startsWith("/api/")) {
     return json({ error: "Not found" }, 404);
   }
+  // The method check runs before the limiter, so crawlers and probes cannot
+  // spend a caller's budget with GET.
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
   const limited = limitResponse(request);
   if (limited !== null) {
     return limited;
-  }
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
   }
 
   const body = await request.text();

@@ -28,6 +28,6 @@ export const WatchMessage = UiSchema.TaggedEnum({
   SucceededCopyShareLink: {},
   FailedCopyShareLink: { message: Schema.String },
   ClickedWatch: {},
-  CompletedDismissNotice: {},
+  CompletedDismissNotice: { noticeId: Schema.Number },
 });
 export type WatchMessage = typeof WatchMessage.Type;

@@ -19,6 +19,9 @@ export const COPY = {
   imdb: "IMDb",
   provider: "Provider",
   streamUrl: "Stream URL",
+  // Shared with the Worker: the outcome and lookup error text.
+  tmdbNotFound: "TMDB ID not found",
+  lookupFailed: "Something went wrong. Try again.",
 } as const;
 
 // The dialog's exit note names the provider, so it cannot be a plain string.

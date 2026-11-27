@@ -6,7 +6,7 @@ import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import type { LookupDeps } from "../src/lookup-machine";
 import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "../src/commands";
-import { COPY } from "../src/copy";
+import { COPY } from "../../src/lib/copy";
 import { WatchNoDeps } from "../src/watch";
 
 const result = {

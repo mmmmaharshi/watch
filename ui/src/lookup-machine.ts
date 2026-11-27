@@ -1,7 +1,7 @@
 import { createEffectLogic, setupEffect } from "@xstate/effect";
 import { Schema } from "effect";
 import type { Effect } from "effect";
-import { LOOKUP_FAILED } from "../../src/lib/messages";
+import { COPY } from "../../src/lib/copy";
 import { isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
 import { Kind, LookupInput, LookupOutcome, Result } from "../../src/lib/types";
 
@@ -12,7 +12,7 @@ const MESSAGES = {
   badLink: "Use an IMDb title link or a TMDB movie or TV link.",
   looking: "Finding a working stream...",
   retrying: "Finding another stream...",
-  lookupFailed: LOOKUP_FAILED,
+  lookupFailed: COPY.lookupFailed,
   noProviders: "No other providers available.",
 } as const;
 
@@ -148,7 +148,11 @@ const onLookupDone = (context: LookupContext, output: LookupOutcome): Move =>
 
 const onRetryDone = (context: LookupContext, output: LookupOutcome): Move => {
   if (output.ok) {
-    return succeed(context, output.result);
+    // A retry for the same id can come back without metadata a miss dropped.
+    // Keep what the open result already showed.
+    const merged =
+      context.result === null ? output.result : { ...context.result, ...output.result };
+    return succeed(context, merged);
   }
   const text = output.reason === "no_providers" ? MESSAGES.noProviders : output.error;
   return { target: "idle", context: { status: errorStatus(text) } };
@@ -182,8 +186,6 @@ const onRetryInput = (context: LookupContext): LookupInput => {
         exclude: result.provider,
       };
 };
-
-export type LookupMachine = ReturnType<typeof createLookupMachine>;
 
 export function createLookupMachine(deps: LookupDeps) {
   const lookup = createEffectLogic({

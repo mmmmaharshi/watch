@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Option, Result } from "effect";
-import { TMDB_NOT_FOUND } from "../../src/lib/messages";
+import { COPY } from "../../src/lib/copy";
 import { parseTitleInput } from "../../src/lib/parse-input";
 import type {
   ContentType,
@@ -37,7 +37,7 @@ const NOT_FOUND: HandlerOutcome = {
   ok: false,
   status: 502,
   reason: "tmdb_not_found",
-  error: TMDB_NOT_FOUND,
+  error: COPY.tmdbNotFound,
 };
 const NO_METADATA: HandlerOutcome = {
   ok: false,

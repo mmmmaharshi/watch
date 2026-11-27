@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { Effect } from "effect";
 import type { LookupInput } from "../../src/lib/types";
-import { LOOKUP_FAILED } from "../../src/lib/messages";
+import { COPY } from "../../src/lib/copy";
 import { makeLookupDeps } from "../src/deps";
 import type { LookupTransport } from "../../src/lib/transport";
 
@@ -78,7 +78,7 @@ describe("the browser lookup deps", () => {
     expect(await lookup(deps, { id: "tt0133093", kind: "movie" })).toEqual({
       ok: false,
       reason: "invalid_input",
-      error: LOOKUP_FAILED,
+      error: COPY.lookupFailed,
     });
   });
 });

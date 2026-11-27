@@ -15,6 +15,8 @@ export const WatchModel = Schema.Struct({
   // False on a touch device: the on-screen keyboard must not open on its own.
   canAutoFocus: Schema.Boolean,
   notice: Schema.NullOr(Schema.String),
+  // Bumped with every notice, so a stale dismissal cannot clear a newer one.
+  noticeId: Schema.Number,
 });
 export type WatchModel = typeof WatchModel.Type;
 
@@ -25,4 +27,5 @@ export const initModel = (): WatchModel => ({
   applied: 0,
   canAutoFocus: false,
   notice: null,
+  noticeId: 0,
 });

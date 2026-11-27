@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { LOOKUP_FAILED } from "../../src/lib/messages";
+import { COPY } from "../../src/lib/copy";
 import type { LookupTransport } from "../../src/lib/transport";
 import type { LookupOutcome } from "../../src/lib/types";
 import type { LookupDeps } from "./lookup-machine";
@@ -17,7 +17,7 @@ const resolve = async <A>(task: () => Promise<A>, fallback: A): Promise<A> => {
 const LOOKUP_TRANSPORT_FAILURE: LookupOutcome = {
   ok: false,
   reason: "invalid_input",
-  error: LOOKUP_FAILED,
+  error: COPY.lookupFailed,
 };
 
 export const makeLookupDeps = (transport: LookupTransport): LookupDeps => ({

@@ -11,7 +11,7 @@ import {
   ClearHistoryHash,
   WriteHistoryHash,
 } from "../src/commands";
-import { COPY } from "../src/copy";
+import { COPY } from "../../src/lib/copy";
 import { idleLookup } from "../src/lookup";
 import type { LookupState } from "../src/lookup";
 import { WatchMessage } from "../src/messages";

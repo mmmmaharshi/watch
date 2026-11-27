@@ -4,7 +4,7 @@ import { Status } from "./lookup-machine";
 
 // The kind and result shapes come from the wire contract, and the status comes
 // from the machine, so the UI cannot drift from what it renders.
-export { Kind, Result, Status };
+export { Result };
 
 export const Phase = Schema.Literals(["idle", "looking", "retrying"]);
 export type Phase = typeof Phase.Type;

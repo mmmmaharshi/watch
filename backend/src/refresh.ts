@@ -107,16 +107,17 @@ export const runRefresh = (deps: RefreshDeps): Effect.Effect<RefreshOutcome, Ref
       return { written: false, providers: current.value.providers.length, skipped: [] };
     }
 
-    const alive: Array<string> = [];
-    const skipped: Array<string> = [];
-    for (const origin of parseActiveDomains(directory.value.body)) {
-      const ok = yield* isVidSrcAlive(deps, origin).pipe(Effect.orElseSucceed(() => false));
-      if (ok) {
-        alive.push(origin);
-      } else {
-        skipped.push(origin);
-      }
-    }
+    const checked = yield* Effect.forEach(
+      parseActiveDomains(directory.value.body),
+      (origin) =>
+        isVidSrcAlive(deps, origin).pipe(
+          Effect.map((ok) => ({ origin, ok })),
+          Effect.orElseSucceed(() => ({ origin, ok: false })),
+        ),
+      { concurrency: 4 },
+    );
+    const alive = checked.filter((one) => one.ok).map((one) => one.origin);
+    const skipped = checked.filter((one) => !one.ok).map((one) => one.origin);
 
     const vidLink = yield* Effect.gen(function* () {
       const valid = yield* probeEmbed(deps, VIDLINK, PROBE_ID);

@@ -12,6 +12,7 @@ import {
   OpenStream,
   WriteHistoryHash,
 } from "../src/commands";
+import { COPY } from "../../src/lib/copy";
 import { idleLookup } from "../src/lookup";
 import type { LookupState, Result } from "../src/lookup";
 import { WatchMessage } from "../src/messages";
@@ -205,9 +206,19 @@ describe("copying the share link", () => {
         .expectExact(CopyShareLink)
         .resolve(CopyShareLink, WatchMessage.SucceededCopyShareLink())
         .expectExact(DismissNotice)
-        .resolve(DismissNotice, WatchMessage.CompletedDismissNotice())
+        .resolve(DismissNotice, WatchMessage.CompletedDismissNotice({ noticeId: 1 }))
         .expectNone();
       assert.strictEqual(s.model.notice, null);
+    }),
+  );
+
+  it.effect("a stale dismissal leaves a newer notice alone", () =>
+    Effect.gen(function* () {
+      const s = yield* Story.make(WatchNoDeps, {});
+      s.given({ ...initModel(), notice: COPY.copied, noticeId: 2 })
+        .send(WatchMessage.CompletedDismissNotice({ noticeId: 1 }))
+        .expectNone();
+      assert.strictEqual(s.model.notice, COPY.copied);
     }),
   );
 

@@ -57,6 +57,18 @@ cf workers list
 cf workers get watch
 ```
 
+## Rate limits
+
+The Worker answers `429` after 100 requests per IP per 15 minutes
+(`src/lib/rate-limit.ts`). That counter lives in one isolate, so under load
+the real limit is 100 × the number of isolates, and it resets when an isolate
+is recycled. It is abuse control, not a guarantee.
+
+The real limit belongs at the edge: one Rate limiting rule on the zone
+(Rules → Rate limiting rules) — path starts with `/api/watch`, 60 requests
+per minute per IP, block for 60 seconds. A shared counter in code would need a
+Durable Object; use it only if the zone rule cannot be set.
+
 ## Security headers
 
 Four headers do not come from the app. They come from a zone rule named

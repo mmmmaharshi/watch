@@ -7,7 +7,7 @@ import { LookupCommand, createLookupMachine } from "./lookup-machine";
 import type { LookupDeps } from "./lookup-machine";
 import { Phase } from "./lookup";
 import type { LookupState } from "./lookup";
-import { COPY } from "./copy";
+import { COPY } from "../../src/lib/copy";
 import { WatchMessage } from "./messages";
 
 type Machine = ReturnType<typeof createLookupMachine>;
@@ -141,8 +141,11 @@ export const CopyShareLink = Command.make(
     ),
 );
 
-export const DismissNotice = Command.make("watch/DismissNotice", { args: {} }, () =>
-  Effect.as(Effect.sleep("4 seconds"), WatchMessage.CompletedDismissNotice()),
+export const DismissNotice = Command.make(
+  "watch/DismissNotice",
+  { args: { noticeId: Schema.Number } },
+  ({ noticeId }) =>
+    Effect.as(Effect.sleep("4 seconds"), WatchMessage.CompletedDismissNotice({ noticeId })),
 );
 
 export const OpenStream = Command.make(

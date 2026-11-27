@@ -11,7 +11,7 @@ import {
   OpenStream,
   WriteHistoryHash,
 } from "./commands";
-import { COPY, exitNote } from "./copy";
+import { COPY, exitNote } from "../../src/lib/copy";
 import { resultMeta, resultTitle, resultType } from "./lookup";
 import type { LookupState, Result } from "./lookup";
 import type { LookupCommand } from "./lookup-machine";
@@ -344,7 +344,10 @@ export const WatchNoDeps = WatchDef.make({
         return result === null ? $.model : $.run(CopyShareLink.make({ id: result.id }));
       },
 
-      SucceededCopyShareLink: () => $.evolve({ notice: COPY.copied }).run(DismissNotice.make({})),
+      SucceededCopyShareLink: () => {
+        const noticeId = $.model.noticeId + 1;
+        return $.evolve({ notice: COPY.copied, noticeId }).run(DismissNotice.make({ noticeId }));
+      },
 
       FailedCopyShareLink: ({ message }) =>
         $.evolve({
@@ -363,7 +366,8 @@ export const WatchNoDeps = WatchDef.make({
         );
       },
 
-      CompletedDismissNotice: () => $.evolve({ notice: null }),
+      CompletedDismissNotice: ({ noticeId }) =>
+        noticeId === $.model.noticeId ? $.evolve({ notice: null }) : $.model,
     });
   },
   view: (h, model) => {

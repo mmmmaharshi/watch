@@ -1,7 +1,7 @@
 import type { Renderer } from "@effect/ui";
 import { HtmlServer } from "@effect/ui/html";
 import { SITE_URL } from "../../src/consts";
-import { COPY } from "./copy";
+import { COPY } from "../../src/lib/copy";
 
 const description = `${COPY.intro} Paste an IMDb or TMDB ID or link.`;
 // Share cards cut the copy short, so they get the promise in one line.

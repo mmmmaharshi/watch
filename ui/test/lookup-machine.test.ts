@@ -139,6 +139,24 @@ describe("lookup machine", () => {
     }).pipe(Effect.scoped);
   });
 
+  it.effect("a retry keeps the metadata the first result showed", () => {
+    const { deps } = controlled();
+    return Effect.gen(function* () {
+      const actor = yield* createEffectActor(createLookupMachine(deps));
+      yield* sendAndAwait(actor, { type: "submit", input: "tt0133093" });
+      yield* sendAndAwait(actor, {
+        type: "lookupDone",
+        output: { ok: true, result: { ...MATRIX_RESULT, description: "Neo." } },
+      });
+      yield* sendAndAwait(actor, { type: "retry" });
+      const done = yield* sendAndAwait(actor, {
+        type: "lookupDone",
+        output: { ok: true, result: MATRIX_RESULT },
+      });
+      assert.strictEqual(done.context.result?.description, "Neo.");
+    }).pipe(Effect.scoped);
+  });
+
   it.effect("retry with no result is ignored", () => {
     const { deps, lookups } = controlled();
     return Effect.gen(function* () {

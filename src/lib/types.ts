@@ -33,7 +33,6 @@ export const FAILURE_REASONS = [
   "metadata_missing",
   "no_providers",
 ] as const;
-export type WatchFailureReason = (typeof FAILURE_REASONS)[number];
 
 // The request the page sends, the route decodes, and the handler reads. One
 // shape, so a new field reaches all three without a second definition.
