@@ -35,6 +35,25 @@ const strictCacheText: HttpShape["getText"] = (url) => {
   return json({ name: "The Approval Matrix", premiered: "2014-01-01" });
 };
 
+// Cinemeta answers tt2661044 twice: a "Yellowknife" movie stub with no year,
+// and the series record holding The 100's episodes.
+const stubMovieText: HttpShape["getText"] = (url) =>
+  url.includes("/meta/series/")
+    ? json({
+        meta: {
+          name: "The 100",
+          year: "2014–2020",
+          imdbRating: "7.5",
+          videos: [{ id: "tt2473624" }, { id: "tt2473626" }],
+        },
+      })
+    : json({ meta: { name: "Yellowknife", year: "", releaseInfo: "2002", imdbRating: "7.5" } });
+
+const namedSeriesText: HttpShape["getText"] = (url) =>
+  url.includes("/meta/series/")
+    ? json({ meta: { name: "Some Show", year: "2020" } })
+    : json(MATRIX);
+
 describe("Metadata", () => {
   it.effect("a preferred kind answers without asking the other kind", () => {
     const asked: Array<string> = [];
@@ -113,24 +132,21 @@ describe("Metadata", () => {
     }).pipe(Effect.provide(withStub(strictCacheText)));
   });
 
-  it.effect("with no preferred kind the first answer wins and the loser is interrupted", () => {
-    let seriesInterrupted = false;
-    const getText: HttpShape["getText"] = (url) =>
-      url.includes("/meta/series/")
-        ? Effect.never.pipe(
-            Effect.onInterrupt(() =>
-              Effect.sync(() => {
-                seriesInterrupted = true;
-              }),
-            ),
-          )
-        : json(MATRIX);
+  it.effect("a series that lists episodes wins over a stub movie record", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.deepStrictEqual(meta, { type: "tv", name: "The 100", year: "2014", rating: "7.5" });
+    }).pipe(Effect.provide(withStub(stubMovieText)));
+  });
+
+  it.effect("a movie with its own year beats a series record that lists no episodes", () => {
     return Effect.gen(function* () {
       const metadata = yield* Metadata;
       const meta = yield* metadata.resolve("tt0133093");
       assert.strictEqual(meta.type, "movie");
-      assert.strictEqual(seriesInterrupted, true);
-    }).pipe(Effect.provide(withStub(getText)));
+      assert.strictEqual(meta.name, "The Matrix");
+    }).pipe(Effect.provide(withStub(namedSeriesText)));
   });
 
   it.effect("TVMaze answers when both Cinemeta kinds miss", () => {

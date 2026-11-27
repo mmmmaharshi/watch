@@ -1,4 +1,4 @@
-import { Context, Duration, Effect, Fiber, Layer, Option, Schema } from "effect";
+import { Context, Duration, Effect, Layer, Option, Schema } from "effect";
 import { CINEMETA_HOST, TVMAZE_HOST } from "../../src/consts";
 import type { ContentType, Mutable } from "../../src/lib/types";
 import { Kind as MediaKind } from "../../src/lib/types";
@@ -31,6 +31,7 @@ const CinemetaBody = Schema.Struct({
       releaseInfo: Schema.optional(Schema.Unknown),
       imdbRating: Schema.optional(Schema.Unknown),
       description: Schema.optional(Schema.Unknown),
+      videos: Schema.optional(Schema.Array(Schema.Unknown)),
     }),
   ),
 });
@@ -57,9 +58,18 @@ type Kind = "movie" | "series";
 interface KindResult {
   readonly meta: TitleMeta | null;
   readonly transient: boolean;
+  /** The series record lists episodes; always false for a movie. */
+  readonly hasEpisodes: boolean;
+  /** The record carried its own `year`; Cinemeta's stubs leave it empty. */
+  readonly hasOwnYear: boolean;
 }
 
-const MISS: KindResult = { meta: null, transient: false };
+const MISS: KindResult = {
+  meta: null,
+  transient: false,
+  hasEpisodes: false,
+  hasOwnYear: false,
+};
 
 export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/backend/Metadata") {
   static readonly layer: Layer.Layer<Metadata, never, Cache | Http> = Layer.effect(
@@ -89,14 +99,19 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             if (typeof m.description === "string") {
               meta.description = m.description;
             }
-            return { meta, transient: false };
+            return {
+              meta,
+              transient: false,
+              hasEpisodes: kind === "series" && (m.videos?.length ?? 0) > 0,
+              hasOwnYear: yearOf(m.year) !== undefined,
+            };
           }),
           // A non-ok status is a verified miss; a network or parse failure is not.
           Effect.catchTag("HttpError", (error) =>
-            Effect.succeed({ meta: null, transient: error.status === undefined }),
+            Effect.succeed({ ...MISS, transient: error.status === undefined }),
           ),
           Effect.timeoutOption(Duration.millis(REQUEST_TIMEOUT_MS)),
-          Effect.map(Option.getOrElse((): KindResult => ({ meta: null, transient: true }))),
+          Effect.map(Option.getOrElse((): KindResult => ({ ...MISS, transient: true }))),
         );
 
       const preferKind = (id: string, preferred: ContentType) =>
@@ -107,27 +122,29 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             return first;
           }
           const second = yield* fetchKind(firstKind === "series" ? "movie" : "series", id);
-          return { meta: second.meta, transient: first.transient || second.transient };
+          return { ...second, transient: first.transient || second.transient };
         });
 
-      // Both kinds race; the loser is interrupted when the first answers.
-      const raceKinds = (id: string) =>
-        Effect.scoped(
-          Effect.gen(function* () {
-            const series = yield* Effect.forkScoped(fetchKind("series", id));
-            const movie = yield* Effect.forkScoped(fetchKind("movie", id));
-            const first = yield* Effect.race(
-              Fiber.join(series).pipe(Effect.map((result) => ({ result, other: movie }))),
-              Fiber.join(movie).pipe(Effect.map((result) => ({ result, other: series }))),
-            );
-            if (first.result.meta !== null) {
-              return first.result;
-            }
-            // A miss on the first finish still lets the other kind answer.
-            const second = yield* Fiber.join(first.other);
-            return { meta: second.meta, transient: first.result.transient || second.transient };
-          }),
-        );
+      // Cinemeta keeps a stub movie record for some series ids: tt2661044
+      // answers "Yellowknife" (2002) as a movie while the series record holds
+      // The 100's episodes. Both kinds are asked, and the record that proves
+      // what it is wins: a series that lists episodes, then a movie that
+      // carries its own year (the stubs leave `year` empty).
+      const bothKinds = (id: string) =>
+        Effect.gen(function* () {
+          const [series, movie] = yield* Effect.all(
+            [fetchKind("series", id), fetchKind("movie", id)],
+            { concurrency: "unbounded" },
+          );
+          const transient = series.transient || movie.transient;
+          if (series.meta !== null && series.hasEpisodes) {
+            return { ...series, transient };
+          }
+          if (movie.meta !== null && movie.hasOwnYear) {
+            return { ...movie, transient };
+          }
+          return { ...(series.meta !== null ? series : movie), transient };
+        });
 
       const fetchTVMaze = (id: string) =>
         Effect.gen(function* () {
@@ -187,7 +204,7 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
 
         const fetched =
           preferred === undefined
-            ? yield* raceKinds(id)
+            ? yield* bothKinds(id)
             : strict
               ? yield* fetchKind(preferred === "tv" ? "series" : "movie", id)
               : yield* preferKind(id, preferred);
