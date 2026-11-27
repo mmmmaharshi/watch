@@ -273,9 +273,10 @@ export const WatchNoDeps = WatchDef.make({
         lookup: snapshot,
         applied: generation,
       });
-      if (previous === null && snapshot.openId !== null) {
+      // The hash follows the open result, including a retry that opens another.
+      if (snapshot.openId !== null && snapshot.openId !== previous) {
         next = next.run(WriteHistoryHash.make({ id: snapshot.openId }));
-      } else if (previous !== null && snapshot.openId === null) {
+      } else if (snapshot.openId === null && previous !== null) {
         next = next.run(ClearHistoryHash.make({}));
         if ($.model.canAutoFocus) {
           next = next.run(focusSearch());

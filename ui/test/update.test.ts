@@ -114,6 +114,23 @@ describe("a successful lookup", () => {
   );
 });
 
+it.effect("a retry that opens another id moves the hash", () =>
+  Effect.gen(function* () {
+    const s = yield* Story.make(WatchNoDeps, {});
+    const breakingBad: Result = { ...MATRIX, id: "tt0903747", name: "Breaking Bad", type: "tv" };
+    s.given({ ...initModel(), lookup: opened })
+      .send(
+        WatchMessage.CompletedLookup({
+          generation: 1,
+          snapshot: snapshot({ result: breakingBad, openId: breakingBad.id }),
+        }),
+      )
+      .expectExact(WriteHistoryHash)
+      .resolve(WriteHistoryHash, Component.noop);
+    assert.strictEqual(s.model.lookup.openId, breakingBad.id);
+  }),
+);
+
 describe("typing", () => {
   it.effect("clears the status line", () =>
     Effect.gen(function* () {

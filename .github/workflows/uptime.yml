@@ -1,0 +1,17 @@
+name: uptime
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: The public API still answers a lookup
+        run: |
+          body=$(curl -sS --max-time 30 -X POST https://watch.maharshi.work/api/watch \
+            -H 'content-type: application/json' -d '{"id":"tt0133093"}')
+          echo "$body"
+          echo "$body" | grep -q '"ok":true'

@@ -16,9 +16,14 @@ those assets. The platform serves the page and the assets; the Worker answers
 
 ## Deploy
 
-Pushing `master` deploys production through Cloudflare's Git integration; the
-repo has no deploy job, so CI only checks and runs e2e. The commands below are
-for a manual redeploy.
+Pushing `master` does **not** deploy. The latest deployment was made by
+`wrangler` (Alchemy), there is no Workers Builds configuration for `watch`, and
+the repo has no deploy job or repository secrets. CI only checks and runs e2e.
+Deploys are manual, with the commands below.
+
+To make a push deploy, add a job that runs
+`bun alchemy deploy --stage prod --yes` with `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets, and delete this paragraph.
 
 The Alchemy CLI needs Cloudflare credentials once. Either run the profile
 editor:
@@ -80,6 +85,15 @@ cf rulesets rules create <ruleset-id> --zone maharshi.work --body '{"description
 ```
 
 Verify: 11 POSTs to `/api/watch` from one IP; the 11th answers `429`.
+
+To roll the rule back:
+
+```sh
+cf rulesets delete ebfee6dc9805419eb63f09307c3a29f1 --zone maharshi.work
+```
+
+A shared NAT (an office, a school) can reach 10 lookups in 10 seconds with
+several people; the block lasts 10 seconds.
 
 ## Security headers
 

@@ -39,6 +39,6 @@ The verifier runs `$verify`, with fresh context and another provider. See
 
 ### Deploys
 
-The site runs on Cloudflare. Pushing `master` deploys it. The Worker, the host,
-the rate-limit rule and the manual path are in `docs/agents/deploy.md`. Use the
-`cf` CLI for Cloudflare commands.
+The site runs on Cloudflare. Deploys are manual (`bun run deploy`); pushing
+only runs CI. The Worker, the host, the rate-limit rule and the deploy commands
+are in `docs/agents/deploy.md`. Use the `cf` CLI for Cloudflare commands.
