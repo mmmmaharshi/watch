@@ -1,8 +1,7 @@
 import { Context, Effect, Layer } from "effect";
-import type { Mutable, WatchOutcome } from "../../src/lib/types";
+import type { LookupInput, WatchOutcome } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Handler } from "./handler";
-import type { HandlerInput } from "./handler";
 import { Http } from "./http";
 import type { KvNamespace } from "./kv";
 import { Mapping } from "./mapping";
@@ -16,8 +15,6 @@ export interface Bindings {
   readonly CACHE?: KvNamespace;
   readonly PROVIDERS?: KvNamespace;
 }
-
-export type SiteBindings = Bindings;
 
 const MEMORY_CACHE_ENTRIES = 500;
 
@@ -35,18 +32,9 @@ const transportLayer = (bindings: Bindings): Layer.Layer<Http | Cache | Provider
 const handlerLayer = (): Layer.Layer<Handler, never, Http | Cache | ProviderList> =>
   Handler.layer.pipe(Layer.provide(Layer.mergeAll(Mapping.layer, Metadata.layer, Providers.layer)));
 
-// The HTTP boundary: one id in, one stream link out.
-export interface WatchInput {
-  readonly id: string;
-  readonly kind?: "movie" | "tv";
-  readonly strictKind?: boolean;
-  readonly name?: string;
-  readonly year?: string;
-  readonly exclude?: string;
-}
-
+// The HTTP boundary: one request shape in, one stream link out.
 export interface SiteShape {
-  readonly watch: (input: WatchInput) => Effect.Effect<WatchOutcome>;
+  readonly watch: (input: LookupInput) => Effect.Effect<WatchOutcome>;
 }
 
 export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site") {
@@ -55,35 +43,15 @@ export class Site extends Context.Service<Site, SiteShape>()("watch/backend/Site
     Effect.gen(function* () {
       const handler = yield* Handler;
 
-      const watch = Effect.fnUntraced(function* (input: WatchInput) {
-        const handlerInput: Mutable<HandlerInput> = { id: input.id };
-        if (input.kind !== undefined) {
-          handlerInput.kind = input.kind;
-        }
-        if (input.strictKind !== undefined) {
-          handlerInput.strictKind = input.strictKind;
-        }
-        if (input.name !== undefined) {
-          handlerInput.name = input.name;
-        }
-        if (input.year !== undefined) {
-          handlerInput.year = input.year;
-        }
-        if (input.exclude !== undefined) {
-          handlerInput.exclude = input.exclude;
-        }
-        return yield* handler.handle(handlerInput);
-      });
-
-      return Site.of({ watch });
+      return Site.of({ watch: handler.handle });
     }),
   );
 }
 
-export const siteLayer = (bindings: SiteBindings): Layer.Layer<Site> =>
+export const siteLayer = (bindings: Bindings): Layer.Layer<Site> =>
   Site.layer.pipe(Layer.provide(handlerLayer()), Layer.provide(transportLayer(bindings)));
 
-const composeSite = (bindings: SiteBindings): SiteShape =>
+const composeSite = (bindings: Bindings): SiteShape =>
   Effect.runSync(
     Effect.gen(function* () {
       return yield* Site;
@@ -94,18 +62,10 @@ const composeSite = (bindings: SiteBindings): SiteShape =>
 // fallback must survive requests, or every instance refetches.
 let memorySite: SiteShape | undefined;
 
-export const siteFor = (bindings: SiteBindings = {}): SiteShape => {
+export const siteFor = (bindings: Bindings = {}): SiteShape => {
   if (bindings.CACHE !== undefined || bindings.PROVIDERS !== undefined) {
     return composeSite(bindings);
   }
   memorySite ??= composeSite(bindings);
   return memorySite;
 };
-
-// Kept for the handler-level tests and for one-off scripts.
-export const composeHandler = (bindings: Bindings) =>
-  Effect.runSync(
-    Effect.gen(function* () {
-      return yield* Handler;
-    }).pipe(Effect.provide(handlerLayer().pipe(Layer.provide(transportLayer(bindings))))),
-  );

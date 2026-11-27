@@ -4,7 +4,7 @@ import { HtmlLocator, HtmlPlay } from "@effect/ui/html/testing";
 import { TestHost } from "@effect/ui/testing";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
-import type { LookupDeps } from "../../backend/src/lookup-machine";
+import type { LookupDeps } from "../src/lookup-machine";
 import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "../src/commands";
 import { COPY } from "../src/copy";
 import { WatchNoDeps } from "../src/watch";

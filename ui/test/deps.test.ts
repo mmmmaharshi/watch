@@ -1,9 +1,9 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { Effect } from "effect";
-import type { LookupInput } from "../../backend/src/lookup-machine";
-import { LOOKUP_FAILED } from "./messages";
-import { makeLookupDeps } from "./ui-deps";
-import type { LookupTransport } from "./ui-deps";
+import type { LookupInput } from "../../src/lib/types";
+import { LOOKUP_FAILED } from "../../src/lib/messages";
+import { makeLookupDeps } from "../src/deps";
+import type { LookupTransport } from "../../src/lib/transport";
 
 const RESULT = {
   id: "tt0133093",

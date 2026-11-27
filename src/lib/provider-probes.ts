@@ -1,6 +1,5 @@
 import { originIfHttps } from "./providers";
 import type { ProviderEntry, ProvidersFile } from "./providers";
-
 // Probe rules shared by the Bun script and the Worker cron. A plain HTTP 200
 // proves nothing: valid and bogus titles return the same shell, so each host
 // must show its own alive signal (see research/probe-26.md).

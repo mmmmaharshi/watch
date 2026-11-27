@@ -12,7 +12,12 @@ and mounts it with `start(deps, container)`.
 - `src/model.ts` — the page Model and its initial value.
 - `src/messages.ts` — every Message, named after the fact.
 - `src/commands.ts` — the Command Services and the `LookupEngine` layer that runs
-  the XState machine from `backend/src/lookup-machine.ts`.
+  the XState machine from `src/lookup-machine.ts`.
+- `src/lookup-machine.ts` — the lookup lifecycle: `idle`, `looking`,
+  `retrying`, with dialog-open state in context. Effect work runs only in
+  declared actors.
+- `src/deps.ts` — the machine's transport adapter: one `watch` call, with
+  transport failures turned into product failures.
 - `src/mounts.ts` — reads the field once when the input mounts, and tracks
   hash changes while the page lives.
 - `src/watch.ts` — the root component: `init`, `update`, the page view, and

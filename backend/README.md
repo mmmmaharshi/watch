@@ -38,12 +38,8 @@ root installs it.
   fallback and a negative cache.
 - `src/mapping.ts` — `Mapping` service: a TMDB id resolves to an IMDb id
   through Wikidata.
-- `src/lookup-machine.ts` — the lookup lifecycle machine: `idle`, `looking`,
-  `retrying`, with dialog-open state in context. Effect work runs
-  only in declared actors, and leaving a busy state interrupts its actor.
 - `test/` — behavior tests through the service interfaces, plus property tests
-  for the cache and provider rules and model tests over the machine's event
-  sequences.
+  for the cache and provider rules.
 
 ## Commands
 

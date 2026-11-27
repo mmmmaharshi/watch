@@ -1,4 +1,4 @@
-import { makeLookupDeps } from "../../src/lib/ui-deps";
+import { makeLookupDeps } from "./deps";
 import { httpTransport } from "../../src/lib/transport";
 import { start } from "./entry";
 

@@ -3,10 +3,9 @@ import { HtmlServer } from "@effect/ui/html";
 import { SITE_URL } from "../../src/consts";
 import { COPY } from "./copy";
 
-const description =
-  "Paste an IMDb or TMDB ID or link. Get a working stream link for free. No sign-up, no app.";
-// Share cards cut the copy short, so they get the same promise in one line.
-const shareDescription = "Paste an IMDb or TMDB ID or link. Get a working stream link for free.";
+const description = `${COPY.intro} Paste an IMDb or TMDB ID or link.`;
+// Share cards cut the copy short, so they get the promise in one line.
+const shareDescription = COPY.intro;
 
 export interface RenderedPage {
   readonly html: string;
@@ -38,7 +37,7 @@ ${page.head}
 <meta property="og:image" content="${SITE_URL}/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="watch — search a title or paste an IMDb or TMDB ID to get a stream link.">
+<meta property="og:image:alt" content="watch — paste an IMDb or TMDB ID or link to get a stream link.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${COPY.title}">
 <meta name="twitter:description" content="${shareDescription}">

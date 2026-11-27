@@ -1,30 +1,11 @@
 import { Effect, Option, Schema } from "effect";
+import { json } from "../../src/lib/http";
 import { limitResponse } from "../../src/lib/rate-limit";
-import type { WatchOutcome } from "../../src/lib/types";
-import { Kind } from "../../src/lib/types";
-import type { SiteBindings } from "./compose";
-import type { WatchInput } from "./compose";
+import { LookupInput } from "../../src/lib/types";
+import type { Mutable, WatchOutcome } from "../../src/lib/types";
 import { siteFor } from "./compose";
+import type { Bindings } from "./compose";
 import type { KvNamespace } from "./kv";
-import type { Mutable } from "../../src/lib/types";
-
-const WatchBody = Schema.Struct({
-  id: Schema.String,
-  kind: Schema.optionalKey(Kind),
-  strictKind: Schema.optionalKey(Schema.Boolean),
-  name: Schema.optionalKey(Schema.String),
-  year: Schema.optionalKey(Schema.String),
-  exclude: Schema.optionalKey(Schema.String),
-});
-
-const json = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-    },
-  });
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
@@ -36,11 +17,11 @@ const isKv = (value: unknown): value is KvNamespace =>
   typeof value.put === "function";
 
 // Every binding is optional: the site runs without KV (memory stores).
-export const bindingsOf = (source: unknown): SiteBindings => {
+export const bindingsOf = (source: unknown): Bindings => {
   if (!isObject(source)) {
     return {};
   }
-  const bindings: Mutable<SiteBindings> = {};
+  const bindings: Mutable<Bindings> = {};
   if ("CACHE" in source && isKv(source.CACHE)) {
     bindings.CACHE = source.CACHE;
   }
@@ -55,7 +36,7 @@ const decodeBody = <A>(schema: Schema.ConstraintDecoder<A>, text: string): Optio
 
 export const handleSiteRequest = async (
   request: Request,
-  bindings: SiteBindings,
+  bindings: Bindings,
 ): Promise<Response> => {
   const url = new URL(request.url);
 
@@ -74,28 +55,11 @@ export const handleSiteRequest = async (
   const site = siteFor(bindings);
 
   if (url.pathname === "/api/watch") {
-    const parsed = decodeBody(WatchBody, body);
+    const parsed = decodeBody(LookupInput, body);
     if (Option.isNone(parsed)) {
       return json({ error: "Send an IMDb or TMDB id." }, 400);
     }
-    const input = parsed.value;
-    const watchInput: Mutable<WatchInput> = { id: input.id };
-    if (input.kind !== undefined) {
-      watchInput.kind = input.kind;
-    }
-    if (input.strictKind !== undefined) {
-      watchInput.strictKind = input.strictKind;
-    }
-    if (input.name !== undefined) {
-      watchInput.name = input.name;
-    }
-    if (input.year !== undefined) {
-      watchInput.year = input.year;
-    }
-    if (input.exclude !== undefined) {
-      watchInput.exclude = input.exclude;
-    }
-    const outcome: WatchOutcome = await Effect.runPromise(site.watch(watchInput));
+    const outcome: WatchOutcome = await Effect.runPromise(site.watch(parsed.value));
     return json(outcome, outcome.ok ? 200 : outcome.status);
   }
 

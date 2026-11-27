@@ -2,7 +2,8 @@ import { assert, describe, it } from "@effect/vitest";
 import { Deferred, Effect } from "effect";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
 import { createLookupMachine } from "../src/lookup-machine";
-import type { LookupDeps, LookupInput, LookupOutcome } from "../src/lookup-machine";
+import type { LookupDeps } from "../src/lookup-machine";
+import type { LookupInput, LookupOutcome } from "../../src/lib/types";
 
 const MATRIX_RESULT = {
   id: "tt0133093",
@@ -232,24 +233,11 @@ describe("lookup machine", () => {
   it.effect("re-applying the link the field already shows is a no-op", () =>
     Effect.gen(function* () {
       const actor = yield* opened();
-      const snap = yield* sendAndAwait(actor, {
-        type: "change",
-        value: "https://www.imdb.com/title/tt0133093/",
-      });
+      const snap = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
       const again = yield* sendAndAwait(actor, { type: "hashNav", id: "tt0133093" });
       assert.strictEqual(again.context.value, snap.context.value);
       assert.deepStrictEqual(again.context.result, MATRIX_RESULT);
       assert.strictEqual(again.context.openId, "tt0133093");
-    }).pipe(Effect.scoped),
-  );
-
-  it.effect("typing clears a field error", () =>
-    Effect.gen(function* () {
-      const actor = yield* createEffectActor(idle());
-      yield* sendAndAwait(actor, { type: "submit", input: "   " });
-      const snap = yield* sendAndAwait(actor, { type: "change", value: "tt0" });
-      assert.strictEqual(snap.context.value, "tt0");
-      assert.deepStrictEqual(snap.context.status, { kind: "idle" });
     }).pipe(Effect.scoped),
   );
 

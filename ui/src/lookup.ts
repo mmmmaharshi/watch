@@ -1,6 +1,6 @@
 import { Schema } from "effect";
-import { Status } from "../../backend/src/lookup-machine";
 import { Kind, Result } from "../../src/lib/types";
+import { Status } from "./lookup-machine";
 
 // The kind and result shapes come from the wire contract, and the status comes
 // from the machine, so the UI cannot drift from what it renders.
@@ -27,17 +27,7 @@ export const idleLookup = (): LookupState => ({
   openId: null,
 });
 
-// The machine events the UI sends. Everything that moves the lifecycle goes
-// through the machine, so its context stays the one authority.
-export const LookupEvent = Schema.Union([
-  Schema.Struct({ type: Schema.Literal("submit"), input: Schema.String }),
-  Schema.Struct({ type: Schema.Literal("retry") }),
-  Schema.Struct({ type: Schema.Literal("close") }),
-  Schema.Struct({ type: Schema.Literal("hashNav"), id: Schema.String }),
-]);
-export type LookupEvent = typeof LookupEvent.Type;
-
-export const busy = (phase: Phase): boolean => phase === "looking";
+export const isLooking = (phase: Phase): boolean => phase === "looking";
 
 export const resultTitle = (data: Pick<Result, "id" | "name">): string =>
   data.name || data.id.toUpperCase();

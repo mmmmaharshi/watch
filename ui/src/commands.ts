@@ -2,10 +2,10 @@ import { Context, Effect, Layer, Schema } from "effect";
 import type { SnapshotFrom } from "xstate";
 import { Command, Component } from "@effect/ui";
 import { createEffectActor, sendAndAwait, waitFor } from "@xstate/effect";
-import { createLookupMachine } from "../../backend/src/lookup-machine";
-import type { LookupDeps } from "../../backend/src/lookup-machine";
 import { hashForId, shareUrl } from "../../src/lib/parse-input";
-import { LookupEvent, Phase } from "./lookup";
+import { LookupCommand, createLookupMachine } from "./lookup-machine";
+import type { LookupDeps } from "./lookup-machine";
+import { Phase } from "./lookup";
 import type { LookupState } from "./lookup";
 import { COPY } from "./copy";
 import { WatchMessage } from "./messages";
@@ -25,7 +25,7 @@ const toLookupState = (snapshot: Snapshot): LookupState => ({
 
 export interface LookupEngineShape {
   /** Sends one machine event and returns the snapshot its transition left. */
-  readonly advance: (event: LookupEvent) => Effect.Effect<LookupState>;
+  readonly advance: (event: LookupCommand) => Effect.Effect<LookupState>;
   /** Waits for the running work to settle, then returns the snapshot. */
   readonly settle: () => Effect.Effect<LookupState>;
 }
@@ -61,7 +61,7 @@ export const lookupEngineLayer = (deps: LookupDeps) =>
 
 // Sends one machine event, then reports the snapshot the transition left.
 export class AdvanceLookup extends Command.Service<AdvanceLookup>()("watch/AdvanceLookup", {
-  args: { generation: Schema.Number, event: LookupEvent },
+  args: { generation: Schema.Number, event: LookupCommand },
   success: WatchMessage,
 }) {
   static readonly layer = this.toLayer(

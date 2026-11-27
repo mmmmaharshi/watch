@@ -6,10 +6,9 @@ import {
   VIDLINK,
   VIDZEE,
   buildEmbedUrl,
-  originIfHttps,
   parseActiveDomains,
 } from "../../src/lib/providers";
-import type { Provider, ProviderEntry, ProvidersFile } from "../../src/lib/providers";
+import type { Provider } from "../../src/lib/providers";
 import type { ContentType } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Http, HttpError } from "./http";
@@ -36,53 +35,6 @@ const LOAD_TIMEOUT_MS = 5000;
 function toProviders(baseUrls: ReadonlyArray<string>): Array<Provider> {
   return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
 }
-
-interface RefreshFile {
-  readonly domains: ReadonlyArray<string>;
-  readonly updatedAt: number;
-}
-
-export const PROVIDER_LIST_KEY = "providers";
-
-const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
-
-// Entries are taken as listed (https-parse only, no name gate): a bad entry
-// costs one failed probe. Malformed or non-https entries are dropped.
-export const parseProvidersFile = (value: unknown): Option.Option<ProvidersFile> => {
-  if (!isObject(value) || !("providers" in value) || !Array.isArray(value.providers)) {
-    return Option.none();
-  }
-  const providers: Array<ProviderEntry> = [];
-  const seen = new Set<string>();
-  for (const entry of value.providers) {
-    if (!isObject(entry) || !("baseUrl" in entry) || typeof entry.baseUrl !== "string") {
-      continue;
-    }
-    const baseUrl = originIfHttps(entry.baseUrl);
-    if (baseUrl === null || seen.has(baseUrl)) {
-      continue;
-    }
-    seen.add(baseUrl);
-    const name =
-      "name" in entry && typeof entry.name === "string" && entry.name !== ""
-        ? entry.name
-        : new URL(baseUrl).host;
-    providers.push({ name, baseUrl });
-  }
-  if (!providers.length) {
-    return Option.none();
-  }
-  // An unparseable updatedAt means stale, not missing: the list still serves
-  // when the directory is down.
-  const updatedAt =
-    "updatedAt" in value && typeof value.updatedAt === "string" ? value.updatedAt : "";
-  return Option.some({ updatedAt, providers });
-};
-
-const toRefreshFile = (file: ProvidersFile): RefreshFile => ({
-  domains: file.providers.map((entry) => entry.baseUrl),
-  updatedAt: Date.parse(file.updatedAt),
-});
 
 const fetchDirectoryDomains = (http: HttpShape) =>
   http.getText(DIRECTORY_URL).pipe(
@@ -137,14 +89,14 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
         // Shared storage first; the live directory fills when the stored
         // list is stale or missing.
         const stored = yield* providerList.load;
-        const file = Option.isSome(stored)
-          ? Option.some(toRefreshFile(stored.value))
-          : Option.none<RefreshFile>();
-        if (Option.isSome(file)) {
-          const age = (yield* Clock.currentTimeMillis) - file.value.updatedAt;
-          if (age <= PROVIDERS_STALE_MS) {
-            yield* cache.set(DOMAINS_KEY, file.value.domains.join("\n"), PROVIDERS_TTL_MS);
-            return toProviders(file.value.domains);
+        if (Option.isSome(stored)) {
+          const bases = stored.value.providers.map((entry) => entry.baseUrl);
+          const updatedAt = Date.parse(stored.value.updatedAt);
+          // An unparseable timestamp is stale, not fresh.
+          const age = (yield* Clock.currentTimeMillis) - updatedAt;
+          if (!Number.isNaN(age) && age <= PROVIDERS_STALE_MS) {
+            yield* cache.set(DOMAINS_KEY, bases.join("\n"), PROVIDERS_TTL_MS);
+            return toProviders(bases);
           }
         }
 
@@ -154,8 +106,10 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
           return toProviders(live);
         }
 
-        // A stale file still names hosts; the per-request probe vets them.
-        return toProviders(Option.isSome(file) ? file.value.domains : []);
+        // A stale list still names hosts; the per-request probe vets them.
+        return toProviders(
+          Option.isSome(stored) ? stored.value.providers.map((entry) => entry.baseUrl) : [],
+        );
       });
 
       const selectStream = Effect.fnUntraced(function* (args: {

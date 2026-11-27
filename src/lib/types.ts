@@ -35,8 +35,32 @@ export const FAILURE_REASONS = [
 ] as const;
 export type WatchFailureReason = (typeof FAILURE_REASONS)[number];
 
+// The request the page sends, the route decodes, and the handler reads. One
+// shape, so a new field reaches all three without a second definition.
+export const LookupInput = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.optionalKey(Kind),
+  strictKind: Schema.optionalKey(Schema.Boolean),
+  name: Schema.optionalKey(Schema.String),
+  year: Schema.optionalKey(Schema.String),
+  exclude: Schema.optionalKey(Schema.String),
+});
+export type LookupInput = typeof LookupInput.Type;
+
+const Success = Schema.Struct({ ok: Schema.Literal(true), result: Result });
+const Failure = Schema.Struct({
+  ok: Schema.Literal(false),
+  reason: Schema.Literals(FAILURE_REASONS),
+  error: Schema.String,
+});
+
+// What the lookup machine consumes: a product outcome, with no transport
+// detail. The HTTP answer adds the status the machine never reads.
+export const LookupOutcome = Schema.Union([Success, Failure]);
+export type LookupOutcome = typeof LookupOutcome.Type;
+
 export const WatchOutcome = Schema.Union([
-  Schema.Struct({ ok: Schema.Literal(true), result: Result }),
+  Success,
   Schema.Struct({
     ok: Schema.Literal(false),
     status: Schema.Literals([400, 502, 503]),

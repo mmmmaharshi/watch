@@ -1,3 +1,5 @@
+import { json } from "./http";
+
 // The edge answers 429 past this.
 const MAX_TRACKED_IPS = 10_000;
 
@@ -48,26 +50,7 @@ export function clientIp(req: Request): string {
   return last || "unknown";
 }
 
-export const JSON_HEADERS = {
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-  "Referrer-Policy": "no-referrer",
-  "Content-Type": "application/json",
-  "Content-Security-Policy": "default-src 'none'",
-  "Cache-Control": "no-store",
-} satisfies Record<string, string>;
-
-// Null means allowed; a Response means limited. Middleware answers with it.
-export function limitResponse(
+export const limitResponse = (
   req: Request,
   limited: (ip: string) => boolean = isLimited,
-): Response | null {
-  if (limited(clientIp(req))) {
-    return new Response(JSON.stringify({ error: "Too many requests" }), {
-      status: 429,
-      headers: JSON_HEADERS,
-    });
-  }
-  return null;
-}
+): Response | null => (limited(clientIp(req)) ? json({ error: "Too many requests" }, 429) : null);

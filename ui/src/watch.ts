@@ -11,9 +11,10 @@ import {
   OpenStream,
   WriteHistoryHash,
 } from "./commands";
-import { COPY } from "./copy";
-import { busy, resultMeta, resultTitle, resultType } from "./lookup";
-import type { LookupEvent, LookupState, Result } from "./lookup";
+import { COPY, exitNote } from "./copy";
+import { isLooking, resultMeta, resultTitle, resultType } from "./lookup";
+import type { LookupState, Result } from "./lookup";
+import type { LookupCommand } from "./lookup-machine";
 import { WatchMessage } from "./messages";
 import { WatchModel, WatchProps, initModel } from "./model";
 import { ReadSearchField, SearchField, TrackHash } from "./mounts";
@@ -92,7 +93,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
   const retrying = model.lookup.phase === "retrying";
   const title = result === null ? "" : resultTitle(result);
   const meta = result === null ? "" : resultMeta(result);
-  const disabled = retrying || busy(model.lookup.phase) || model.generation > model.applied;
+  const disabled = retrying || isLooking(model.lookup.phase) || model.generation > model.applied;
   const dialogOpen = model.lookup.openId !== null && result !== null;
 
   const link = (href: string, text: string, extra: string) => {
@@ -180,11 +181,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
                     .children(
                       h.p
                         .class("text-sm leading-relaxed text-ink-2 text-pretty")
-                        .children(
-                          "You'll leave this site and play on ",
-                          h.strong.class("font-medium text-ink").children(result.provider),
-                          ". We don't control external sites.",
-                        ),
+                        .children(exitNote(result.provider)),
                       h.div.class("flex shrink-0 flex-wrap justify-end gap-2").children(
                         h.button
                           .attrs({ type: "button" })
@@ -238,7 +235,7 @@ const resultDialog = WatchDef.fragment((h, model: WatchModel, result: Result | n
 export const WatchNoDeps = WatchDef.make({
   init: () => initModel(),
   update: ($, message) => {
-    const advance = (event: LookupEvent) => {
+    const advance = (event: LookupCommand) => {
       const generation = $.model.generation + 1;
       return $.evolve({ generation }).run(AdvanceLookup.make({ generation, event }));
     };
@@ -363,7 +360,7 @@ export const WatchNoDeps = WatchDef.make({
     });
   },
   view: (h, model) => {
-    const loading = busy(model.lookup.phase) || model.generation > model.applied;
+    const loading = isLooking(model.lookup.phase) || model.generation > model.applied;
     const invalid = model.lookup.status.kind === "field";
     const statusText = model.lookup.status.kind === "idle" ? "" : model.lookup.status.text;
     const strong = model.lookup.status.kind === "error" || model.lookup.status.kind === "field";

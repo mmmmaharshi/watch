@@ -1,5 +1,4 @@
-// Every string the UI shows. Copied word for word from DESIGN.md so the port
-// cannot drift from the old screen.
+// Every string the UI shows. DESIGN.md quotes the same copy.
 export const COPY = {
   title: "watch — find a stream link by IMDb or TMDB ID",
   wordmark: "watch",
@@ -21,3 +20,7 @@ export const COPY = {
   provider: "Provider",
   streamUrl: "Stream URL",
 } as const;
+
+// The dialog's exit note names the provider, so it cannot be a plain string.
+export const exitNote = (provider: string): string =>
+  `You'll leave this site and play on ${provider}. We don't control external sites.`;

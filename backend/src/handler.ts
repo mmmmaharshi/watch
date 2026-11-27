@@ -1,26 +1,22 @@
 import { Context, Effect, Layer, Option, Result } from "effect";
 import { TMDB_NOT_FOUND } from "../../src/lib/messages";
 import { parseTitleInput } from "../../src/lib/parse-input";
-import type { Mutable, WatchOutcome, WatchResult } from "../../src/lib/types";
+import type {
+  ContentType,
+  LookupInput,
+  Mutable,
+  WatchOutcome,
+  WatchResult,
+} from "../../src/lib/types";
 import { Mapping } from "./mapping";
 import { Metadata } from "./metadata";
 import type { TitleMeta } from "./metadata";
 import { Providers } from "./providers";
-import type { ContentType } from "../../src/lib/types";
 
 export type HandlerOutcome = WatchOutcome;
 
-export interface HandlerInput {
-  readonly id: string;
-  readonly kind?: ContentType;
-  readonly strictKind?: boolean;
-  readonly name?: string;
-  readonly year?: string;
-  readonly exclude?: string;
-}
-
 export interface HandlerShape {
-  readonly handle: (input: HandlerInput) => Effect.Effect<HandlerOutcome>;
+  readonly handle: (input: LookupInput) => Effect.Effect<HandlerOutcome>;
 }
 
 // The five failure shapes mirror the old API exactly. The client branches on
@@ -64,7 +60,7 @@ export class Handler extends Context.Service<Handler, HandlerShape>()("watch/bac
       const metadata = yield* Metadata;
       const providers = yield* Providers;
 
-      const handle = Effect.fnUntraced(function* (input: HandlerInput) {
+      const handle = Effect.fnUntraced(function* (input: LookupInput) {
         const parsed = parseTitleInput(input.id, input.kind);
         if (parsed === null) {
           return INVALID;

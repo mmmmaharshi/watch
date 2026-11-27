@@ -1,24 +1,8 @@
 import { Effect } from "effect";
-import type { LookupDeps, LookupOutcome } from "../../backend/src/lookup-machine";
-import { LOOKUP_FAILED } from "./messages";
-import type { ContentType, WatchOutcome } from "./types";
-
-// The API response, structurally. A call that reaches the Worker answers
-// with data; a call that fails answers with an error, or rejects.
-interface ApiResponse<A> {
-  readonly data?: A;
-  readonly error?: { readonly message?: string };
-}
-
-// The endpoint the page exposes. Passed in, so the deps are tested without a
-// server.
-export interface LookupTransport {
-  readonly watch: (input: {
-    readonly id: string;
-    readonly kind?: ContentType;
-    readonly exclude?: string;
-  }) => Promise<ApiResponse<WatchOutcome>>;
-}
+import { LOOKUP_FAILED } from "../../src/lib/messages";
+import type { LookupTransport } from "../../src/lib/transport";
+import type { LookupOutcome } from "../../src/lib/types";
+import type { LookupDeps } from "./lookup-machine";
 
 const resolve = async <A>(task: () => Promise<A>, fallback: A): Promise<A> => {
   try {

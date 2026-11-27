@@ -1,7 +1,7 @@
 import { Context, Effect, Layer, Option } from "effect";
 import type { ProvidersFile } from "../../src/lib/providers";
+import { PROVIDER_LIST_KEY, parseProvidersFile } from "../../src/lib/providers";
 import type { KvNamespace } from "./kv";
-import { PROVIDER_LIST_KEY, parseProvidersFile } from "./providers";
 
 export interface ProviderListShape {
   // A read failure is a miss: the Providers service falls back to the live

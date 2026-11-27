@@ -1,3 +1,4 @@
+import { Option } from "effect";
 import type { ContentType } from "./types";
 
 // VidSrc rotates domains, and a stale hardcoded list fails badly: dead domains
@@ -19,6 +20,44 @@ export type ProviderEntry = Pick<Provider, "name" | "baseUrl">;
 export interface ProvidersFile {
   readonly updatedAt: string;
   readonly providers: ReadonlyArray<ProviderEntry>;
+}
+
+// The KV key the refresh cron writes and the app reads.
+export const PROVIDER_LIST_KEY = "providers";
+
+const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
+
+// Entries are taken as listed (https-parse only, no name gate): a bad entry
+// costs one failed probe. Malformed or non-https entries are dropped.
+export function parseProvidersFile(value: unknown): Option.Option<ProvidersFile> {
+  if (!isObject(value) || !("providers" in value) || !Array.isArray(value.providers)) {
+    return Option.none();
+  }
+  const providers: Array<ProviderEntry> = [];
+  const seen = new Set<string>();
+  for (const entry of value.providers) {
+    if (!isObject(entry) || !("baseUrl" in entry) || typeof entry.baseUrl !== "string") {
+      continue;
+    }
+    const baseUrl = originIfHttps(entry.baseUrl);
+    if (baseUrl === null || seen.has(baseUrl)) {
+      continue;
+    }
+    seen.add(baseUrl);
+    const name =
+      "name" in entry && typeof entry.name === "string" && entry.name !== ""
+        ? entry.name
+        : new URL(baseUrl).host;
+    providers.push({ name, baseUrl });
+  }
+  if (!providers.length) {
+    return Option.none();
+  }
+  // An unparseable updatedAt means stale, not missing: the list still serves
+  // when the directory is down.
+  const updatedAt =
+    "updatedAt" in value && typeof value.updatedAt === "string" ? value.updatedAt : "";
+  return Option.some({ updatedAt, providers });
 }
 
 // Static fallbacks, tried after every directory domain fails. VidFast goes

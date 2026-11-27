@@ -1,6 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Deferred, Effect } from "effect";
-import type { LookupDeps, LookupOutcome } from "../../backend/src/lookup-machine";
+import type { LookupDeps } from "../src/lookup-machine";
+import type { LookupOutcome } from "../../src/lib/types";
 import { LookupEngine, lookupEngineLayer } from "../src/commands";
 
 const MATRIX = {

@@ -1,7 +1,7 @@
 import { Component } from "@effect/ui";
 import { HtmlServer } from "@effect/ui/html";
 import { Effect, Layer } from "effect";
-import { makeLookupDeps } from "../../src/lib/ui-deps";
+import { makeLookupDeps } from "./deps";
 import { httpTransport } from "../../src/lib/transport";
 import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "./commands";
 import { WatchNoDeps } from "./watch";

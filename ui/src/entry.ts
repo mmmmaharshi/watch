@@ -2,7 +2,7 @@ import { Component } from "@effect/ui";
 import type { Renderer } from "@effect/ui";
 import { BrowserHost, HtmlHydrate } from "@effect/ui/html";
 import { Effect, Layer, Schema } from "effect";
-import type { LookupDeps } from "../../backend/src/lookup-machine";
+import type { LookupDeps } from "./lookup-machine";
 import { AdvanceLookup, AwaitLookupSettle, lookupEngineLayer } from "./commands";
 import { WatchModel } from "./model";
 import { SEARCH_FIELD_NAME, WatchNoDeps } from "./watch";

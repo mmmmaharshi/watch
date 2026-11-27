@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import type { Effect } from "effect";
 import { LOOKUP_FAILED } from "../../src/lib/messages";
 import { fullLinkForId, isLinkLike, parseTitleInput } from "../../src/lib/parse-input";
-import { FAILURE_REASONS, Kind, Result } from "../../src/lib/types";
+import { Kind, LookupInput, LookupOutcome, Result } from "../../src/lib/types";
 
 // The status copy the machine emits. The tests pin these strings, because they
 // are what a person reads while a lookup runs.
@@ -15,18 +15,6 @@ const MESSAGES = {
   lookupFailed: LOOKUP_FAILED,
   noProviders: "No other providers available.",
 } as const;
-
-const FailureReason = Schema.Literals(FAILURE_REASONS);
-
-const LookupOutcome = Schema.Union([
-  Schema.Struct({ ok: Schema.Literal(true), result: Result }),
-  Schema.Struct({
-    ok: Schema.Literal(false),
-    reason: FailureReason,
-    error: Schema.String,
-  }),
-]);
-export type LookupOutcome = typeof LookupOutcome.Type;
 
 export const Status = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("idle") }),
@@ -46,25 +34,13 @@ const LookupContext = Schema.Struct({
 });
 export type LookupContext = typeof LookupContext.Type;
 
-const LookupInput = Schema.Struct({
-  id: Schema.String,
-  // A bare TMDB number has no kind, so the mapping tries both ID spaces.
-  kind: Schema.optionalKey(Kind),
-  strictKind: Schema.optionalKey(Schema.Boolean),
-  name: Schema.optionalKey(Schema.String),
-  year: Schema.optionalKey(Schema.String),
-  exclude: Schema.optionalKey(Schema.String),
-});
-export type LookupInput = typeof LookupInput.Type;
-
 export type LookupEvent =
   | { readonly type: "submit"; readonly input: string }
   | { readonly type: "retry" }
   | { readonly type: "lookupDone"; readonly output: LookupOutcome }
   | { readonly type: "fail"; readonly message: string }
   | { readonly type: "close" }
-  | { readonly type: "hashNav"; readonly id: string }
-  | { readonly type: "change"; readonly value: string };
+  | { readonly type: "hashNav"; readonly id: string };
 
 const Events = {
   submit: Schema.Struct({ input: Schema.String }),
@@ -73,8 +49,17 @@ const Events = {
   fail: Schema.Struct({ message: Schema.String }),
   close: Schema.Struct({}),
   hashNav: Schema.Struct({ id: Schema.String }),
-  change: Schema.Struct({ value: Schema.String }),
 };
+
+// The four events the page sends. The machine's replies (`lookupDone`, `fail`)
+// stay inside.
+export const LookupCommand = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("submit"), input: Schema.String }),
+  Schema.Struct({ type: Schema.Literal("retry") }),
+  Schema.Struct({ type: Schema.Literal("close") }),
+  Schema.Struct({ type: Schema.Literal("hashNav"), id: Schema.String }),
+]);
+export type LookupCommand = typeof LookupCommand.Type;
 
 // Look up a stream for one id. The UI supplies the real services; the tests
 // supply fakes. Product failures stay in the outcome union, so the machine
@@ -97,11 +82,6 @@ type Move =
   | { readonly context?: Partial<LookupContext> };
 
 const onClose = (): Move => ({ context: { openId: null } });
-
-// A field error clears as soon as the person types again.
-const onChange = (context: LookupContext, value: string): Move => ({
-  context: context.status.kind === "field" ? { value, status: idleStatus() } : { value },
-});
 
 // Hash navigation prefills but never opens. The id of the dialog we opened is
 // its own history echo and is dropped; re-applying the shown link is a no-op.
@@ -237,7 +217,6 @@ export function createLookupMachine(deps: LookupDeps) {
     on: {
       close: onClose,
       hashNav: (args) => onHashNav(args.context, args.event.id),
-      change: (args) => onChange(args.context, args.event.value),
     },
     states: {
       idle: {

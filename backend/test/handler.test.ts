@@ -1,7 +1,7 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Layer, Option } from "effect";
 import { Handler } from "../src/handler";
-import type { HandlerInput } from "../src/handler";
+import type { LookupInput } from "../../src/lib/types";
 import { Mapping, TmdbAmbiguous, TmdbNotFound } from "../src/mapping";
 import type { MappingShape } from "../src/mapping";
 import { Metadata, MetadataMissing } from "../src/metadata";
@@ -32,7 +32,7 @@ const stub = (stubs: HandlerStubs = {}) =>
     ),
   );
 
-const handle = (input: HandlerInput, stubs: HandlerStubs = {}) =>
+const handle = (input: LookupInput, stubs: HandlerStubs = {}) =>
   Effect.gen(function* () {
     const handler = yield* Handler;
     return yield* handler.handle(input);

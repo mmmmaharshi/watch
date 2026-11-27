@@ -5,8 +5,8 @@ Four folders, one owner each. Find the owner before adding logic.
 | Folder         | Owns                                                                                                                                                                                                                                                                              | Used by                    |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `src/lib/`     | The plain contract and helpers: wire types (`types.ts`), link shapes (`parse-input.ts`), provider facts (`providers.ts`), the loose-JSON guard (`http.ts`), the year helper (`year.ts`), server copy (`messages.ts`), the CSP (`csp.ts`), the browser transport (`transport.ts`). | The browser and the Worker |
-| `backend/src/` | Effect services and the lookup machine: `site.ts` (the `/api/*` routes), `site-worker.ts` (the Worker entry), handler, metadata, mapping, providers layer, cache, refresh core, Alchemy stack.                                                                                    | The Worker, the cron       |
-| `ui/src/`      | Effect UI components: `watch.ts` (the root component) and `poster.ts`, Messages, Model, Commands, mounts, `shell.ts` (the static page), `boot.ts` (the browser entry).                                                                                                            | The build, the browser     |
+| `backend/src/` | Effect services: `site.ts` (the `/api/*` routes), `site-worker.ts` (the Worker entry), handler, metadata, mapping, providers layer, cache, refresh core, Alchemy stack.                                                                                                           | The Worker, the cron       |
+| `ui/src/`      | Effect UI components and the page's client: `watch.ts` (the root component), `lookup-machine.ts` (the lookup lifecycle), `deps.ts` (its transport adapter), Messages, Model, Commands, mounts, `shell.ts` (the static page), `boot.ts` (the browser entry).                       | The build, the browser     |
 | `scripts/`     | Bun entry points run by hand or by CI: `build-site.ts`.                                                                                                                                                                                                                           | Your terminal              |
 
 Three rules follow from the split:
@@ -16,8 +16,7 @@ Three rules follow from the split:
 - A provider fact (host, URL shape, directory parser) lives in
   `src/lib/providers.ts`. The Effect layer over it lives in
   `backend/src/providers.ts`.
-- `src/lib` imports nothing from `backend/` or `ui/`, except `ui-deps.ts`, which
-  is the page's adapter between the transport and the machine.
+- `src/lib` imports nothing from `backend/` or `ui/`.
 
 Tests sit beside their owner: `src/lib/*.test.ts`, `backend/test/`, `ui/test/`,
 and `e2e/`. `e2e` has an offline project (`ci`) that runs in CI and a live

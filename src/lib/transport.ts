@@ -1,10 +1,18 @@
 import { Option, Schema } from "effect";
 import { WatchOutcome } from "./types";
-import type { LookupTransport } from "./ui-deps";
+import type { LookupInput } from "./types";
 
-interface ApiResponse<A> {
+// A call that reached the server answers with data; a call that failed answers
+// with an error. Every transport speaks this shape.
+export interface ApiResponse<A> {
   readonly data?: A;
   readonly error?: { readonly message?: string };
+}
+
+// The endpoint the page exposes. Passed in, so the deps are tested without a
+// server, and typed with the request shape the route decodes.
+export interface LookupTransport {
+  readonly watch: (input: LookupInput) => Promise<ApiResponse<WatchOutcome>>;
 }
 
 const errorMessage = (payload: unknown, status: number): string => {

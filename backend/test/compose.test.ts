@@ -5,7 +5,7 @@ import { Cache } from "../src/cache";
 import { cacheLayer, providerListLayer, siteFor } from "../src/compose";
 import type { KvNamespace } from "../src/kv";
 import { ProviderList } from "../src/provider-list";
-import { PROVIDER_LIST_KEY } from "../src/providers";
+import { PROVIDER_LIST_KEY } from "../../src/lib/providers";
 
 const stubKv = (initial: Record<string, string> = {}) => {
   const values = new Map<string, string>(Object.entries(initial));
