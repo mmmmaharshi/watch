@@ -1,7 +1,16 @@
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Option } from "effect";
 import type { ProvidersFile } from "../../src/lib/providers";
-import { DIRECTORY_URL, VIDFAST, VIDLINK, VIDZEE, buildEmbedUrl } from "../../src/lib/providers";
+import {
+  DIRECTORY_URL,
+  NXSHA,
+  TWOEMBED,
+  VIDCORE,
+  VIDFAST,
+  VIDLINK,
+  VIDZEE,
+  buildEmbedUrl,
+} from "../../src/lib/providers";
 import { ROT_ALARM_MS } from "../../src/lib/provider-probes";
 import { runRefresh } from "../src/refresh";
 import type { ProbeResponse, RefreshDeps } from "../src/refresh";
@@ -35,6 +44,9 @@ const hiredRoutes = (): Array<[string, ProbeResponse]> => [
   [buildEmbedUrl(VIDLINK, "movie", BOGUS_ID), { status: 500, body: "Internal Server Error" }],
   [buildEmbedUrl(VIDZEE, "movie", PROBE_ID), { status: 200, body: vidZeePlayer }],
   [buildEmbedUrl(VIDFAST, "movie", PROBE_ID), { status: 200, body: "<html>vidfast</html>" }],
+  [buildEmbedUrl(NXSHA, "movie", PROBE_ID), { status: 200, body: "<html>nxsha</html>" }],
+  [buildEmbedUrl(TWOEMBED, "movie", PROBE_ID), { status: 200, body: "<html>2embed</html>" }],
+  [buildEmbedUrl(VIDCORE, "movie", PROBE_ID), { status: 200, body: "<html>vidcore</html>" }],
 ];
 
 interface Harness {
@@ -94,31 +106,30 @@ describe("provider refresh", () => {
       const outcome = yield* runRefresh(h.deps);
 
       assert.strictEqual(outcome.written, true);
-      assert.strictEqual(outcome.providers, 4);
+      assert.strictEqual(outcome.providers, 1);
       assert.deepStrictEqual(outcome.skipped, []);
       assert.deepStrictEqual(h.saved, [
         {
           updatedAt: "1970-01-01T00:00:00.000Z",
-          providers: [
-            { name: "a.test", baseUrl: "https://a.test" },
-            { name: "vidlink.pro", baseUrl: VIDLINK.baseUrl },
-            { name: "player.vidzee.wtf", baseUrl: VIDZEE.baseUrl },
-            { name: "vidfast.vc", baseUrl: VIDFAST.baseUrl },
-          ],
+          providers: [{ name: "a.test", baseUrl: "https://a.test" }],
         },
       ]);
     }),
   );
 
-  it.effect("skips a host whose embed has no player wiring", () =>
+  it.effect("skips a dead directory host and stores the live one", () =>
     Effect.gen(function* () {
       const h = harness(
         [
-          [DIRECTORY_URL, { status: 200, body: directoryPage(["https://dead.test"]) }],
+          [
+            DIRECTORY_URL,
+            { status: 200, body: directoryPage(["https://dead.test", "https://a.test"]) },
+          ],
           [
             buildEmbedUrl({ name: "dead.test", baseUrl: "https://dead.test" }, "movie", PROBE_ID),
             { status: 200, body: "<html>no player</html>" },
           ],
+          ...vidsrcRoutes("https://a.test"),
           ...hiredRoutes(),
         ],
         Option.none(),
@@ -129,7 +140,7 @@ describe("provider refresh", () => {
       assert.deepStrictEqual(outcome.skipped, ["https://dead.test"]);
       assert.deepStrictEqual(
         h.saved[0]?.providers.map((entry) => entry.baseUrl),
-        [VIDLINK.baseUrl, VIDZEE.baseUrl, VIDFAST.baseUrl],
+        ["https://a.test"],
       );
     }),
   );

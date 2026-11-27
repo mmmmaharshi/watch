@@ -31,7 +31,7 @@ export default Worker(
         Effect.tap((outcome) =>
           Effect.logInfo(
             outcome.written
-              ? `Stored ${outcome.providers} providers.`
+              ? `Stored ${outcome.providers} providers. Skipped: ${outcome.skipped.join(", ") || "none"}.`
               : `Directory unreachable; kept ${outcome.providers} providers.`,
           ),
         ),

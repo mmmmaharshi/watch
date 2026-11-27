@@ -2,20 +2,18 @@ import { Clock, Context, Effect, Layer, Option } from "effect";
 import { PROBE_TIMEOUT_MS } from "../../src/lib/provider-probes";
 import {
   DIRECTORY_URL,
-  VIDFAST,
-  VIDLINK,
-  VIDZEE,
+  PROVIDER_TIERS,
   buildEmbedUrl,
   parseActiveDomains,
 } from "../../src/lib/providers";
-import type { Provider } from "../../src/lib/providers";
+import type { Provider, ProviderSpec } from "../../src/lib/providers";
 import type { ContentType } from "../../src/lib/types";
 import { Cache } from "./cache";
 import { Http, HttpError } from "./http";
 import type { HttpShape } from "./http";
 import { ProviderList } from "./provider-list";
 
-// The provider facts (hosts, URL shapes, the directory parser) live in
+// The provider facts (hosts, URL shapes, tiers, directory parsers) live in
 // src/lib/providers, because the refresh script needs them without Effect.
 // This module adds the layer that talks HTTP through the Effect runtime.
 export interface Stream {
@@ -32,27 +30,46 @@ const STREAM_TTL_MS = 5 * 60 * 1000;
 
 const LOAD_TIMEOUT_MS = 5000;
 
-function toProviders(baseUrls: ReadonlyArray<string>): Array<Provider> {
-  return baseUrls.map((baseUrl) => ({ name: new URL(baseUrl).host, baseUrl }));
-}
+// A stored VidSrc domain carries no shape: the default /embed one is the rule
+// for that list, so this constructor takes no template to lose.
+const defaultAt = (baseUrl: string): Provider => ({
+  name: new URL(baseUrl).host,
+  baseUrl,
+});
 
-const fetchDirectoryDomains = (http: HttpShape) =>
-  http.getText(DIRECTORY_URL).pipe(
-    Effect.timeoutOrElse({
-      duration: LOAD_TIMEOUT_MS,
-      orElse: () => Effect.fail(new HttpError({ url: DIRECTORY_URL })),
-    }),
-    Effect.map(parseActiveDomains),
+// A listed mirror keeps its provider's own shape and alive check.
+const mirrorAt =
+  (template: Provider) =>
+  (baseUrl: string): Provider => ({
+    ...template,
+    name: new URL(baseUrl).host,
+    baseUrl,
+  });
+
+const toProviders = (baseUrls: ReadonlyArray<string>): Array<Provider> => baseUrls.map(defaultAt);
+
+const withTimeout = <A, E, R>(url: string, duration: number, effect: Effect.Effect<A, E, R>) =>
+  effect.pipe(
+    Effect.timeoutOrElse({ duration, orElse: () => Effect.fail(new HttpError({ url })) }),
+  );
+
+const fetchParsed = (http: HttpShape, url: string, parse: (html: string) => Array<string>) =>
+  withTimeout(url, LOAD_TIMEOUT_MS, http.getText(url)).pipe(
+    Effect.map(parse),
     Effect.orElseSucceed((): Array<string> => []),
   );
 
+const fetchDirectoryDomains = (http: HttpShape) =>
+  fetchParsed(http, DIRECTORY_URL, parseActiveDomains);
+
 const probe = (http: HttpShape, provider: Provider, type: ContentType, id: string) => {
   const url = buildEmbedUrl(provider, type, id);
-  return http.getText(url).pipe(
-    Effect.timeoutOrElse({
-      duration: PROBE_TIMEOUT_MS,
-      orElse: () => Effect.fail(new HttpError({ url })),
-    }),
+  return withTimeout(url, PROBE_TIMEOUT_MS, http.getText(url)).pipe(
+    // A 2xx is not proof of a title: some hosts answer a not-found page with 200.
+    Effect.filterOrFail(
+      (body) => provider.alive === undefined || provider.alive(body),
+      () => new HttpError({ url }),
+    ),
     Effect.as({ url, provider: provider.name }),
   );
 };
@@ -68,6 +85,7 @@ export interface ProvidersShape {
 // Cache holds strings, so a domain list travels newline-joined (URLs never
 // contain a newline).
 const DOMAINS_KEY = "providers:domains";
+const mirrorKey = (template: Provider) => `providers:mirror:${template.name}`;
 const streamKey = (type: ContentType, id: string) => `providers:stream:${type}:${id}`;
 
 export class Providers extends Context.Service<Providers, ProvidersShape>()(
@@ -79,6 +97,36 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
       const http = yield* Http;
       const cache = yield* Cache;
       const providerList = yield* ProviderList;
+
+      // A directory replaces its template's single host with the live mirrors.
+      // A down page falls back to the template's own host, so nothing is lost.
+      const loadMirrors = Effect.fnUntraced(function* (
+        template: Provider,
+        directory: NonNullable<ProviderSpec["directory"]>,
+      ) {
+        const at = mirrorAt(template);
+        const key = mirrorKey(template);
+        const cached = yield* cache.get(key);
+        if (Option.isSome(cached)) {
+          return cached.value.split("\n").map(at);
+        }
+        const live = yield* fetchParsed(http, directory.url, directory.parse).pipe(
+          Effect.map((origins) =>
+            origins.filter((origin) => origin !== new URL(directory.url).origin),
+          ),
+        );
+        // Cache the fallback too, so a down page costs one fetch, not one per lookup.
+        const origins = live.length ? live : [template.baseUrl];
+        yield* cache.set(key, origins.join("\n"), PROVIDERS_TTL_MS);
+        return origins.map(at);
+      });
+
+      const loadTier = (tier: ReadonlyArray<ProviderSpec>) =>
+        Effect.forEach(tier, (spec) =>
+          spec.directory === undefined
+            ? Effect.succeed([spec.provider])
+            : loadMirrors(spec.provider, spec.directory),
+        ).pipe(Effect.map((lists) => lists.flat()));
 
       const loadProviders = Effect.fnUntraced(function* () {
         const cached = yield* cache.get(DOMAINS_KEY);
@@ -118,20 +166,30 @@ export class Providers extends Context.Service<Providers, ProvidersShape>()(
         readonly exclude?: string;
       }) {
         const providers = yield* loadProviders();
+        const staticTiers = yield* Effect.forEach(PROVIDER_TIERS, loadTier);
+        const tiers: ReadonlyArray<ReadonlyArray<Provider>> = [providers, ...staticTiers];
+        // A retry leaves a whole directory: another mirror of the same host is
+        // not another stream. A static tier keeps its siblings.
+        const directoryTiers = new Set<ReadonlyArray<Provider>>([
+          providers,
+          ...staticTiers.filter((_, index) =>
+            PROVIDER_TIERS[index]?.some((spec) => spec.directory !== undefined),
+          ),
+        ]);
         const key = streamKey(args.type, args.id);
         const cachedName = yield* cache.get(key);
-        const known = [...providers, VIDLINK, VIDZEE, VIDFAST];
+        // A remembered provider is probed before the directory on a repeat lookup.
+        const known = tiers.flat();
         const cached = Option.isSome(cachedName)
           ? known.find((provider) => provider.name === cachedName.value)
           : undefined;
-        const tiers: ReadonlyArray<ReadonlyArray<Provider>> = [
-          ...(cached === undefined ? [] : [[cached]]),
-          providers,
-          [VIDLINK, VIDZEE],
-          [VIDFAST],
-        ];
+        const order = (cached === undefined ? tiers : [[cached], ...tiers]).filter(
+          (tier) =>
+            args.exclude === undefined ||
+            !(directoryTiers.has(tier) && tier.some((provider) => provider.name === args.exclude)),
+        );
 
-        for (const tier of tiers) {
+        for (const tier of order) {
           const candidates = tier.filter((provider) => provider.name !== args.exclude);
           if (!candidates.length) {
             continue;

@@ -1,8 +1,9 @@
-import { originIfHttps } from "./providers";
-import type { ProviderEntry, ProvidersFile } from "./providers";
+import { providerEntries } from "./providers";
+import type { Provider, ProvidersFile } from "./providers";
+
 // Probe rules shared by the Bun script and the Worker cron. A plain HTTP 200
 // proves nothing: valid and bogus titles return the same shell, so each host
-// must show its own alive signal (see research/probe-26.md).
+// carries its own alive check (see research/probe-26.md).
 export const PROBE_ID = "tt0133093";
 export const BOGUS_ID = "tt0000000";
 export const PROBE_TIMEOUT_MS = 8000;
@@ -18,56 +19,19 @@ export function hasSignedSrc(apiBody: string): boolean {
   return apiBody.includes('"src"') && apiBody.includes("?vs=");
 }
 
-// VidLink is the only host with a per-title signal: 200 for a real title, 500
-// for a bogus one. The body marker guards against a parked domain.
-export function isVidLinkAlive(status: number, body: string): boolean {
-  return status === 200 && /tmdb|vidlink/i.test(body);
-}
-
-// Both halves must hold: a parked domain answers 200 with a marker to every
-// title, so the bogus title has to stay dead.
-export function isVidLinkPairAlive(
-  valid: { status: number; body: string },
-  bogus: { status: number; body: string },
+// One answer is alive when the host answered 200 and its own body check, if
+// any, passes. The cron and the request path share this rule.
+export function isAlive(
+  provider: Provider,
+  response: { readonly status: number; readonly body: string },
 ): boolean {
-  return isVidLinkAlive(valid.status, valid.body) && !isVidLinkAlive(bogus.status, bogus.body);
+  return response.status === 200 && (provider.alive === undefined || provider.alive(response.body));
 }
 
-// VidZee has no per-title signal (valid and bogus return the same shell), so
-// this only proves the player shell is up. Left shallow on purpose; a deeper
-// API check is out of scope (see research/probe-26.md).
-export function isVidZeeAlive(status: number, body: string): boolean {
-  return status === 200 && /tmdb|vidzee/i.test(body);
-}
-
-// VidFast is the static last resort, but even it gets probed: a blocked host is
-// left out of the list.
-export function isVidFastAlive(status: number): boolean {
-  return status === 200;
-}
-
-export function buildProvidersJson(
-  baseUrls: Array<string>,
-  updatedAt: string,
-  fallbacks: Array<string>,
-): ProvidersFile {
-  const seen = new Set<string>();
-  const providers: Array<ProviderEntry> = [];
-  for (const baseUrl of [...baseUrls, ...fallbacks]) {
-    const origin = originIfHttps(baseUrl);
-    if (!origin || seen.has(origin)) {
-      continue;
-    }
-    seen.add(origin);
-    providers.push({ name: new URL(origin).host, baseUrl: origin });
-  }
-  return { updatedAt, providers };
+export function buildProvidersJson(baseUrls: Array<string>, updatedAt: string): ProvidersFile {
+  return { updatedAt, providers: providerEntries(baseUrls) };
 }
 
 // Twice the Tue+Sat schedule, plus margin. Older than this with no live
 // directory, the run fails red so someone looks before users notice rot.
 export const ROT_ALARM_MS = 7 * 24 * 60 * 60 * 1000;
-
-export function needsRotAlarm(ageMs: number | null): boolean {
-  return ageMs === null || ageMs > ROT_ALARM_MS;
-}

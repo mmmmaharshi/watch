@@ -13,7 +13,7 @@ export const Status = Schema.Union([
 ]);
 export type Status = typeof Status.Type;
 
-const LookupContext = Schema.Struct({
+export const LookupContext = Schema.Struct({
   // True when the last submit was a pasted link, so its result type becomes
   // the kind a later bare id uses.
   linkSubmit: Schema.Boolean,

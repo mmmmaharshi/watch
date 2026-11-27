@@ -10,6 +10,9 @@ export interface Provider {
   readonly baseUrl: string;
   // Defaults to /embed/{type}/{id}; override for a provider with another shape.
   readonly path?: (type: ContentType, id: string) => string;
+  // A 2xx is not proof of a title: some hosts answer a not-found page with 200.
+  // When set, the body must also pass this check.
+  readonly alive?: (body: string) => boolean;
 }
 
 // One entry of the stored provider list. The cron writer and the app reader
@@ -27,29 +30,35 @@ export const PROVIDER_LIST_KEY = "providers";
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
-// Entries are taken as listed (https-parse only, no name gate): a bad entry
-// costs one failed probe. Malformed or non-https entries are dropped.
-export function parseProvidersFile(value: unknown): Option.Option<ProvidersFile> {
-  if (!isObject(value) || !("providers" in value) || !Array.isArray(value.providers)) {
-    return Option.none();
-  }
-  const providers: Array<ProviderEntry> = [];
+// A stored entry is always the origin plus its host name. The writer and the
+// reader share this one derivation, so the file cannot drift.
+export function providerEntries(origins: ReadonlyArray<string>): Array<ProviderEntry> {
   const seen = new Set<string>();
-  for (const entry of value.providers) {
-    if (!isObject(entry) || !("baseUrl" in entry) || typeof entry.baseUrl !== "string") {
-      continue;
-    }
-    const baseUrl = originIfHttps(entry.baseUrl);
+  const entries: Array<ProviderEntry> = [];
+  for (const raw of origins) {
+    const baseUrl = originIfHttps(raw);
     if (baseUrl === null || seen.has(baseUrl)) {
       continue;
     }
     seen.add(baseUrl);
-    const name =
-      "name" in entry && typeof entry.name === "string" && entry.name !== ""
-        ? entry.name
-        : new URL(baseUrl).host;
-    providers.push({ name, baseUrl });
+    entries.push({ name: new URL(baseUrl).host, baseUrl });
   }
+  return entries;
+}
+
+// Entries are taken as listed (https-parse only, no name gate): a bad entry
+// costs one failed probe. Malformed or non-https entries are dropped, and the
+// name is always the host, so the writer and the reader cannot drift.
+export function parseProvidersFile(value: unknown): Option.Option<ProvidersFile> {
+  if (!isObject(value) || !("providers" in value) || !Array.isArray(value.providers)) {
+    return Option.none();
+  }
+  const origins = value.providers.flatMap((entry) =>
+    isObject(entry) && "baseUrl" in entry && typeof entry.baseUrl === "string"
+      ? [entry.baseUrl]
+      : [],
+  );
+  const providers = providerEntries(origins);
   if (!providers.length) {
     return Option.none();
   }
@@ -60,25 +69,57 @@ export function parseProvidersFile(value: unknown): Option.Option<ProvidersFile>
   return Option.some({ updatedAt, providers });
 }
 
-// Static fallbacks, tried after every directory domain fails. VidFast goes
-// last. TV needs season/episode, default to 1/1. VidZee uses /embed/movie/{id}
-// for movies and /embed/tv/{id}/1/1 for TV; the bare TV path is 404.
+// Static fallbacks, tried after every directory domain fails. VidFast is the
+// last resort. TV needs season/episode, default to 1/1.
+const firstEpisodePath = (type: ContentType, id: string) =>
+  type === "movie" ? `/embed/movie/${id}` : `/embed/tv/${id}/1/1`;
+
+const plainEpisodePath = (type: ContentType, id: string) =>
+  type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`;
+
 export const VIDLINK: Provider = {
   name: "vidlink.pro",
   baseUrl: "https://vidlink.pro",
-  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+  path: plainEpisodePath,
+  // A real title answers 200 with this marker; a bogus one answers 500.
+  alive: (body) => /tmdb|vidlink/i.test(body),
 };
 
+// VidZee, Nxsha and 2Embed share one shape. The bare TV path is 404, so TV
+// always carries 1/1.
 export const VIDZEE: Provider = {
   name: "player.vidzee.wtf",
   baseUrl: "https://player.vidzee.wtf",
-  path: (type, id) => (type === "movie" ? `/embed/movie/${id}` : `/embed/tv/${id}/1/1`),
+  path: firstEpisodePath,
+  alive: (body) => /tmdb|vidzee/i.test(body),
+};
+
+// Both take the IMDb id directly and show a real per-title signal: the valid
+// title appears in the body and a bogus id gets an error page.
+export const NXSHA: Provider = {
+  name: "nxsha.space",
+  baseUrl: "https://nxsha.space",
+  path: firstEpisodePath,
+};
+
+export const TWOEMBED: Provider = {
+  name: "2embed.stream",
+  baseUrl: "https://2embed.stream",
+  path: firstEpisodePath,
+};
+
+// A real title renders its name; a bogus id does not. Both answer 200, so the
+// probe only checks reachability.
+export const VIDCORE: Provider = {
+  name: "vidcore.net",
+  baseUrl: "https://vidcore.net",
+  path: plainEpisodePath,
 };
 
 export const VIDFAST: Provider = {
   name: "vidfast.vc",
   baseUrl: "https://vidfast.vc",
-  path: (type, id) => (type === "movie" ? `/movie/${id}` : `/tv/${id}/1/1`),
+  path: plainEpisodePath,
 };
 
 // No name-based allowlist: a pattern (vidsrc*) trusts blindly, and an exact
@@ -115,3 +156,32 @@ export function parseActiveDomains(html: string): Array<string> {
 export function buildEmbedUrl(provider: Provider, type: ContentType, id: string): string {
   return provider.baseUrl + (provider.path ? provider.path(type, id) : `/embed/${type}/${id}`);
 }
+
+// vidfast.domains lists the official mirrors as bare origin links. A mirror
+// link carries no path, which drops the support and Discord links beside it.
+export const VIDFAST_DIRECTORY_URL = "https://vidfast.domains/";
+
+export function parseMirrorOrigins(html: string): Array<string> {
+  const urls = [...html.matchAll(/href="(https:\/\/[^"/]+)\/?"/g)].flatMap((match) => {
+    const origin = originIfHttps(match[1] ?? "");
+    return origin ? [origin] : [];
+  });
+  return [...new Set(urls)];
+}
+
+// One static provider and, when it publishes one, the page that lists its live
+// mirrors. The tier order below is the only place that order is written.
+export interface ProviderSpec {
+  readonly provider: Provider;
+  readonly directory?: {
+    readonly url: string;
+    readonly parse: (html: string) => Array<string>;
+  };
+}
+
+// Every tier is raced; the next runs only when the whole tier fails.
+export const PROVIDER_TIERS: ReadonlyArray<ReadonlyArray<ProviderSpec>> = [
+  [{ provider: VIDLINK }, { provider: VIDZEE }],
+  [{ provider: NXSHA }, { provider: TWOEMBED }, { provider: VIDCORE }],
+  [{ provider: VIDFAST, directory: { url: VIDFAST_DIRECTORY_URL, parse: parseMirrorOrigins } }],
+];

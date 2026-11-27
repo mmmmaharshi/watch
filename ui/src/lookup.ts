@@ -1,7 +1,8 @@
 import { Schema } from "effect";
 import { COPY } from "../../src/lib/copy";
-import { Kind, Result } from "../../src/lib/types";
-import { Status } from "./lookup-machine";
+import { Result } from "../../src/lib/types";
+import type { Kind } from "../../src/lib/types";
+import { LookupContext } from "./lookup-machine";
 
 // The kind and result shapes come from the wire contract, and the status comes
 // from the machine, so the UI cannot drift from what it renders.
@@ -10,14 +11,11 @@ export { Result };
 export const Phase = Schema.Literals(["idle", "looking", "retrying"]);
 export type Phase = typeof Phase.Type;
 
-// The machine's context minus `value`, which the page Model holds as `query`.
+// The machine's context minus `value`, which the page Model holds as `query`,
+// plus the phase the machine is in.
 export const LookupState = Schema.Struct({
   phase: Phase,
-  kind: Kind,
-  result: Schema.NullOr(Result),
-  status: Status,
-  openId: Schema.NullOr(Schema.String),
-  linkSubmit: Schema.Boolean,
+  ...LookupContext.fields,
 });
 export type LookupState = typeof LookupState.Type;
 

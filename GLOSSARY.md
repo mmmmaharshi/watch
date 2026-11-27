@@ -12,4 +12,16 @@ The state of behaving exactly like the current app: same lookups, same results, 
 
 ## Provider
 
-A third-party embed host the app links to (`VidSrc`, `VidLink`, `VidZee`, `VidFast`). The app hosts nothing.
+A third-party embed host the app links to (`VidSrc`, `VidLink`, `VidZee`, `Nxsha`, `2Embed`, `VidCore`, `VidFast`). The app hosts nothing.
+
+## Directory
+
+A provider page that lists its live mirror domains, such as `vidsrc.domains`. The app reads it at runtime, so a domain move needs no code edit.
+
+## Mirror
+
+One domain of a provider, taken from its directory. A mirror keeps that provider's URL shape.
+
+## Multi-source host
+
+A provider that keeps several sources inside its own player. One dead CDN link is its problem, not ours.

@@ -67,6 +67,10 @@ const typeQuery = (id: string): string =>
 // Cinemeta's own two kinds, before the app's movie/tv vocabulary.
 type CinemetaKind = "movie" | "series";
 
+const toContentType = (kind: CinemetaKind): ContentType => (kind === "series" ? "tv" : "movie");
+
+const toCinemeta = (type: ContentType): CinemetaKind => (type === "tv" ? "series" : "movie");
+
 interface KindResult {
   readonly meta: TitleMeta | null;
   readonly transient: boolean;
@@ -113,7 +117,7 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             }
             const year = yearOf(m.year) ?? yearOf(m.releaseInfo);
             const meta: Mutable<TitleMeta> = {
-              type: kind === "series" ? "tv" : "movie",
+              type: toContentType(kind),
               name: m.name,
             };
             if (year !== undefined) {
@@ -163,7 +167,7 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
       // decides before a stub can name the result.
       const preferKind = (id: string, preferred: ContentType) =>
         Effect.gen(function* () {
-          const kind: CinemetaKind = preferred === "tv" ? "series" : "movie";
+          const kind = toCinemeta(preferred);
           const first = yield* fetchKind(kind, id);
           if (first.meta === null) {
             const second = yield* fetchKind(otherKind(kind), id);
@@ -274,7 +278,7 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
           preferred === undefined
             ? yield* bothKinds(id)
             : strict
-              ? yield* fetchKind(preferred === "tv" ? "series" : "movie", id)
+              ? yield* fetchKind(toCinemeta(preferred), id)
               : yield* preferKind(id, preferred);
         if (fetched.meta !== null) {
           yield* remember(cacheKind, id, fetched.meta);
@@ -288,7 +292,7 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
         }
 
         if (strict && preferred !== undefined) {
-          const other = yield* fetchKind(preferred === "tv" ? "movie" : "series", id);
+          const other = yield* fetchKind(otherKind(toCinemeta(preferred)), id);
           if (other.meta !== null) {
             const meta = { ...other.meta, type: preferred };
             yield* remember(cacheKind, id, meta);
