@@ -1,11 +1,9 @@
 import { Context, Effect, Layer, Schema } from "effect";
-import { USER_AGENT } from "../../src/consts";
+import { USER_AGENT, WIKIDATA_HOST } from "../../src/consts";
 import { isImdbId } from "../../src/lib/parse-input";
 import type { ContentType } from "../../src/lib/types";
 import type { HttpError } from "./http";
 import { Http } from "./http";
-
-const WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql";
 
 // Wikidata stores TMDB movie IDs in P4947 and TMDB TV IDs in P4983.
 const ID_PROPERTY = { movie: "P4947", tv: "P4983" } as const;
@@ -14,7 +12,7 @@ const wikidataUrl = (property: (typeof ID_PROPERTY)[ContentType], id: string): s
   const query =
     `SELECT ?imdb WHERE { ?item wdt:${property} "${id}" . ` +
     '?item wdt:P345 ?imdb . FILTER(STRSTARTS(?imdb, "tt")) }';
-  return `${WIKIDATA_ENDPOINT}?query=${encodeURIComponent(query)}&format=json`;
+  return `${WIKIDATA_HOST}/sparql?query=${encodeURIComponent(query)}&format=json`;
 };
 
 const WikidataAnswer = Schema.Struct({

@@ -1,5 +1,6 @@
 import { Context, Duration, Effect, Layer, Option, Schema } from "effect";
-import { CINEMETA_HOST, TVMAZE_HOST } from "../../src/consts";
+import { CINEMETA_HOST, TVMAZE_HOST, USER_AGENT, WIKIDATA_HOST } from "../../src/consts";
+import { isImdbId } from "../../src/lib/parse-input";
 import type { ContentType, Mutable } from "../../src/lib/types";
 import { Kind as MediaKind } from "../../src/lib/types";
 import { yearOf } from "../../src/lib/year";
@@ -51,7 +52,31 @@ export interface MetadataShape {
 }
 
 const REQUEST_TIMEOUT_MS = 5000;
+const WIKIDATA_TYPE_MS = 2000;
 const CACHE_TTL_MS = 60_000;
+
+// P31 is the item class. Film (Q11424) and series (Q5398426) items often sit
+// under a subclass — miniseries, anime series — so the P279* walk is required.
+const TypeAnswer = Schema.Struct({
+  results: Schema.optional(
+    Schema.Struct({
+      bindings: Schema.optional(
+        Schema.Array(
+          Schema.Struct({
+            root: Schema.optional(Schema.Struct({ value: Schema.optional(Schema.String) })),
+          }),
+        ),
+      ),
+    }),
+  ),
+});
+
+const typeUrl = (id: string): string => {
+  const query =
+    `SELECT ?root WHERE { ?item wdt:P345 "${id}" ; wdt:P31 ?type . ` +
+    "?type wdt:P279* ?root . VALUES ?root { wd:Q11424 wd:Q5398426 } } LIMIT 1";
+  return `${WIKIDATA_HOST}/sparql?query=${encodeURIComponent(query)}&format=json`;
+};
 
 type Kind = "movie" | "series";
 
@@ -127,9 +152,9 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
 
       // Cinemeta keeps a stub movie record for some series ids: tt2661044
       // answers "Yellowknife" (2002) as a movie while the series record holds
-      // The 100's episodes. Both kinds are asked, and the record that proves
-      // what it is wins: a series that lists episodes, then a movie that
-      // carries its own year (the stubs leave `year` empty).
+      // The 100's episodes. Both kinds are asked. One that proves itself — a
+      // series listing episodes, or a movie carrying its own year — wins
+      // outright; when both do, or neither does, Wikidata decides.
       const bothKinds = (id: string) =>
         Effect.gen(function* () {
           const [series, movie] = yield* Effect.all(
@@ -137,12 +162,23 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             { concurrency: "unbounded" },
           );
           const transient = series.transient || movie.transient;
-          if (series.meta !== null && series.hasEpisodes) {
+          const seriesProves = series.meta !== null && series.hasEpisodes;
+          const movieProves = movie.meta !== null && movie.hasOwnYear;
+          if (seriesProves !== movieProves) {
+            return { ...(seriesProves ? series : movie), transient };
+          }
+          if (series.meta === null && movie.meta === null) {
+            return { ...MISS, transient };
+          }
+          const known = yield* fetchType(id);
+          if (known === "tv" && series.meta !== null) {
             return { ...series, transient };
           }
-          if (movie.meta !== null && movie.hasOwnYear) {
+          if (known === "movie" && movie.meta !== null) {
             return { ...movie, transient };
           }
+          // No answer, or an answer for the kind that missed: keep the series,
+          // the kind whose stub records Cinemeta gets wrong.
           return { ...(series.meta !== null ? series : movie), transient };
         });
 
@@ -174,6 +210,28 @@ export class Metadata extends Context.Service<Metadata, MetadataShape>()("watch/
             meta.description = summary;
           }
           return meta;
+        });
+
+      // The deciding vote when both Cinemeta kinds look real. A miss or a slow
+      // answer leaves the heuristic in charge, so the lookup never fails here.
+      const fetchType = (id: string) =>
+        Effect.gen(function* () {
+          if (!isImdbId(id)) {
+            return null;
+          }
+          const answer = yield* http
+            .getJson(typeUrl(id), TypeAnswer, { "User-Agent": USER_AGENT })
+            .pipe(
+              Effect.timeoutOption(Duration.millis(WIKIDATA_TYPE_MS)),
+              Effect.catchTag("HttpError", () => Effect.succeed(Option.none())),
+            );
+          const root = Option.isSome(answer)
+            ? answer.value.results?.bindings?.[0]?.root?.value
+            : undefined;
+          if (root === "http://www.wikidata.org/entity/Q11424") {
+            return "movie";
+          }
+          return root === "http://www.wikidata.org/entity/Q5398426" ? "tv" : null;
         });
 
       const remember = (cacheKind: ContentType | "any", id: string, meta: TitleMeta) =>

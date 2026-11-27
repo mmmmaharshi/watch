@@ -54,6 +54,24 @@ const namedSeriesText: HttpShape["getText"] = (url) =>
     ? json({ meta: { name: "Some Show", year: "2020" } })
     : json(MATRIX);
 
+// Both kinds look real: a series with episodes and a movie carrying a year.
+// Wikidata's answer is the P31 root the stub returns.
+const bothLookReal =
+  (root: string): HttpShape["getText"] =>
+  (url) => {
+    if (url.includes("wikidata")) {
+      return json({
+        results: { bindings: [{ root: { value: `http://www.wikidata.org/entity/${root}` } }] },
+      });
+    }
+    return url.includes("/meta/series/")
+      ? json({ meta: { name: "The 100", year: "2014–2020", videos: [{ id: "tt1" }] } })
+      : json({ meta: { name: "Yellowknife", year: "2002", imdbRating: "7.5" } });
+  };
+
+const brokenWikiText: HttpShape["getText"] = (url) =>
+  url.includes("wikidata") ? notFound(url) : bothLookReal("Q5398426")(url);
+
 describe("Metadata", () => {
   it.effect("a preferred kind answers without asking the other kind", () => {
     const asked: Array<string> = [];
@@ -147,6 +165,47 @@ describe("Metadata", () => {
       assert.strictEqual(meta.type, "movie");
       assert.strictEqual(meta.name, "The Matrix");
     }).pipe(Effect.provide(withStub(namedSeriesText)));
+  });
+
+  it.effect("when both kinds look real, Wikidata picks the movie", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.type, "movie");
+      assert.strictEqual(meta.name, "Yellowknife");
+    }).pipe(Effect.provide(withStub(bothLookReal("Q11424"))));
+  });
+
+  it.effect("when both kinds look real, Wikidata picks the series", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.type, "tv");
+      assert.strictEqual(meta.name, "The 100");
+    }).pipe(Effect.provide(withStub(bothLookReal("Q5398426"))));
+  });
+
+  it.effect("a Wikidata failure keeps the Cinemeta answer", () => {
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.type, "tv");
+      assert.strictEqual(meta.name, "The 100");
+    }).pipe(Effect.provide(withStub(brokenWikiText)));
+  });
+
+  it.effect("an answer that proves itself asks no third party", () => {
+    const asked: Array<string> = [];
+    const getText: HttpShape["getText"] = (url) => {
+      asked.push(url);
+      return stubMovieText(url);
+    };
+    return Effect.gen(function* () {
+      const metadata = yield* Metadata;
+      const meta = yield* metadata.resolve("tt2661044");
+      assert.strictEqual(meta.name, "The 100");
+      assert.isFalse(asked.some((url) => url.includes("wikidata")));
+    }).pipe(Effect.provide(withStub(getText)));
   });
 
   it.effect("TVMaze answers when both Cinemeta kinds miss", () => {
