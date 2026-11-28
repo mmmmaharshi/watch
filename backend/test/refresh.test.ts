@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import { Effect, Option } from "effect";
+import { Effect, Option, Schedule } from "effect";
 import type { ProvidersFile } from "../../src/lib/providers";
 import {
   DIRECTORY_URL,
@@ -12,7 +12,7 @@ import {
   buildEmbedUrl,
 } from "../../src/lib/providers";
 import { ROT_ALARM_MS } from "../../src/lib/provider-probes";
-import { runRefresh } from "../src/refresh";
+import { fetchProbe, runRefresh } from "../src/refresh";
 import type { ProbeResponse, RefreshDeps } from "../src/refresh";
 
 const PROBE_ID = "tt0133093";
@@ -89,6 +89,51 @@ const harness = (
 const stored = (updatedAt: number): ProvidersFile => ({
   updatedAt: new Date(updatedAt).toISOString(),
   providers: [{ name: "kept.test", baseUrl: "https://kept.test" }],
+});
+
+describe("fetchProbe", () => {
+  it.effect("retries a transient network failure instead of failing", () =>
+    Effect.gen(function* () {
+      let calls = 0;
+      const original = globalThis.fetch;
+      globalThis.fetch = async () => {
+        calls++;
+        if (calls === 1) {
+          throw new Error("blip");
+        }
+        return new Response("ok", { status: 200 });
+      };
+      try {
+        const res = yield* fetchProbe(8000, Schedule.recurs(1))("https://x.test");
+        assert.strictEqual(res.status, 200);
+        assert.strictEqual(res.body, "ok");
+        assert.strictEqual(calls, 2);
+      } finally {
+        globalThis.fetch = original;
+      }
+    }),
+  );
+
+  it.effect("gives up after the retry budget and fails", () =>
+    Effect.gen(function* () {
+      let calls = 0;
+      const original = globalThis.fetch;
+      globalThis.fetch = async () => {
+        calls++;
+        throw new Error("down");
+      };
+      try {
+        const failure = yield* fetchProbe(
+          8000,
+          Schedule.recurs(2),
+        )("https://x.test").pipe(Effect.flip);
+        assert.strictEqual(calls, 3);
+        assert.match(String(failure), /down/);
+      } finally {
+        globalThis.fetch = original;
+      }
+    }),
+  );
 });
 
 describe("provider refresh", () => {

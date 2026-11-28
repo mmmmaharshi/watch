@@ -1,4 +1,4 @@
-import { Clock, Effect, Option, Schema } from "effect";
+import { Clock, Effect, Option, Schedule, Schema } from "effect";
 import {
   BOGUS_ID,
   PROBE_ID,
@@ -47,10 +47,21 @@ export interface RefreshOutcome {
   readonly skipped: ReadonlyArray<string>;
 }
 
+// Three attempts with 1s then 2s backoff: a transient blip must not mark
+// a host dead. A non-ok answer stays data (no retry); only a network
+// failure retries.
+export const probeRetrySchedule = Schedule.max([
+  Schedule.exponential("1 second"),
+  Schedule.recurs(2),
+]);
+
 // The plain-HTTP probe used by both the Bun script and the Worker: a non-ok
 // answer is data, a network failure is an error.
 export const fetchProbe =
-  (timeoutMs: number): RefreshDeps["probe"] =>
+  (
+    timeoutMs: number,
+    schedule: Schedule.Schedule<unknown, unknown, never, never> = probeRetrySchedule,
+  ): RefreshDeps["probe"] =>
   (url) =>
     Effect.tryPromise({
       try: async () => {
@@ -58,7 +69,7 @@ export const fetchProbe =
         return { status: response.status, body: await response.text() };
       },
       catch: (cause) => cause,
-    });
+    }).pipe(Effect.retry(schedule));
 
 const probeEmbed = (deps: RefreshDeps, provider: Provider, id: string) =>
   deps.probe(buildEmbedUrl(provider, "movie", id));
